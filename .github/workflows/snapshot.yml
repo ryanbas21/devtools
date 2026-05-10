@@ -25,6 +25,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          registry-url: https://registry.npmjs.org
 
       - run: pnpm install --frozen-lockfile
 
@@ -39,7 +40,7 @@ jobs:
       - name: Publish npm snapshots
         run: pnpm changeset publish --tag snapshot
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
 
       - name: Zip extension
         if: inputs.extension
