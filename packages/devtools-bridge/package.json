@@ -1,8 +1,13 @@
 {
   "name": "@wolfcola/devtools-bridge",
   "version": "0.0.0",
-  "description": "Opt-in Ping SDK adapter that emits AuthEvents to the DevTools extension",
+  "description": "Opt-in SDK adapter that emits AuthEvents to the WolfCola DevTools extension",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ryanbas21/devtools.git",
+    "directory": "packages/devtools-bridge"
+  },
   "sideEffects": false,
   "type": "module",
   "exports": {
