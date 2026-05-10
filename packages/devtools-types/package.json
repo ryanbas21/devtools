@@ -1,8 +1,13 @@
 {
   "name": "@wolfcola/devtools-types",
   "version": "0.0.0",
-  "description": "Shared AuthEvent schema and types for Ping DevTools",
+  "description": "Shared AuthEvent schema and types for WolfCola DevTools",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ryanbas21/devtools.git",
+    "directory": "packages/devtools-types"
+  },
   "sideEffects": false,
   "type": "module",
   "exports": {
