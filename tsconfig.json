@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/devtools-types" },
+    { "path": "packages/devtools-bridge" },
+    { "path": "packages/devtools-extension" }
+  ]
+}
