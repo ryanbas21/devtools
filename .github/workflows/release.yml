@@ -44,12 +44,12 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
 
       - name: Zip extension
-        if: inputs.extension
+        if: inputs.extension != false
         working-directory: packages/devtools-extension
         run: cd dist && zip -r ../extension.zip .
 
       - name: Publish extension to testers
-        if: inputs.extension
+        if: inputs.extension != false
         uses: mnao305/chrome-extension-upload@v5.0.0
         with:
           file-path: packages/devtools-extension/extension.zip
