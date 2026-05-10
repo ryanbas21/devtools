@@ -4,3 +4,8 @@ coverage/
 *.tsbuildinfo
 .vite/
 elm-stuff/
+*.pem
+*.crx
+*.crx.zip
+extension.zip
+packged/

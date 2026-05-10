@@ -70,6 +70,7 @@ npx([
 
 // Static files
 cpSync('manifest.json', 'dist/manifest.json');
+cpSync('icons', 'dist/icons', { recursive: true });
 cpSync('src/devtools/devtools.html', 'dist/devtools.html');
 cpSync('src/panel/panel.html', 'dist/panel/panel.html');
 

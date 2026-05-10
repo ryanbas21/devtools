@@ -21,7 +21,7 @@ connect();
 
 // panels.create is safe to call once — the devtools page is not reloaded
 // while DevTools is open, so no need to guard with runtime.id here.
-chrome.devtools.panels.create('Ping DevTools', '', 'panel/panel.html', undefined);
+chrome.devtools.panels.create('OIDC Devtool', '', 'panel/panel.html', undefined);
 
 chrome.devtools.network.onRequestFinished.addListener((entry) => {
   // getContent() is required to retrieve the response body — the HAR entry
