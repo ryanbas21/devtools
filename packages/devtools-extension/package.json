@@ -2,7 +2,7 @@
   "name": "@wolfcola/devtools-extension",
   "version": "0.0.0",
   "private": true,
-  "description": "Ping Auth DevTools Chrome Extension",
+  "description": "WolfCola DevTools Chrome Extension",
   "license": "MIT",
   "type": "module",
   "scripts": {
