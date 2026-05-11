@@ -77,7 +77,7 @@ jobs:
 
       - name: Publish Firefox extension (unlisted)
         if: inputs.extension
-        uses: yayuyokitano/firefox-addon@v1.0.0
+        uses: yayuyokitano/firefox-addon@v0.0.6-alpha
         with:
           api_key: ${{ secrets.AMO_JWT_ISSUER }}
           api_secret: ${{ secrets.AMO_JWT_SECRET }}
