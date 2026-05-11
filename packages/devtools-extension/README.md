@@ -4,13 +4,15 @@
 
 Most auth debugging starts in the Network panel and stays there — copying tokens into jwt.io, cross-referencing timestamps, guessing which 400 was the CORS preflight and which was a bad grant. WolfCola DevTools replaces that with a single panel that captures network traffic, annotates it with OIDC semantics, optionally merges in SDK-level events, and runs an automated diagnosis engine that tells you _what went wrong and how to fix it_.
 
+Supports **Chrome 88+** and **Firefox 128+**.
+
 ![Flow view with diagnosis banner and node rail](screenshots/Flow-Screen.png)
 
 ---
 
 ## Status
 
-**v0.1.0 — alpha, active development.** The extension is functional and loadable as an unpacked Chrome extension. It is not published to the Chrome Web Store. The package is private (`@wolfcola/devtools-extension`).
+**v0.1.0 — alpha, active development.** The extension is functional and loadable as an unpacked extension in Chrome and Firefox. The package is private (`@wolfcola/devtools-extension`).
 
 ---
 
@@ -172,17 +174,18 @@ Events are linked by `flowId` and an optional `causedBy` reference pointing to t
 
 ## Security and privacy
 
-The extension requests only `storage` and `clipboardWrite`/`clipboardRead` (for copying collectors and exported data) — no `cookies`, `webRequest`, `tabs`, or other sensitive APIs. Content scripts use a two-world architecture: `content-script.ts` runs in the MAIN world (page access, no `chrome.runtime`), while `relay.ts` runs in the isolated world (runtime access, guarded by a sentinel flag and same-source check), preventing arbitrary page code from injecting messages into the service worker. All SDK events are decoded through `AuthEventSchema` (Effect Schema) before reaching the EventStore — malformed payloads are dropped with a console warning. Captured data is stored in `chrome.storage.local` under a namespaced key and never transmitted off-device. No remote code is loaded or executed.
+The extension requests only `storage` and `clipboardWrite`/`clipboardRead` (for copying collectors and exported data) — no `cookies`, `webRequest`, `tabs`, or other sensitive APIs. Content scripts use a two-world architecture: `content-script.ts` runs in the MAIN world (page access, no extension runtime), while `relay.ts` runs in the isolated world (runtime access, guarded by a sentinel flag and same-source check), preventing arbitrary page code from injecting messages into the background script. All SDK events are decoded through `AuthEventSchema` (Effect Schema) before reaching the EventStore — malformed payloads are dropped with a console warning. Captured data is stored in `storage.local` under a namespaced key and never transmitted off-device. No remote code is loaded or executed.
 
 ---
 
 ## Build
 
 ```bash
-nx run devtools-extension:build
+pnpm build              # Chrome (default)
+pnpm build:firefox      # Firefox
 ```
 
-Output is written to `packages/devtools-extension/dist/`.
+Output is written to `packages/devtools-extension/dist/`. Both targets produce the same JS bundles — only the manifest differs (Firefox uses `background.scripts` instead of `background.service_worker` and includes `browser_specific_settings.gecko`).
 
 > **Prerequisite:** [Elm](https://guide.elm-lang.org/install/elm.html) must be installed and on your `PATH`. The build step compiles `src/panel/Main.elm` into a single JS bundle.
 
@@ -194,9 +197,21 @@ Output is written to `packages/devtools-extension/dist/`.
 2. Enable **Developer mode** (top-right toggle)
 3. Click **Load unpacked**
 4. Select `packages/devtools-extension/dist/`
-5. Open DevTools on any page with OIDC traffic -- the **WolfCola DevTools** tab appears
+5. Open DevTools on any page with OIDC traffic — the **WolfCola DevTools** tab appears
 
 After rebuilding, click the refresh icon on the extension card at `chrome://extensions`, then close and reopen DevTools.
+
+---
+
+## Load in Firefox
+
+1. Run `pnpm build:firefox`
+2. Open `about:debugging#/runtime/this-firefox`
+3. Click **Load Temporary Add-on...**
+4. Select `packages/devtools-extension/dist/manifest.json`
+5. Open DevTools on any page with OIDC traffic — the **WolfCola DevTools** tab appears
+
+Temporary add-ons are removed when Firefox closes. For persistent installation, use a signed `.xpi` from [addons.mozilla.org](https://addons.mozilla.org).
 
 ---
 
@@ -286,6 +301,6 @@ When both SDK bridge events and network OIDC annotations are present, the Learn 
 
 | Package                        | Description                                                      |
 | ------------------------------ | ---------------------------------------------------------------- |
-| `@wolfcola/devtools-extension` | The Chrome extension (this package — private, not published)     |
+| `@wolfcola/devtools-extension` | The browser extension (this package — private, not published)    |
 | `@wolfcola/devtools-bridge`    | Opt-in SDK adapter — emits `AuthEvent`s from subscribable clients |
 | `@wolfcola/devtools-types`     | Shared `AuthEvent` Effect Schema definitions and TypeScript types |
