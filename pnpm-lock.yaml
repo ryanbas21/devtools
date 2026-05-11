@@ -104,8 +104,20 @@ importers:
         specifier: catalog:effect
         version: 3.21.2
 
+  packages/devtools-core:
+    dependencies:
+      '@wolfcola/devtools-types':
+        specifier: workspace:*
+        version: link:../devtools-types
+      effect:
+        specifier: catalog:effect
+        version: 3.21.2
+
   packages/devtools-extension:
     dependencies:
+      '@wolfcola/devtools-core':
+        specifier: workspace:*
+        version: link:../devtools-core
       '@wolfcola/devtools-types':
         specifier: workspace:*
         version: link:../devtools-types

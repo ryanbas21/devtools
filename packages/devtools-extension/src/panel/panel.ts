@@ -1,9 +1,7 @@
 import { Schema } from 'effect';
 import { FlowExportSchema } from '@wolfcola/devtools-types';
 import type { FlowExport } from '@wolfcola/devtools-types';
-import { redactFlowState } from '../export/redact.js';
-import { renderFlowMarkdown } from '../export/markdown.js';
-import { runDiagnosis } from '../background/diagnosis-engine.js';
+import { redactFlowState, renderFlowMarkdown, runDiagnosis } from '@wolfcola/devtools-core';
 // jwt.ts is no longer used for DOM rendering — JWT decoding now happens
 // in Elm (JsonTree.elm). The jwt.ts module is kept for the test suite.
 
