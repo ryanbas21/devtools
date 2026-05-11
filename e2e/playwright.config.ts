@@ -20,6 +20,9 @@ export default defineConfig({
       use: {
         browserName: 'firefox',
       },
+      // Firefox extension e2e is not supported by Playwright.
+      // Only run the build verification test.
+      testMatch: /firefox-build/,
     },
   ],
 });

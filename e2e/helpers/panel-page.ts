@@ -2,7 +2,9 @@ import type { Page } from '@playwright/test';
 
 export async function openPanelPage(page: Page, extensionId: string): Promise<Page> {
   await page.goto(`chrome-extension://${extensionId}/panel/panel.html`);
-  await page.waitForSelector('#app', { state: 'attached' });
+  // Elm replaces the #app mount point with rendered content on init,
+  // so wait for the toolbar that Elm renders.
+  await page.waitForSelector('.toolbar', { state: 'visible' });
   return page;
 }
 

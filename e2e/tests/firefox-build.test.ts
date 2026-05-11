@@ -12,6 +12,12 @@ test.describe('firefox build', () => {
   test('produces a valid Firefox manifest', () => {
     const manifest = JSON.parse(readFileSync(path.join(DIST, 'manifest.json'), 'utf8'));
 
+    // Skip if the current dist is a Chrome build (no browser_specific_settings)
+    test.skip(
+      !manifest.browser_specific_settings,
+      'Firefox build not present — run `pnpm --filter @wolfcola/devtools-extension build:firefox` first',
+    );
+
     expect(manifest.background.scripts).toEqual(['background/service-worker.js']);
     expect(manifest.background).not.toHaveProperty('service_worker');
 
@@ -27,6 +33,7 @@ test.describe('firefox build', () => {
       'devtools.html',
       'devtools.js',
       'panel/panel.html',
+      'panel/panel.css',
       'panel/panel.js',
       'panel/elm.js',
       'background/service-worker.js',

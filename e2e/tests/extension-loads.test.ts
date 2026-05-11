@@ -15,9 +15,8 @@ test.describe('extension loads', () => {
     const page = await extensionContext.newPage();
     await page.goto(`chrome-extension://${extensionId}/panel/panel.html`);
 
-    const app = page.locator('#app');
-    await expect(app).toBeAttached();
-
+    // Elm replaces the #app mount point with rendered content, so check for
+    // the toolbar that Elm renders instead of the raw #app div.
     const toolbar = page.locator('.toolbar');
     await expect(toolbar).toBeVisible();
 

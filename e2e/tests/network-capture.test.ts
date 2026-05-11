@@ -32,7 +32,7 @@ test.describe('network capture pipeline', () => {
     await panelPage.waitForTimeout(1000);
 
     await panelPage.reload();
-    await panelPage.waitForSelector('#app', { state: 'attached' });
+    await panelPage.waitForSelector('.toolbar', { state: 'visible' });
     await panelPage.waitForTimeout(500);
 
     const eventCount = await getEventCount(panelPage);
@@ -106,7 +106,7 @@ test.describe('network capture pipeline', () => {
 
     await panelPage.waitForTimeout(1000);
     await panelPage.reload();
-    await panelPage.waitForSelector('#app', { state: 'attached' });
+    await panelPage.waitForSelector('.toolbar', { state: 'visible' });
     await panelPage.waitForTimeout(500);
 
     const eventCount = await getEventCount(panelPage);
