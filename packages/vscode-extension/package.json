@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "publisher": "ryanbasmajian",
   "license": "MIT",
+  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/ryanbas21/devtools.git",
