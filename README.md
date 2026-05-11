@@ -40,12 +40,21 @@ pnpm install
 pnpm build
 ```
 
-Open the `packages/vscode-extension` folder in VS Code and press F5 to launch. Then:
+Launch VS Code with the extension loaded:
 
-1. Launch Chrome with `--remote-debugging-port=9222`
-2. Run **"OIDC DevTools: Start Capture"** from the command palette
+```bash
+code --extensionDevelopmentPath=packages/vscode-extension
+```
 
-See the [VS Code extension README](packages/vscode-extension) for details.
+Then launch a Chromium-based browser with remote debugging enabled (**must be a separate instance** — use `--user-data-dir` to avoid conflicts with your normal browser):
+
+```bash
+chromium --remote-debugging-port=9222 --no-first-run --user-data-dir=/tmp/oidc-devtools-test
+```
+
+In the VS Code window, run `Ctrl+Shift+P` → **"OIDC DevTools: Start Capture"** → enter `9222`. Auth-related events will appear in the Timeline as you browse.
+
+See the [VS Code extension README](packages/vscode-extension) for detailed setup, troubleshooting, and the mock OIDC server for testing.
 
 ### Browser compatibility
 
