@@ -144,6 +144,15 @@ importers:
         specifier: catalog:effect
         version: 3.21.2
 
+  packages/devtools-ui:
+    devDependencies:
+      elm-tooling:
+        specifier: ^1.15.1
+        version: 1.17.0
+      terser:
+        specifier: ^5.47.1
+        version: 5.47.1
+
 packages:
 
   '@asamuzakjp/css-color@3.2.0':
