@@ -1796,7 +1796,7 @@ expandedPanel cardId x y w expandedCard content =
             [ SA.x (String.fromFloat x)
             , SA.y (String.fromFloat y)
             , SA.width (String.fromFloat w)
-            , SA.height "120"
+            , SA.height "200"
             ]
             [ Html.div
                 [ Html.Attributes.style "font-family" "'Segoe UI', system-ui, sans-serif"
@@ -1806,6 +1806,8 @@ expandedPanel cardId x y w expandedCard content =
                 , Html.Attributes.style "border" "1px solid #30363d"
                 , Html.Attributes.style "border-radius" "6px"
                 , Html.Attributes.style "padding" "6px 8px"
+                , Html.Attributes.style "max-height" "192px"
+                , Html.Attributes.style "overflow-y" "auto"
                 ]
                 content
             ]
