@@ -136,6 +136,18 @@ update msg model =
                 , recording = True
                 , importPasteOpen = False
                 , importPasteText = ""
+                , learnCanvas =
+                    { zoom = 1.0
+                    , panX = 0.0
+                    , panY = 0.0
+                    , cardPositions = []
+                    , expandedCard = Nothing
+                    , dragTarget = Nothing
+                    , dragStart = Nothing
+                    , isPanning = False
+                    , panStart = Nothing
+                    , learnSelectedNodeId = Nothing
+                    }
               }
             , Cmd.none
             )

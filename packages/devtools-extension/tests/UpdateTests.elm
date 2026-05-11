@@ -259,6 +259,60 @@ clearFlowTests =
                     , \m -> Expect.equal Dict.empty m.eventsById
                     ]
                     model
+        , test "ClearFlow resets learnCanvas to initial state" <|
+            \_ ->
+                let
+                    canvas =
+                        initModel.learnCanvas
+
+                    dirtyModel =
+                        { initModel
+                            | learnCanvas =
+                                { canvas
+                                    | learnSelectedNodeId = Just "node-1"
+                                    , expandedCard = Just BrowserCard
+                                    , cardPositions = [ ( "browser", { x = 50, y = 100 } ) ]
+                                    , panX = 200
+                                    , panY = 150
+                                    , zoom = 2.5
+                                }
+                        }
+
+                    ( model, _ ) =
+                        update ClearFlow dirtyModel
+                in
+                Expect.all
+                    [ \m -> Expect.equal Nothing m.learnCanvas.learnSelectedNodeId
+                    , \m -> Expect.equal Nothing m.learnCanvas.expandedCard
+                    , \m -> Expect.equal [] m.learnCanvas.cardPositions
+                    , \m -> Expect.within (Expect.Absolute 0.001) 0.0 m.learnCanvas.panX
+                    , \m -> Expect.within (Expect.Absolute 0.001) 0.0 m.learnCanvas.panY
+                    , \m -> Expect.within (Expect.Absolute 0.001) 1.0 m.learnCanvas.zoom
+                    ]
+                    model
+        , test "ClearFlow preserves learnCanvas dragTarget and isPanning as false" <|
+            \_ ->
+                let
+                    canvas =
+                        initModel.learnCanvas
+
+                    dirtyModel =
+                        { initModel
+                            | learnCanvas =
+                                { canvas
+                                    | dragTarget = Just ServerCard
+                                    , isPanning = True
+                                }
+                        }
+
+                    ( model, _ ) =
+                        update ClearFlow dirtyModel
+                in
+                Expect.all
+                    [ \m -> Expect.equal Nothing m.learnCanvas.dragTarget
+                    , \m -> Expect.equal False m.learnCanvas.isPanning
+                    ]
+                    model
         ]
 
 
