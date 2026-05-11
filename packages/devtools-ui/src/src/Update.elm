@@ -49,8 +49,6 @@ type Msg
     | LearnDrag Float Float
     | LearnEndDrag
     | LearnStartPan Float Float
-    | LearnPan Float Float
-    | LearnEndPan
     | LearnZoom Float
 
 
@@ -498,49 +496,6 @@ update msg model =
                     { canvas
                         | isPanning = True
                         , panStart = Just (Vec2 mx my)
-                    }
-              }
-            , Cmd.none
-            )
-
-        LearnPan mx my ->
-            let
-                canvas =
-                    model.learnCanvas
-            in
-            case canvas.panStart of
-                Just start ->
-                    let
-                        dx =
-                            mx - start.x
-
-                        dy =
-                            my - start.y
-                    in
-                    ( { model
-                        | learnCanvas =
-                            { canvas
-                                | panX = canvas.panX + dx
-                                , panY = canvas.panY + dy
-                                , panStart = Just (Vec2 mx my)
-                            }
-                      }
-                    , Cmd.none
-                    )
-
-                Nothing ->
-                    ( model, Cmd.none )
-
-        LearnEndPan ->
-            let
-                canvas =
-                    model.learnCanvas
-            in
-            ( { model
-                | learnCanvas =
-                    { canvas
-                        | isPanning = False
-                        , panStart = Nothing
                     }
               }
             , Cmd.none

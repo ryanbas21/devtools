@@ -920,29 +920,6 @@ learnDragTests =
                     , \m -> Expect.equal (Just { x = 300, y = 400 }) m.learnCanvas.panStart
                     ]
                     model
-        , test "LearnEndPan clears isPanning and panStart" <|
-            \_ ->
-                let
-                    canvas =
-                        initModel.learnCanvas
-
-                    panningModel =
-                        { initModel
-                            | learnCanvas =
-                                { canvas
-                                    | isPanning = True
-                                    , panStart = Just { x = 300, y = 400 }
-                                }
-                        }
-
-                    ( model, _ ) =
-                        update LearnEndPan panningModel
-                in
-                Expect.all
-                    [ \m -> Expect.equal False m.learnCanvas.isPanning
-                    , \m -> Expect.equal Nothing m.learnCanvas.panStart
-                    ]
-                    model
         ]
 
 
