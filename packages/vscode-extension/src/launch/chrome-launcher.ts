@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, execFileSync, type ChildProcess } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -35,7 +35,19 @@ export function buildChromeArgs(options: LaunchOptions): string[] {
 export function findChromePath(): string | undefined {
   const platform = process.platform as 'linux' | 'darwin' | 'win32';
   const candidates = CHROME_PATHS[platform] ?? [];
-  return candidates[0];
+  for (const candidate of candidates) {
+    try {
+      // For absolute paths, check if the file exists via which/where
+      // For bare names, check if they're on PATH
+      execFileSync(platform === 'win32' ? 'where' : 'which', [candidate], {
+        stdio: 'ignore',
+      });
+      return candidate;
+    } catch {
+      // Not found, try next candidate
+    }
+  }
+  return undefined;
 }
 
 export function launchChrome(options: LaunchOptions): ChildProcess {
