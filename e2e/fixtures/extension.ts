@@ -1,11 +1,10 @@
 import { test as base, type BrowserContext, chromium } from '@playwright/test';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import type { Server } from 'node:http';
 import { createMockOidcServer } from '../mock-oidc-server/server.js';
 
-const EXT_PKG = path.resolve(import.meta.dirname, '../../packages/devtools-extension');
-const EXT_DIST = path.join(EXT_PKG, 'dist');
+const EXT_DIST = path.resolve(import.meta.dirname, '../../packages/devtools-extension/dist');
 
 export type TestFixtures = {
   context: BrowserContext;
@@ -23,13 +22,10 @@ export const test = base.extend<TestFixtures>({
 
   context: async ({ browserName }, use) => {
     if (browserName === 'chromium') {
-      const buildResult = spawnSync(process.execPath, ['build.mjs'], {
-        cwd: EXT_PKG,
-        stdio: 'pipe',
-        env: { ...process.env, PATH: process.env.PATH },
-      });
-      if (buildResult.status !== 0) {
-        throw new Error(`Extension build failed: ${buildResult.stderr?.toString()}`);
+      if (!existsSync(path.join(EXT_DIST, 'manifest.json'))) {
+        throw new Error(
+          'Extension not built. Run `pnpm --filter @wolfcola/devtools-extension build` first.',
+        );
       }
 
       const context = await chromium.launchPersistentContext('', {
