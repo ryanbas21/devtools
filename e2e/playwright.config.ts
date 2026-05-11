@@ -1,12 +1,10 @@
 import { defineConfig } from '@playwright/test';
-import path from 'node:path';
-
-const extensionDist = path.resolve(import.meta.dirname, '../packages/devtools-extension/dist');
 
 export default defineConfig({
   testDir: './tests',
   timeout: 30_000,
   retries: 1,
+  workers: 1,
   use: {
     headless: false,
   },
@@ -15,12 +13,6 @@ export default defineConfig({
       name: 'chrome',
       use: {
         browserName: 'chromium',
-        launchOptions: {
-          args: [
-            `--disable-extensions-except=${extensionDist}`,
-            `--load-extension=${extensionDist}`,
-          ],
-        },
       },
     },
     {
