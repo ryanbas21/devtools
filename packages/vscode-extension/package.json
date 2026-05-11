@@ -1,0 +1,136 @@
+{
+  "name": "oidc-devtools",
+  "displayName": "OIDC DevTools",
+  "description": "Live OIDC/OAuth2 debugging — network capture, SDK event correlation, and flow diagnosis via Chrome DevTools Protocol",
+  "version": "0.1.0",
+  "publisher": "ryanbasmajian",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ryanbas21/devtools.git",
+    "directory": "packages/vscode-extension"
+  },
+  "icon": "icons/oidc-devtools-marketplace.png",
+  "keywords": ["oidc", "oauth", "oauth2", "authentication", "debugger", "devtools", "chrome", "cdp"],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Debuggers", "Other"],
+  "activationEvents": [
+    "onCommand:oidc-devtools.startCapture",
+    "onDebugResolve:oidc-devtools"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "oidc-devtools.startCapture",
+        "title": "OIDC DevTools: Start Capture"
+      },
+      {
+        "command": "oidc-devtools.stopCapture",
+        "title": "OIDC DevTools: Stop Capture"
+      },
+      {
+        "command": "oidc-devtools.clearEvents",
+        "title": "OIDC DevTools: Clear Events"
+      },
+      {
+        "command": "oidc-devtools.exportFlow",
+        "title": "OIDC DevTools: Export Flow"
+      },
+      {
+        "command": "oidc-devtools.selectEvent",
+        "title": "OIDC DevTools: Select Event"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "oidc-devtools",
+          "title": "OIDC DevTools",
+          "icon": "icons/oidc-devtools.svg"
+        }
+      ]
+    },
+    "views": {
+      "oidc-devtools": [
+        {
+          "id": "oidc-devtools.timeline",
+          "name": "Timeline"
+        }
+      ]
+    },
+    "debuggers": [
+      {
+        "type": "oidc-devtools",
+        "label": "OIDC DevTools",
+        "configurationAttributes": {
+          "launch": {
+            "required": ["url"],
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "URL to open in Chrome",
+                "default": "http://localhost:3000"
+              },
+              "port": {
+                "type": "number",
+                "description": "Chrome remote debugging port",
+                "default": 9222
+              },
+              "chromePath": {
+                "type": "string",
+                "description": "Path to Chrome executable"
+              }
+            }
+          },
+          "attach": {
+            "properties": {
+              "port": {
+                "type": "number",
+                "description": "Chrome remote debugging port",
+                "default": 9222
+              }
+            }
+          }
+        },
+        "configurationSnippets": [
+          {
+            "label": "OIDC DevTools: Launch",
+            "description": "Launch Chrome and capture OIDC flows",
+            "body": {
+              "type": "oidc-devtools",
+              "request": "launch",
+              "name": "Debug OIDC Flow",
+              "url": "http://localhost:3000",
+              "port": 9222
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "package": "vsce package --no-dependencies",
+    "publish": "vsce publish --no-dependencies"
+  },
+  "dependencies": {
+    "@wolfcola/devtools-core": "workspace:*",
+    "@wolfcola/devtools-types": "workspace:*",
+    "@wolfcola/devtools-ui": "workspace:*",
+    "effect": "catalog:effect",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.18.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.28.0"
+  }
+}

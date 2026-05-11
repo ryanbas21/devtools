@@ -235,3 +235,22 @@ if (Either.isLeft(result)) {
 | `SessionData`            | Type   | Inferred from `SessionDataSchema`    |
 | `SdkConfigData`          | Type   | Inferred from `SdkConfigDataSchema`  |
 | `DomData`                | Type   | Inferred from `DomDataSchema`        |
+| `FlowStateSchema`        | Schema | Aggregated event collection          |
+| `FlowState`              | Type   | Inferred from `FlowStateSchema`      |
+| `FlowExportSchema`       | Schema | Versioned export envelope            |
+| `FlowExport`             | Type   | Inferred from `FlowExportSchema`     |
+| `OidcSemanticsSchema`    | Schema | OIDC phase annotation                |
+| `OidcSemantics`          | Type   | Inferred from `OidcSemanticsSchema`  |
+| `CorsFlagSchema`         | Schema | CORS violation data                  |
+| `CorsFlag`               | Type   | Inferred from `CorsFlagSchema`       |
+
+---
+
+## Consumers
+
+This package is used by all other packages in the monorepo:
+
+- **[`devtools-core`](../devtools-core)** — annotators and diagnosis engine operate on these types
+- **[`devtools-extension`](../devtools-extension)** — browser extension
+- **[`vscode-extension`](../vscode-extension)** — VS Code extension
+- **[`devtools-bridge`](../devtools-bridge)** — SDK adapter emits AuthEvents

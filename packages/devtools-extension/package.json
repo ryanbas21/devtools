@@ -11,20 +11,19 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "postinstall": "elm-tooling install",
     "build": "node build.mjs",
     "build:firefox": "node build.mjs --target=firefox",
     "lint": "eslint .",
     "test": "vitest run"
   },
   "dependencies": {
+    "@wolfcola/devtools-core": "workspace:*",
     "@wolfcola/devtools-types": "workspace:*",
+    "@wolfcola/devtools-ui": "workspace:*",
     "effect": "catalog:effect"
   },
   "devDependencies": {
     "@types/chrome": "^0.1.40",
-    "elm-tooling": "^1.15.1",
-    "esbuild": "^0.28.0",
-    "terser": "^5.47.1"
+    "esbuild": "^0.28.0"
   }
 }

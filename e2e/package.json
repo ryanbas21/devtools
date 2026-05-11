@@ -1,0 +1,20 @@
+{
+  "name": "@wolfcola/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:chrome": "playwright test --project=chrome",
+    "test:firefox": "playwright test --project=firefox",
+    "test:unit": "vitest run mock-oidc-server/"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "hono": "^4.7.0",
+    "@hono/node-server": "^1.14.0",
+    "@types/node": "^22.0.0",
+    "typescript": "5.8.3",
+    "vitest": "catalog:vitest"
+  }
+}

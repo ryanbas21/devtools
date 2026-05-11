@@ -17,5 +17,8 @@
   },
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
-  "references": [{ "path": "../devtools-types/tsconfig.lib.json" }]
+  "references": [
+    { "path": "../devtools-types/tsconfig.lib.json" },
+    { "path": "../devtools-core/tsconfig.lib.json" }
+  ]
 }

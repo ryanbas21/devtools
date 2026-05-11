@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>OIDC Test App</title>
+</head>
+<body>
+  <h1>OIDC Test App</h1>
+  <button id="start-flow">Start OIDC Flow</button>
+  <pre id="output"></pre>
+
+  <script>
+    const output = document.getElementById('output');
+    const baseUrl = window.location.origin;
+
+    document.getElementById('start-flow').addEventListener('click', async () => {
+      output.textContent = 'Starting OIDC flow...\n';
+
+      // Step 1: Discovery
+      const disco = await fetch(baseUrl + '/.well-known/openid-configuration');
+      const config = await disco.json();
+      output.textContent += 'Discovery: ' + config.issuer + '\n';
+
+      // Step 2: Token exchange (skip authorize redirect, go straight to token)
+      const tokenRes = await fetch(config.token_endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: 'grant_type=authorization_code&code=mock-code&client_id=test-client&code_verifier=test-verifier',
+      });
+      const tokens = await tokenRes.json();
+      output.textContent += 'Token: ' + tokens.token_type + '\n';
+
+      // Step 3: Userinfo
+      const userRes = await fetch(config.userinfo_endpoint, {
+        headers: { authorization: 'Bearer ' + tokens.access_token },
+      });
+      const user = await userRes.json();
+      output.textContent += 'User: ' + user.email + '\n';
+
+      output.textContent += 'Flow complete.';
+    });
+  </script>
+</body>
+</html>

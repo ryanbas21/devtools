@@ -1,6 +1,6 @@
 # @wolfcola/devtools-bridge
 
-Opt-in SDK adapter that connects your Ping Identity / ForgeRock application to the [WolfCola DevTools extension](../devtools-extension). Add it to your app in one line — it is a no-op when the extension is not installed, so it is safe to ship in production builds.
+Opt-in SDK adapter that connects your Ping Identity / ForgeRock application to WolfCola DevTools — either the [browser extension](../devtools-extension) or the [VS Code extension](../vscode-extension). Add it to your app in one line — it is a no-op when the extension is not installed, so it is safe to ship in production builds.
 
 ## Contents
 
@@ -178,7 +178,22 @@ Your app
             │  chrome.runtime.sendMessage({ type: 'EVENTS_UPDATED' })
             ▼
       panel (Elm)  ──  Timeline view + Flow view
+
+── OR (VS Code extension) ──
+
+Your app
+  └── emitAuthEvent()
+            │
+            │  window.postMessage({ type: '__pingDevtools', ... })
+            ▼
+      CDP-injected script  (Page.addScriptToEvaluateOnNewDocument)
+            │
+            │  Runtime.bindingCalled('__wolfcolaBridge', payload)
+            ▼
+      VS Code extension host  ──▶  TreeView + WebView (Elm)
 ```
+
+The VS Code extension captures SDK events via a CDP-injected script that listens for the same `__pingDevtools` postMessage — no browser extension needed.
 
 Each bridge function:
 

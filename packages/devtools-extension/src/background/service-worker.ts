@@ -1,11 +1,14 @@
 import { ManagedRuntime, Effect } from 'effect';
-import { EventStoreLive, EventStoreService } from './event-store.service.js';
-import { handleMessage } from './message-handler.js';
-import { runDiagnosis } from './diagnosis-engine.js';
-import { serializeDiagnosis } from './serialize-diagnosis.js';
-import type { SerializableDiagnosisResult } from './serialize-diagnosis.js';
+import { EventStoreChromeLive } from './event-store-chrome.js';
+import {
+  EventStoreService,
+  handleMessage,
+  runDiagnosis,
+  serializeDiagnosis,
+} from '@wolfcola/devtools-core';
+import type { SerializableDiagnosisResult } from '@wolfcola/devtools-core';
 
-const AppLayer = EventStoreLive;
+const AppLayer = EventStoreChromeLive;
 let runtime = ManagedRuntime.make(AppLayer);
 
 self.addEventListener('activate', () => {
