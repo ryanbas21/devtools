@@ -99,15 +99,19 @@ viewRail nodes selectedNodeId layout =
                 count * nodeSpacing + 60
 
         emptyMessage =
-            case layout of
-                DaVinciLayout ->
-                    "No DaVinci nodes recorded yet."
+            if List.isEmpty nodes then
+                "No auth events recorded yet."
 
-                JourneyLayout ->
-                    "No Journey steps recorded yet."
+            else
+                case layout of
+                    DaVinciLayout ->
+                        "No DaVinci nodes recorded yet."
 
-                _ ->
-                    "No OIDC events detected yet."
+                    JourneyLayout ->
+                        "No Journey steps recorded yet."
+
+                    _ ->
+                        "No OIDC events detected yet."
     in
     Html.div [ class "lv-rail" ]
         [ if List.isEmpty nodes then
@@ -254,15 +258,19 @@ viewCanvas events canvas layout =
         Nothing ->
             Html.div [ class "lv-canvas lv-canvas-empty" ]
                 [ Html.text
-                    (case layout of
-                        DaVinciLayout ->
-                            "Select a DaVinci node above to see its request lifecycle."
+                    (if List.isEmpty events then
+                        "Record some auth activity, then select a node above."
 
-                        JourneyLayout ->
-                            "Select a Journey step above to see its callback lifecycle."
+                     else
+                        case layout of
+                            DaVinciLayout ->
+                                "Select a DaVinci node above to see its request lifecycle."
 
-                        _ ->
-                            "Select an OIDC event above to see its details."
+                            JourneyLayout ->
+                                "Select a Journey step above to see its callback lifecycle."
+
+                            _ ->
+                                "Select an OIDC event above to see its details."
                     )
                 ]
 
