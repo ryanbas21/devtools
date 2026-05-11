@@ -1,9 +1,5 @@
 import { Effect, Layer, Ref, pipe } from 'effect';
-import {
-  EventStoreService,
-  makeEmptyFlowState,
-  updateSummary,
-} from '@wolfcola/devtools-core';
+import { EventStoreService, makeEmptyFlowState, updateSummary } from '@wolfcola/devtools-core';
 import type { ExtendedFlowState } from '@wolfcola/devtools-core';
 import type { AuthEvent } from '@wolfcola/devtools-types';
 import type { OidcConfig } from '@wolfcola/devtools-core';

@@ -24,9 +24,7 @@ export class FlowWebviewPanel {
       {
         enableScripts: true,
         retainContextWhenHidden: true,
-        localResourceRoots: [
-          vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview'),
-        ],
+        localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview')],
       },
     );
 
@@ -62,28 +60,13 @@ export class FlowWebviewPanel {
 
   private getHtml(webview: vscode.Webview): string {
     const nonce = getNonce();
-    const webviewDir = vscode.Uri.joinPath(
-      this.extensionUri,
-      'dist',
-      'webview',
-    );
+    const webviewDir = vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview');
 
-    const elmJsUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(webviewDir, 'elm.js'),
-    );
-    const panelCssUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(webviewDir, 'panel.css'),
-    );
-    const adapterJsUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(webviewDir, 'adapter.js'),
-    );
+    const elmJsUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, 'elm.js'));
+    const panelCssUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, 'panel.css'));
+    const adapterJsUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, 'adapter.js'));
 
-    const templatePath = join(
-      this.extensionUri.fsPath,
-      'dist',
-      'webview',
-      'index.html',
-    );
+    const templatePath = join(this.extensionUri.fsPath, 'dist', 'webview', 'index.html');
     let html = readFileSync(templatePath, 'utf8');
 
     html = html

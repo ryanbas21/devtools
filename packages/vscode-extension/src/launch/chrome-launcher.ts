@@ -10,12 +10,7 @@ export interface LaunchOptions {
 }
 
 const CHROME_PATHS: Record<string, string[]> = {
-  linux: [
-    'google-chrome',
-    'google-chrome-stable',
-    'chromium',
-    'chromium-browser',
-  ],
+  linux: ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser'],
   darwin: [
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
     '/Applications/Chromium.app/Contents/MacOS/Chromium',

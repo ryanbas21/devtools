@@ -6,7 +6,12 @@ import { injectSdkCapture } from './cdp/sdk-injector.js';
 import { TimelineTreeProvider } from './providers/timeline-tree.js';
 import { StatusBar } from './status-bar.js';
 import { FlowWebviewPanel } from './panels/flow-webview.js';
-import { buildNetworkEvent, redactFlowState, renderFlowMarkdown, runDiagnosis } from '@wolfcola/devtools-core';
+import {
+  buildNetworkEvent,
+  redactFlowState,
+  renderFlowMarkdown,
+  runDiagnosis,
+} from '@wolfcola/devtools-core';
 import type { HarEntry } from '@wolfcola/devtools-core';
 import type { AuthEvent } from '@wolfcola/devtools-types';
 import type { FlowState } from '@wolfcola/devtools-types';
