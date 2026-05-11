@@ -28,11 +28,13 @@ interface CdpEvents {
   error: [err: Error];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export declare interface CdpClient {
   on<K extends keyof CdpEvents>(event: K, listener: (...args: CdpEvents[K]) => void): this;
   emit<K extends keyof CdpEvents>(event: K, ...args: CdpEvents[K]): boolean;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class CdpClient extends EventEmitter {
   private ws: WebSocket | null = null;
   private nextId = 1;

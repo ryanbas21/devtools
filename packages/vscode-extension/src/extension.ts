@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Effect, ManagedRuntime } from 'effect';
+import { ManagedRuntime } from 'effect';
 import { OidcDebugConfigProvider } from './launch/debug-config-provider.js';
 import { CdpClient } from './cdp/cdp-client.js';
 import { discoverTargets, findPageTarget } from './cdp/target-discovery.js';
@@ -9,7 +9,6 @@ import { StatusBar } from './status-bar.js';
 import { FlowWebviewPanel } from './panels/flow-webview.js';
 import {
   handleMessage,
-  EventStoreService,
   EventStoreInMemory,
   runDiagnosis,
   serializeDiagnosis,

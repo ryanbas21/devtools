@@ -32,9 +32,7 @@ export function discoverTargets(port: number): Promise<CdpTarget[]> {
 export function findPageTarget(targets: CdpTarget[], url?: string): CdpTarget | undefined {
   // Filter out internal browser pages (devtools://, chrome://, about:, etc.)
   const pages = targets.filter(
-    (t) =>
-      t.type === 'page' &&
-      (t.url.startsWith('http://') || t.url.startsWith('https://')),
+    (t) => t.type === 'page' && (t.url.startsWith('http://') || t.url.startsWith('https://')),
   );
   if (url) {
     return pages.find((t) => t.url.startsWith(url)) ?? pages[0];
