@@ -4,6 +4,7 @@ import { discoverTargets, findPageTarget } from './cdp/target-discovery.js';
 import { injectSdkCapture } from './cdp/sdk-injector.js';
 import { TimelineTreeProvider } from './providers/timeline-tree.js';
 import { StatusBar } from './status-bar.js';
+import { FlowWebviewPanel } from './panels/flow-webview.js';
 import { buildNetworkEvent } from '@wolfcola/devtools-core';
 import type { HarEntry } from '@wolfcola/devtools-core';
 import type { AuthEvent } from '@wolfcola/devtools-types';
@@ -15,6 +16,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const statusBar = new StatusBar();
 
   vscode.window.registerTreeDataProvider('oidc-devtools.timeline', timeline);
+
+  const flowPanel = new FlowWebviewPanel(context.extensionUri);
 
   const startCmd = vscode.commands.registerCommand('oidc-devtools.startCapture', async () => {
     const portInput = await vscode.window.showInputBox({
@@ -49,6 +52,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const event = buildNetworkEvent(entry, null, null);
         if (!event.flags.isAuthRelated) return;
         timeline.addEvent(event);
+        flowPanel.sendEvent(event);
         statusBar.setEventCount(timeline.eventCount);
       });
 
@@ -87,7 +91,23 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.showInformationMessage('Export: coming in Task 15');
   });
 
-  context.subscriptions.push(startCmd, stopCmd, clearCmd, exportCmd, statusBar);
+  const selectCmd = vscode.commands.registerCommand(
+    'oidc-devtools.selectEvent',
+    (event: AuthEvent) => {
+      flowPanel.reveal();
+      flowPanel.sendEvent(event);
+    },
+  );
+
+  context.subscriptions.push(
+    startCmd,
+    stopCmd,
+    clearCmd,
+    exportCmd,
+    selectCmd,
+    statusBar,
+    { dispose: () => flowPanel.dispose() },
+  );
 }
 
 export function deactivate(): void {

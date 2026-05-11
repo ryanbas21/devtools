@@ -33,6 +33,10 @@
       {
         "command": "oidc-devtools.exportFlow",
         "title": "OIDC DevTools: Export Flow"
+      },
+      {
+        "command": "oidc-devtools.selectEvent",
+        "title": "OIDC DevTools: Select Event"
       }
     ],
     "viewsContainers": {
@@ -62,6 +66,7 @@
   "dependencies": {
     "@wolfcola/devtools-core": "workspace:*",
     "@wolfcola/devtools-types": "workspace:*",
+    "@wolfcola/devtools-ui": "workspace:*",
     "effect": "catalog:effect",
     "ws": "^8.18.0"
   },

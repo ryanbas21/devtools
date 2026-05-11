@@ -150,6 +150,34 @@ importers:
         specifier: ^5.47.1
         version: 5.47.1
 
+  packages/vscode-extension:
+    dependencies:
+      '@wolfcola/devtools-core':
+        specifier: workspace:*
+        version: link:../devtools-core
+      '@wolfcola/devtools-types':
+        specifier: workspace:*
+        version: link:../devtools-types
+      '@wolfcola/devtools-ui':
+        specifier: workspace:*
+        version: link:../devtools-ui
+      effect:
+        specifier: catalog:effect
+        version: 3.21.2
+      ws:
+        specifier: ^8.18.0
+        version: 8.20.0
+    devDependencies:
+      '@types/vscode':
+        specifier: ^1.100.0
+        version: 1.118.0
+      '@types/ws':
+        specifier: ^8.18.0
+        version: 8.18.1
+      esbuild:
+        specifier: ^0.28.0
+        version: 0.28.0
+
 packages:
 
   '@asamuzakjp/css-color@3.2.0':
@@ -877,6 +905,12 @@ packages:
 
   '@types/node@22.19.18':
     resolution: {integrity: sha512-9v00a+dn2yWVsYDEunWC4g/TcRKVq3r8N5FuZp7u0SGrPvdN9c2yXI9bBuf5Fl0hNCb+QTIePTn5pJs2pwBOQQ==}
+
+  '@types/vscode@1.118.0':
+    resolution: {integrity: sha512-Ah6eTlqDcwIMELEVwQMO++rJAFBRz/oLluLD/vWdYrH1KuI9kfpaM+7pg0OvvascgcJy+ghLCERAYouM4QbzGw==}
+
+  '@types/ws@8.18.1':
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
   '@typescript-eslint/eslint-plugin@8.59.2':
     resolution: {integrity: sha512-j/bwmkBvHUtPNxzuWe5z6BEk3q54YRyGlBXkSsmfoih7zNrBvl5A9A98anlp/7JbyZcWIJ8KXo/3Tq/DjFLtuQ==}
@@ -3064,6 +3098,12 @@ snapshots:
   '@types/node@22.19.18':
     dependencies:
       undici-types: 6.21.0
+
+  '@types/vscode@1.118.0': {}
+
+  '@types/ws@8.18.1':
+    dependencies:
+      '@types/node': 22.19.18
 
   '@typescript-eslint/eslint-plugin@8.59.2(@typescript-eslint/parser@8.59.2(eslint@9.39.4)(typescript@5.8.3))(eslint@9.39.4)(typescript@5.8.3)':
     dependencies:
