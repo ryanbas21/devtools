@@ -65,10 +65,10 @@ jobs:
         run: zip -r source.zip . -x 'node_modules/*' '*/node_modules/*' '*/dist/*' '.git/*' '*.zip'
 
       - name: Upload to Firefox Add-ons
-        uses: yayuyokitano/firefox-addon@v0.0.6-alpha
+        uses: trmcnvn/firefox-addon@v1
         with:
-          api_key: ${{ secrets.AMO_JWT_ISSUER }}
-          api_secret: ${{ secrets.AMO_JWT_SECRET }}
-          guid: oidc-devtool@wolfcola
-          xpi_path: packages/devtools-extension/extension-firefox.zip
-          src_path: source.zip
+          uuid: oidc-devtool@wolfcola
+          xpi: packages/devtools-extension/extension-firefox.zip
+          manifest: packages/devtools-extension/dist/manifest.json
+          api-key: ${{ secrets.AMO_JWT_ISSUER }}
+          api-secret: ${{ secrets.AMO_JWT_SECRET }}
