@@ -259,6 +259,60 @@ clearFlowTests =
                     , \m -> Expect.equal Dict.empty m.eventsById
                     ]
                     model
+        , test "ClearFlow resets learnCanvas to initial state" <|
+            \_ ->
+                let
+                    canvas =
+                        initModel.learnCanvas
+
+                    dirtyModel =
+                        { initModel
+                            | learnCanvas =
+                                { canvas
+                                    | learnSelectedNodeId = Just "node-1"
+                                    , expandedCard = Just BrowserCard
+                                    , cardPositions = [ ( "browser", { x = 50, y = 100 } ) ]
+                                    , panX = 200
+                                    , panY = 150
+                                    , zoom = 2.5
+                                }
+                        }
+
+                    ( model, _ ) =
+                        update ClearFlow dirtyModel
+                in
+                Expect.all
+                    [ \m -> Expect.equal Nothing m.learnCanvas.learnSelectedNodeId
+                    , \m -> Expect.equal Nothing m.learnCanvas.expandedCard
+                    , \m -> Expect.equal [] m.learnCanvas.cardPositions
+                    , \m -> Expect.within (Expect.Absolute 0.001) 0.0 m.learnCanvas.panX
+                    , \m -> Expect.within (Expect.Absolute 0.001) 0.0 m.learnCanvas.panY
+                    , \m -> Expect.within (Expect.Absolute 0.001) 1.0 m.learnCanvas.zoom
+                    ]
+                    model
+        , test "ClearFlow preserves learnCanvas dragTarget and isPanning as false" <|
+            \_ ->
+                let
+                    canvas =
+                        initModel.learnCanvas
+
+                    dirtyModel =
+                        { initModel
+                            | learnCanvas =
+                                { canvas
+                                    | dragTarget = Just ServerCard
+                                    , isPanning = True
+                                }
+                        }
+
+                    ( model, _ ) =
+                        update ClearFlow dirtyModel
+                in
+                Expect.all
+                    [ \m -> Expect.equal Nothing m.learnCanvas.dragTarget
+                    , \m -> Expect.equal False m.learnCanvas.isPanning
+                    ]
+                    model
         ]
 
 
@@ -866,54 +920,38 @@ learnDragTests =
                     , \m -> Expect.equal (Just { x = 300, y = 400 }) m.learnCanvas.panStart
                     ]
                     model
-        , test "LearnEndPan clears isPanning and panStart" <|
-            \_ ->
-                let
-                    canvas =
-                        initModel.learnCanvas
-
-                    panningModel =
-                        { initModel
-                            | learnCanvas =
-                                { canvas
-                                    | isPanning = True
-                                    , panStart = Just { x = 300, y = 400 }
-                                }
-                        }
-
-                    ( model, _ ) =
-                        update LearnEndPan panningModel
-                in
-                Expect.all
-                    [ \m -> Expect.equal False m.learnCanvas.isPanning
-                    , \m -> Expect.equal Nothing m.learnCanvas.panStart
-                    ]
-                    model
         ]
 
 
 learnZoomTests : Test
 learnZoomTests =
     describe "Learn zoom interactions"
-        [ test "LearnZoom adjusts zoom level" <|
+        [ test "LearnZoom with positive delta zooms out" <|
             \_ ->
                 let
                     ( model, _ ) =
                         update (LearnZoom 100) initModel
+                in
+                Expect.within (Expect.Absolute 0.001) 0.9 model.learnCanvas.zoom
+        , test "LearnZoom with negative delta zooms in" <|
+            \_ ->
+                let
+                    ( model, _ ) =
+                        update (LearnZoom -100) initModel
                 in
                 Expect.within (Expect.Absolute 0.001) 1.1 model.learnCanvas.zoom
         , test "LearnZoom clamps to minimum 0.5" <|
             \_ ->
                 let
                     ( model, _ ) =
-                        update (LearnZoom -10000) initModel
+                        update (LearnZoom 10000) initModel
                 in
                 Expect.within (Expect.Absolute 0.001) 0.5 model.learnCanvas.zoom
         , test "LearnZoom clamps to maximum 3.0" <|
             \_ ->
                 let
                     ( model, _ ) =
-                        update (LearnZoom 10000) initModel
+                        update (LearnZoom -10000) initModel
                 in
                 Expect.within (Expect.Absolute 0.001) 3.0 model.learnCanvas.zoom
         ]

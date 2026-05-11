@@ -49,8 +49,6 @@ type Msg
     | LearnDrag Float Float
     | LearnEndDrag
     | LearnStartPan Float Float
-    | LearnPan Float Float
-    | LearnEndPan
     | LearnZoom Float
 
 
@@ -136,6 +134,18 @@ update msg model =
                 , recording = True
                 , importPasteOpen = False
                 , importPasteText = ""
+                , learnCanvas =
+                    { zoom = 1.0
+                    , panX = 0.0
+                    , panY = 0.0
+                    , cardPositions = []
+                    , expandedCard = Nothing
+                    , dragTarget = Nothing
+                    , dragStart = Nothing
+                    , isPanning = False
+                    , panStart = Nothing
+                    , learnSelectedNodeId = Nothing
+                    }
               }
             , Cmd.none
             )
@@ -491,56 +501,13 @@ update msg model =
             , Cmd.none
             )
 
-        LearnPan mx my ->
-            let
-                canvas =
-                    model.learnCanvas
-            in
-            case canvas.panStart of
-                Just start ->
-                    let
-                        dx =
-                            mx - start.x
-
-                        dy =
-                            my - start.y
-                    in
-                    ( { model
-                        | learnCanvas =
-                            { canvas
-                                | panX = canvas.panX + dx
-                                , panY = canvas.panY + dy
-                                , panStart = Just (Vec2 mx my)
-                            }
-                      }
-                    , Cmd.none
-                    )
-
-                Nothing ->
-                    ( model, Cmd.none )
-
-        LearnEndPan ->
-            let
-                canvas =
-                    model.learnCanvas
-            in
-            ( { model
-                | learnCanvas =
-                    { canvas
-                        | isPanning = False
-                        , panStart = Nothing
-                    }
-              }
-            , Cmd.none
-            )
-
         LearnZoom delta ->
             let
                 canvas =
                     model.learnCanvas
 
                 newZoom =
-                    clamp 0.5 3.0 (canvas.zoom + delta * 0.001)
+                    clamp 0.5 3.0 (canvas.zoom - delta * 0.001)
             in
             ( { model | learnCanvas = { canvas | zoom = newZoom } }
             , Cmd.none

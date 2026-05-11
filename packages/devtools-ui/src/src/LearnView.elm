@@ -99,15 +99,19 @@ viewRail nodes selectedNodeId layout =
                 count * nodeSpacing + 60
 
         emptyMessage =
-            case layout of
-                DaVinciLayout ->
-                    "No DaVinci nodes recorded yet."
+            if List.isEmpty nodes then
+                "No auth events recorded yet."
 
-                JourneyLayout ->
-                    "No Journey steps recorded yet."
+            else
+                case layout of
+                    DaVinciLayout ->
+                        "No DaVinci nodes recorded yet."
 
-                _ ->
-                    "No OIDC events detected yet."
+                    JourneyLayout ->
+                        "No Journey steps recorded yet."
+
+                    _ ->
+                        "No OIDC events detected yet."
     in
     Html.div [ class "lv-rail" ]
         [ if List.isEmpty nodes then
@@ -254,15 +258,19 @@ viewCanvas events canvas layout =
         Nothing ->
             Html.div [ class "lv-canvas lv-canvas-empty" ]
                 [ Html.text
-                    (case layout of
-                        DaVinciLayout ->
-                            "Select a DaVinci node above to see its request lifecycle."
+                    (if List.isEmpty events then
+                        "Record some auth activity, then select a node above."
 
-                        JourneyLayout ->
-                            "Select a Journey step above to see its callback lifecycle."
+                     else
+                        case layout of
+                            DaVinciLayout ->
+                                "Select a DaVinci node above to see its request lifecycle."
 
-                        _ ->
-                            "Select an OIDC event above to see its details."
+                            JourneyLayout ->
+                                "Select a Journey step above to see its callback lifecycle."
+
+                            _ ->
+                                "Select an OIDC event above to see its details."
                     )
                 ]
 
@@ -659,7 +667,13 @@ renderDaVinciCards events canvas nodeId =
     , renderCard ServerCard sx sy fW fH serverBorder "1" "" canvas.expandedCard
         (serverIcon (sx + 40) (sy + 15))
         "SERVER"
-        (if serverHasError then "✕ " ++ responseStatus else responseStatus ++ " OK")
+        (if noNetEvents then
+            "No response"
+         else if serverHasError then
+            "✕ " ++ responseStatus
+         else
+            responseStatus ++ " OK"
+        )
     , expandedPanel ServerCard sx (sy + fH + 8) fW canvas.expandedCard
         (serverDetail responseEvent serverHasError)
     , renderArrowLine (sx + fW) (sy + fH / 2) sdx (sdy + fH / 2) responseArrowLabel responseArrowColor False
@@ -1011,7 +1025,13 @@ renderJourneyCards events canvas nodeId =
     , renderCard ServerCard sx sy fW fH serverBorder "1" "" canvas.expandedCard
         (serverIcon (sx + 40) (sy + 15))
         "AM SERVER"
-        (if serverHasError then "✕ " ++ responseStatus else "Sends callbacks")
+        (if noNetEvents then
+            "No response"
+         else if serverHasError then
+            "✕ " ++ responseStatus
+         else
+            "Sends callbacks"
+        )
     , expandedPanel ServerCard sx (sy + fH + 8) fW canvas.expandedCard
         (journeyServerDetail responseEvent journeyData serverHasError)
 
@@ -1784,7 +1804,7 @@ expandedPanel cardId x y w expandedCard content =
             [ SA.x (String.fromFloat x)
             , SA.y (String.fromFloat y)
             , SA.width (String.fromFloat w)
-            , SA.height "120"
+            , SA.height "200"
             ]
             [ Html.div
                 [ Html.Attributes.style "font-family" "'Segoe UI', system-ui, sans-serif"
@@ -1794,6 +1814,8 @@ expandedPanel cardId x y w expandedCard content =
                 , Html.Attributes.style "border" "1px solid #30363d"
                 , Html.Attributes.style "border-radius" "6px"
                 , Html.Attributes.style "padding" "6px 8px"
+                , Html.Attributes.style "max-height" "192px"
+                , Html.Attributes.style "overflow-y" "auto"
                 ]
                 content
             ]
