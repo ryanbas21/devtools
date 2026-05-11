@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { OidcDebugConfigProvider } from './launch/debug-config-provider.js';
 import { CdpClient } from './cdp/cdp-client.js';
 import { discoverTargets, findPageTarget } from './cdp/target-discovery.js';
 import { injectSdkCapture } from './cdp/sdk-injector.js';
@@ -99,6 +100,11 @@ export function activate(context: vscode.ExtensionContext): void {
     },
   );
 
+  const debugProvider = vscode.debug.registerDebugConfigurationProvider(
+    'oidc-devtools',
+    new OidcDebugConfigProvider(),
+  );
+
   context.subscriptions.push(
     startCmd,
     stopCmd,
@@ -107,6 +113,7 @@ export function activate(context: vscode.ExtensionContext): void {
     selectCmd,
     statusBar,
     { dispose: () => flowPanel.dispose() },
+    debugProvider,
   );
 }
 
