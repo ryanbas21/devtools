@@ -1,9 +1,9 @@
 import { test, expect } from '../fixtures/extension.js';
 
 test.describe('extension loads', () => {
-  test('service worker is registered', async ({ context, extensionId }) => {
+  test('service worker is registered', async ({ extensionContext, extensionId }) => {
     expect(extensionId).toBeTruthy();
-    const workers = context.serviceWorkers();
+    const workers = extensionContext.serviceWorkers();
     expect(workers.length).toBeGreaterThan(0);
 
     const swUrl = workers[0].url();
@@ -11,8 +11,8 @@ test.describe('extension loads', () => {
     expect(swUrl).toContain('service-worker.js');
   });
 
-  test('panel page loads and Elm mounts', async ({ context, extensionId }) => {
-    const page = await context.newPage();
+  test('panel page loads and Elm mounts', async ({ extensionContext, extensionId }) => {
+    const page = await extensionContext.newPage();
     await page.goto(`chrome-extension://${extensionId}/panel/panel.html`);
 
     const app = page.locator('#app');
@@ -24,8 +24,8 @@ test.describe('extension loads', () => {
     await page.close();
   });
 
-  test('devtools page exists', async ({ context, extensionId }) => {
-    const page = await context.newPage();
+  test('devtools page exists', async ({ extensionContext, extensionId }) => {
+    const page = await extensionContext.newPage();
     await page.goto(`chrome-extension://${extensionId}/devtools.html`);
 
     const body = page.locator('body');

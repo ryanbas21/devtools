@@ -3,11 +3,11 @@ import { openPanelPage, getEventCount } from '../helpers/panel-page.js';
 
 test.describe('network capture pipeline', () => {
   test('service worker processes NETWORK_EVENT and panel receives it', async ({
-    context,
+    extensionContext,
     extensionId,
     mockServer,
   }) => {
-    const panelPage = await context.newPage();
+    const panelPage = await extensionContext.newPage();
     await openPanelPage(panelPage, extensionId);
 
     await panelPage.evaluate((discoveryUrl) => {
@@ -42,11 +42,11 @@ test.describe('network capture pipeline', () => {
   });
 
   test('token endpoint request is annotated with OIDC phase', async ({
-    context,
+    extensionContext,
     extensionId,
     mockServer,
   }) => {
-    const panelPage = await context.newPage();
+    const panelPage = await extensionContext.newPage();
     await openPanelPage(panelPage, extensionId);
 
     await panelPage.evaluate((url) => {
