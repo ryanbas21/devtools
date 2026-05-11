@@ -1,6 +1,20 @@
 # OIDC DevTools — VS Code Extension
 
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/RyanBasmajian.oidc-devtools)](https://marketplace.visualstudio.com/items?itemName=RyanBasmajian.oidc-devtools)
+
 VS Code extension for live OIDC/OAuth2 debugging. Connects to Chrome/Chromium via the Chrome DevTools Protocol (CDP) to capture and analyze authentication flows without leaving your editor.
+
+## Install
+
+**From the Marketplace:** [OIDC DevTools](https://marketplace.visualstudio.com/items?itemName=RyanBasmajian.oidc-devtools)
+
+**From the command line:**
+
+```bash
+code --install-extension RyanBasmajian.oidc-devtools
+```
+
+**From VS Code:** Open Extensions (`Ctrl+Shift+X`), search for "OIDC DevTools", and click Install.
 
 ## Features
 

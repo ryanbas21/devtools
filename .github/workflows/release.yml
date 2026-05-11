@@ -77,14 +77,13 @@ jobs:
 
       - name: Publish Firefox extension (unlisted)
         if: inputs.extension
-        uses: yayuyokitano/firefox-addon@v1.0.0
+        uses: trmcnvn/firefox-addon@v1
         with:
-          api_key: ${{ secrets.AMO_JWT_ISSUER }}
-          api_secret: ${{ secrets.AMO_JWT_SECRET }}
-          guid: oidc-devtool@wolfcola
-          xpi_path: packages/devtools-extension/extension-firefox.zip
-          src_path: source.zip
-          channel: unlisted
+          uuid: oidc-devtool@wolfcola
+          xpi: packages/devtools-extension/extension-firefox.zip
+          manifest: packages/devtools-extension/dist/manifest.json
+          api-key: ${{ secrets.AMO_JWT_ISSUER }}
+          api-secret: ${{ secrets.AMO_JWT_SECRET }}
   release:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
