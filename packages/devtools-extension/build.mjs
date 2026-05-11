@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 
 const target = process.argv.includes('--target=firefox') ? 'firefox' : 'chrome';
 const cwd = import.meta.dirname;
@@ -56,22 +57,15 @@ for (const entry of esbuildEntries) {
   npx(args);
 }
 
-// Elm — compile and minify
-npx(['elm', 'make', 'src/panel/Main.elm', '--output=dist/panel/elm.js', '--optimize']);
+// Copy Elm + CSS from devtools-ui
+const require = createRequire(import.meta.url);
+const uiPkg = require.resolve('@wolfcola/devtools-ui/package.json');
+const uiDir = uiPkg.replace('/package.json', '');
+cpSync(`${uiDir}/dist/elm.js`, 'dist/panel/elm.js');
+cpSync(`${uiDir}/dist/panel.css`, 'dist/panel/panel.css');
+cpSync(`${uiDir}/dist/panel.html`, 'dist/panel/panel.html');
 
-npx([
-  'terser',
-  'dist/panel/elm.js',
-  '--compress',
-  'pure_funcs=["F2","F3","F4","F5","F6","F7","F8","F9",' +
-    '"A2","A3","A4","A5","A6","A7","A8","A9"],' +
-    'pure_getters,keep_fargs=false,unsafe_comps,unsafe',
-  '--mangle',
-  '--output',
-  'dist/panel/elm.js',
-]);
-
-// Manifest — swap background field per target
+// Manifest
 const manifest = JSON.parse(readFileSync('manifest.json', 'utf8'));
 if (target === 'firefox') {
   manifest.background = { scripts: ['background/service-worker.js'], type: 'module' };
@@ -85,6 +79,5 @@ if (target === 'firefox') {
 writeFileSync('dist/manifest.json', JSON.stringify(manifest, null, 2));
 cpSync('icons', 'dist/icons', { recursive: true });
 cpSync('src/devtools/devtools.html', 'dist/devtools.html');
-cpSync('src/panel/panel.html', 'dist/panel/panel.html');
 
 console.log('Build complete.');

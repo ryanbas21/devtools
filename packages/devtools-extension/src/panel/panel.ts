@@ -2,31 +2,11 @@ import { Schema } from 'effect';
 import { FlowExportSchema } from '@wolfcola/devtools-types';
 import type { FlowExport } from '@wolfcola/devtools-types';
 import { redactFlowState, renderFlowMarkdown, runDiagnosis } from '@wolfcola/devtools-core';
+import type { ElmModule } from '@wolfcola/devtools-ui/ports';
 // jwt.ts is no longer used for DOM rendering — JWT decoding now happens
 // in Elm (JsonTree.elm). The jwt.ts module is kept for the test suite.
 
-declare const Elm: {
-  Main: {
-    init: (opts: { node: HTMLElement | null; flags: null }) => {
-      ports: {
-        receiveEvent: { send: (event: unknown) => void };
-        receiveDiagnosis: { send: (diagnosis: unknown) => void };
-        receiveImportMeta: { send: (meta: unknown) => void };
-        receiveImportError: { send: (error: unknown) => void };
-        exportJson: { subscribe: (cb: () => void) => void };
-        exportMarkdown: { subscribe: (cb: () => void) => void };
-        submitImportPaste: { subscribe: (cb: (text: string) => void) => void };
-        clearFlow: { subscribe: (cb: () => void) => void };
-        saveSnapshot: { subscribe: (cb: () => void) => void };
-        requestSnapshots: { subscribe: (cb: () => void) => void };
-        receiveSnapshots: { send: (snapshots: unknown[]) => void };
-        loadSnapshot: { subscribe: (cb: (id: string) => void) => void };
-        deleteSnapshot: { subscribe: (cb: (id: string) => void) => void };
-        copyToClipboard: { subscribe: (cb: (text: string) => void) => void };
-      };
-    };
-  };
-};
+declare const Elm: ElmModule;
 
 // ── Panel resize ─────────────────────────────────────────────────────────────
 

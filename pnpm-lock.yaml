@@ -121,6 +121,9 @@ importers:
       '@wolfcola/devtools-types':
         specifier: workspace:*
         version: link:../devtools-types
+      '@wolfcola/devtools-ui':
+        specifier: workspace:*
+        version: link:../devtools-ui
       effect:
         specifier: catalog:effect
         version: 3.21.2
@@ -128,15 +131,9 @@ importers:
       '@types/chrome':
         specifier: ^0.1.40
         version: 0.1.42
-      elm-tooling:
-        specifier: ^1.15.1
-        version: 1.17.0
       esbuild:
         specifier: ^0.28.0
         version: 0.28.0
-      terser:
-        specifier: ^5.47.1
-        version: 5.47.1
 
   packages/devtools-types:
     dependencies:
