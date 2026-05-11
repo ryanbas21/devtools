@@ -7,5 +7,5 @@ elm-stuff/
 *.pem
 *.crx
 *.crx.zip
-extension.zip
+*.zip
 packged/

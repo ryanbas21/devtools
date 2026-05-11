@@ -13,6 +13,7 @@
   "scripts": {
     "postinstall": "elm-tooling install",
     "build": "node build.mjs",
+    "build:firefox": "node build.mjs --target=firefox",
     "lint": "eslint .",
     "test": "vitest run"
   },

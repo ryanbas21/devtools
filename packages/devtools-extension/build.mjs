@@ -1,9 +1,12 @@
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
+const target = process.argv.includes('--target=firefox') ? 'firefox' : 'chrome';
 const cwd = import.meta.dirname;
 const run = (cmd, args) => execFileSync(cmd, args, { stdio: 'inherit', cwd });
 const npx = (args) => run('npx', args);
+
+console.log(`Building for ${target}...`);
 
 mkdirSync('dist/panel', { recursive: true });
 mkdirSync('dist/background', { recursive: true });
@@ -68,8 +71,18 @@ npx([
   'dist/panel/elm.js',
 ]);
 
-// Static files
-cpSync('manifest.json', 'dist/manifest.json');
+// Manifest — swap background field per target
+const manifest = JSON.parse(readFileSync('manifest.json', 'utf8'));
+if (target === 'firefox') {
+  manifest.background = { scripts: ['background/service-worker.js'], type: 'module' };
+  manifest.browser_specific_settings = {
+    gecko: {
+      id: 'oidc-devtool@wolfcola',
+      data_collection_permissions: { required: ['none'] },
+    },
+  };
+}
+writeFileSync('dist/manifest.json', JSON.stringify(manifest, null, 2));
 cpSync('icons', 'dist/icons', { recursive: true });
 cpSync('src/devtools/devtools.html', 'dist/devtools.html');
 cpSync('src/panel/panel.html', 'dist/panel/panel.html');
