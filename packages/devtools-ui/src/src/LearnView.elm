@@ -659,7 +659,13 @@ renderDaVinciCards events canvas nodeId =
     , renderCard ServerCard sx sy fW fH serverBorder "1" "" canvas.expandedCard
         (serverIcon (sx + 40) (sy + 15))
         "SERVER"
-        (if serverHasError then "✕ " ++ responseStatus else responseStatus ++ " OK")
+        (if noNetEvents then
+            "No response"
+         else if serverHasError then
+            "✕ " ++ responseStatus
+         else
+            responseStatus ++ " OK"
+        )
     , expandedPanel ServerCard sx (sy + fH + 8) fW canvas.expandedCard
         (serverDetail responseEvent serverHasError)
     , renderArrowLine (sx + fW) (sy + fH / 2) sdx (sdy + fH / 2) responseArrowLabel responseArrowColor False
@@ -1011,7 +1017,13 @@ renderJourneyCards events canvas nodeId =
     , renderCard ServerCard sx sy fW fH serverBorder "1" "" canvas.expandedCard
         (serverIcon (sx + 40) (sy + 15))
         "AM SERVER"
-        (if serverHasError then "✕ " ++ responseStatus else "Sends callbacks")
+        (if noNetEvents then
+            "No response"
+         else if serverHasError then
+            "✕ " ++ responseStatus
+         else
+            "Sends callbacks"
+        )
     , expandedPanel ServerCard sx (sy + fH + 8) fW canvas.expandedCard
         (journeyServerDetail responseEvent journeyData serverHasError)
 
