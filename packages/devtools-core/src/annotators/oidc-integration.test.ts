@@ -4,7 +4,7 @@ import { detectDpop } from './dpop-detector.js';
 import { detectPar } from './par-detector.js';
 import { makeEmptyOidcFlowState, trackOidcEvent } from './oidc-flow-tracker.js';
 import { parseWellKnownResponse } from './oidc-discovery.js';
-import { runDiagnosis } from '../background/diagnosis-engine.js';
+import { runDiagnosis } from '../diagnosis/diagnosis-engine.js';
 import type { AuthEvent, NetworkData, OidcSemantics } from '@wolfcola/devtools-types';
 import type { OidcConfig } from './oidc-discovery.js';
 

@@ -25,3 +25,19 @@ export {
   extractJwt,
   findExpiredJwtsInHeaders,
 } from './annotators/jwt-utils.js';
+export {
+  runDiagnosis,
+  runFlowRules,
+  runEventRules,
+} from './diagnosis/diagnosis-engine.js';
+export type {
+  Severity,
+  DiagnosisCategory,
+  FlowIssue,
+  EventIssue,
+  DiagnosisResult,
+} from './diagnosis/diagnosis-engine.js';
+export { serializeDiagnosis } from './diagnosis/serialize-diagnosis.js';
+export type { SerializableDiagnosisResult } from './diagnosis/serialize-diagnosis.js';
+export { renderFlowMarkdown } from './export/markdown.js';
+export { redactFlowState } from './export/redact.js';
