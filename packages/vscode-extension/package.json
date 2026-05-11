@@ -6,7 +6,6 @@
   "publisher": "wolfcola",
   "license": "MIT",
   "private": true,
-  "type": "module",
   "engines": {
     "vscode": "^1.100.0"
   },
@@ -44,7 +43,7 @@
         {
           "id": "oidc-devtools",
           "title": "OIDC DevTools",
-          "icon": "$(shield)"
+          "icon": "icons/oidc-devtools.svg"
         }
       ]
     },

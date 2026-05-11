@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { Effect, ManagedRuntime } from 'effect';
 import { OidcDebugConfigProvider } from './launch/debug-config-provider.js';
 import { CdpClient } from './cdp/cdp-client.js';
 import { discoverTargets, findPageTarget } from './cdp/target-discovery.js';
@@ -7,24 +8,38 @@ import { TimelineTreeProvider } from './providers/timeline-tree.js';
 import { StatusBar } from './status-bar.js';
 import { FlowWebviewPanel } from './panels/flow-webview.js';
 import {
-  buildNetworkEvent,
+  handleMessage,
+  EventStoreService,
+  EventStoreInMemory,
+  runDiagnosis,
+  serializeDiagnosis,
   redactFlowState,
   renderFlowMarkdown,
-  runDiagnosis,
 } from '@wolfcola/devtools-core';
 import type { HarEntry } from '@wolfcola/devtools-core';
-import type { AuthEvent } from '@wolfcola/devtools-types';
-import type { FlowState } from '@wolfcola/devtools-types';
+import type { AuthEvent, FlowState } from '@wolfcola/devtools-types';
 
 let cdpClient: CdpClient | null = null;
 
 export function activate(context: vscode.ExtensionContext): void {
   const timeline = new TimelineTreeProvider();
   const statusBar = new StatusBar();
+  const runtime = ManagedRuntime.make(EventStoreInMemory);
 
   vscode.window.registerTreeDataProvider('oidc-devtools.timeline', timeline);
 
   const flowPanel = new FlowWebviewPanel(context.extensionUri);
+
+  function processEvent(event: AuthEvent): void {
+    timeline.addEvent(event);
+    flowPanel.sendEvent(event);
+    statusBar.setEventCount(timeline.eventCount);
+
+    // Run diagnosis and send to webview
+    const events = timeline.getEvents();
+    const diagnosis = runDiagnosis(events);
+    flowPanel.sendDiagnosis(serializeDiagnosis(diagnosis));
+  }
 
   const startCmd = vscode.commands.registerCommand('oidc-devtools.startCapture', async () => {
     const portInput = await vscode.window.showInputBox({
@@ -56,18 +71,23 @@ export function activate(context: vscode.ExtensionContext): void {
       vscode.window.showInformationMessage(`Connected to: ${target.title}`);
 
       cdpClient.on('harEntry', (entry: HarEntry) => {
-        const event = buildNetworkEvent(entry, null, null);
-        if (!event.flags.isAuthRelated) return;
-        timeline.addEvent(event);
-        flowPanel.sendEvent(event);
-        statusBar.setEventCount(timeline.eventCount);
+        runtime
+          .runPromise(handleMessage({ type: 'NETWORK_EVENT', payload: entry }))
+          .then((result) => {
+            if (result) processEvent(result as AuthEvent);
+          })
+          .catch(console.error);
       });
 
       cdpClient.on('sdkEvent', (_name: string, payload: unknown) => {
         const sdkPayload = (payload as { payload?: unknown }).payload;
-        if (sdkPayload && typeof sdkPayload === 'object') {
-          timeline.addEvent(sdkPayload as AuthEvent);
-          statusBar.setEventCount(timeline.eventCount);
+        if (sdkPayload) {
+          runtime
+            .runPromise(handleMessage({ type: 'SDK_EVENT', payload: sdkPayload }))
+            .then((result) => {
+              if (result) processEvent(result as AuthEvent);
+            })
+            .catch(console.error);
         }
       });
 
@@ -92,6 +112,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const clearCmd = vscode.commands.registerCommand('oidc-devtools.clearEvents', () => {
     timeline.clear();
     statusBar.setEventCount(0);
+    runtime.runPromise(handleMessage({ type: 'CLEAR' })).catch(console.error);
   });
 
   const exportCmd = vscode.commands.registerCommand('oidc-devtools.exportFlow', async () => {
