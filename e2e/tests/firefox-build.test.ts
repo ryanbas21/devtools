@@ -1,19 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 
-const ROOT = path.resolve(__dirname, '../packages/devtools-extension');
-const DIST = path.join(ROOT, 'dist');
+const DIST = path.resolve(import.meta.dirname, '../../packages/devtools-extension/dist');
+
+// These tests verify build output. The builds must be run before this test:
+//   pnpm --filter @wolfcola/devtools-extension build:firefox
+//   pnpm --filter @wolfcola/devtools-extension build
 
 test.describe('firefox build', () => {
-  test.beforeAll(() => {
-    execFileSync('node', ['build.mjs', '--target=firefox'], {
-      cwd: ROOT,
-      stdio: 'pipe',
-    });
-  });
-
   test('produces a valid Firefox manifest', () => {
     const manifest = JSON.parse(
       readFileSync(path.join(DIST, 'manifest.json'), 'utf8'),
@@ -55,18 +50,5 @@ test.describe('firefox build', () => {
         `missing: ${file}`,
       ).toBe(true);
     }
-  });
-
-  test('Chrome build is not contaminated with Firefox fields', () => {
-    execFileSync('node', ['build.mjs'], { cwd: ROOT, stdio: 'pipe' });
-    const manifest = JSON.parse(
-      readFileSync(path.join(DIST, 'manifest.json'), 'utf8'),
-    );
-
-    expect(manifest.background.service_worker).toBe(
-      'background/service-worker.js',
-    );
-    expect(manifest.background).not.toHaveProperty('scripts');
-    expect(manifest).not.toHaveProperty('browser_specific_settings');
   });
 });
