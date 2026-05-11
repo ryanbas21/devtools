@@ -1,4 +1,4 @@
-# WolfCola DevTools
+# WolfCola DevTools — Browser Extension
 
 **Captures, correlates, and diagnoses** OIDC/OAuth 2.0 authentication flows in real time — works standalone with any OIDC provider or as an enhanced companion to the Ping Identity SDK.
 
@@ -100,26 +100,7 @@ The Flow view includes transport controls (**Prev / Play / Pause / Reset**) that
 
 ---
 
-## Why not just use the Network panel?
-
-The Network panel shows HTTP requests. Auth flows are not HTTP requests — they are multi-step state machines that span dozens of requests, involve two independent event streams (network and SDK), and fail in ways that only make sense when you see the full sequence.
-
-WolfCola DevTools gives you:
-
-- **OIDC-aware annotation** — network requests are automatically classified by OAuth phase (authorize, token, userinfo) with extracted parameters (client_id, grant_type, PKCE, DPoP).
-- **Two-stream correlation** — network responses and SDK state transitions are merged into a single timeline, linked by flow ID and causal references.
-- **Automated diagnosis** — CORS misconfigurations, expired JWTs, missing PKCE, DPoP proof errors, and connector errors are detected and explained with remediation steps, not left as a 400 status code.
-- **Flow-level structure** — the Flow view shows the authentication flow as a sequence of nodes with detail cards, not a flat list of URLs.
-- **Inline JWT decoding** — tokens are decoded and displayed with claim formatting directly in the panel.
-- **Playback** — step through the flow to see exactly what the SDK saw at each point.
-
-![Timeline with two-stream correlation](screenshots/Timeline-Screen.png)
-
----
-
 ## Architecture
-
-TypeScript with Effect-TS on the data plane, Elm on the view, Schema-validated at the boundary. Elm was chosen for its compile-time guarantees — the panel has no runtime exceptions.
 
 ```
 Host page
@@ -132,49 +113,27 @@ Host page
       relay.ts           (isolated world — chrome.runtime.sendMessage)
             │
       service-worker.ts  (Effect ManagedRuntime)
-        ├── AuthEventSchema validation (Effect Schema — untrusted input decoded or dropped)
-        ├── EventStore (Effect Ref + chrome.storage.local)
-        ├── OIDC annotation pipeline:
-        │     ├── oidc-discovery.ts     (well-known config parsing)
-        │     ├── oidc-annotator.ts     (phase detection + semantic extraction)
-        │     ├── dpop-detector.ts      (DPoP proof detection)
-        │     └── par-detector.ts       (PAR flow detection)
-        ├── diagnosis-engine.ts (flow rules + event rules)
+        ├── @wolfcola/devtools-core:
+        │     ├── AuthEventSchema validation (Effect Schema)
+        │     ├── EventStore (chrome.storage.local-backed Layer)
+        │     ├── OIDC annotation pipeline (annotators)
+        │     └── diagnosis-engine (flow rules + event rules)
         └── broadcast to panel(s)
             │
-      panel/Main.elm  (Elm 0.19)
+      @wolfcola/devtools-ui → Elm panel
         ├── Timeline view  — chronological event table with Inspector
         ├── Flow view      — node rail + detail card + health banner
         └── Learn view     — flow-aware lifecycle visualization
 ```
 
-Network events follow a parallel path: `devtools.ts` uses `chrome.devtools.network.onRequestFinished` with `entry.getContent()` to capture HAR entries including response bodies, filters them against auth URL patterns (with static asset exclusion), and sends them to the service worker. The OIDC annotation pipeline then enriches each event with semantic metadata before it reaches the panel.
+### Shared packages
 
----
+This extension imports shared logic and UI from two sibling packages:
 
-## Captured event types
+- **[`@wolfcola/devtools-core`](../devtools-core)** — annotators, diagnosis engine, event store, message handler, export logic. All pure TypeScript/Effect with no browser dependencies.
+- **[`@wolfcola/devtools-ui`](../devtools-ui)** — compiled Elm UI (JS + CSS) and TypeScript port interface.
 
-| Type                | Source  | Description                                          |
-| ------------------- | ------- | ---------------------------------------------------- |
-| `network:request`   | network | Outgoing HTTP request to an auth endpoint            |
-| `network:response`  | network | Response received (with OIDC semantic annotations)   |
-| `network:cors-flag` | network | CORS failure detected (status 0, missing headers)    |
-| `sdk:node-change`   | sdk     | DaVinci node transition (start, continue, ...)       |
-| `sdk:config`        | sdk     | SDK configuration snapshot (emitted once per bridge) |
-| `sdk:journey-step`  | sdk     | AM Journey step fulfilled or rejected                |
-| `sdk:oidc-state`    | sdk     | OIDC endpoint settled (authorize, exchange, ...)     |
-| `dom:form-submit`   | dom     | Form submission captured                             |
-| `dom:redirect`      | dom     | Page redirect detected                               |
-| `session:cookie`    | session | Cookie value changed                                 |
-| `session:storage`   | session | `localStorage` value changed                         |
-
-Events are linked by `flowId` and an optional `causedBy` reference pointing to the originating event, enabling two-stream correlation in the Timeline.
-
----
-
-## Security and privacy
-
-The extension requests only `storage` and `clipboardWrite`/`clipboardRead` (for copying collectors and exported data) — no `cookies`, `webRequest`, `tabs`, or other sensitive APIs. Content scripts use a two-world architecture: `content-script.ts` runs in the MAIN world (page access, no extension runtime), while `relay.ts` runs in the isolated world (runtime access, guarded by a sentinel flag and same-source check), preventing arbitrary page code from injecting messages into the background script. All SDK events are decoded through `AuthEventSchema` (Effect Schema) before reaching the EventStore — malformed payloads are dropped with a console warning. Captured data is stored in `storage.local` under a namespaced key and never transmitted off-device. No remote code is loaded or executed.
+The extension itself owns only browser-extension-specific code: the manifest, service worker (chrome.runtime wiring + chrome.storage EventStore layer), content scripts, devtools page, and panel.ts (Elm port wiring to chrome.runtime).
 
 ---
 
@@ -185,9 +144,9 @@ pnpm build              # Chrome (default)
 pnpm build:firefox      # Firefox
 ```
 
-Output is written to `packages/devtools-extension/dist/`. Both targets produce the same JS bundles — only the manifest differs (Firefox uses `background.scripts` instead of `background.service_worker` and includes `browser_specific_settings.gecko`).
+Output is written to `dist/`. Both targets produce the same JS bundles — only the manifest differs (Firefox uses `background.scripts` instead of `background.service_worker` and includes `browser_specific_settings.gecko`).
 
-> **Prerequisite:** [Elm](https://guide.elm-lang.org/install/elm.html) must be installed and on your `PATH`. The build step compiles `src/panel/Main.elm` into a single JS bundle.
+The build copies compiled Elm and CSS from `@wolfcola/devtools-ui` — Elm is no longer compiled in this package.
 
 ---
 
@@ -210,8 +169,6 @@ After rebuilding, click the refresh icon on the extension card at `chrome://exte
 3. Click **Load Temporary Add-on...**
 4. Select `packages/devtools-extension/dist/manifest.json`
 5. Open DevTools on any page with OIDC traffic — the **WolfCola DevTools** tab appears
-
-Temporary add-ons are removed when Firefox closes. For persistent installation, use a signed `.xpi` from [addons.mozilla.org](https://addons.mozilla.org).
 
 ---
 
@@ -259,7 +216,7 @@ attachOidcBridge(oidcClient, { clientId: 'my-spa-client', ...config });
 
 A chronological table of all captured events. Each row shows event type, status, method, and URL with colour-coded error/CORS flags. Network events with OIDC annotations show a phase badge (e.g. `authorize`, `token`, `par`). A **graph sidebar** draws a vertical SVG rail of SDK node-change events with status-coloured circles and connector lines — click a node in the rail to jump to it in the table. Click any row to open its Inspector panel.
 
-**Inspector tabs** — the right-hand panel shows contextual tabs depending on the selected event:
+**Inspector tabs:**
 
 | Tab            | Shows                                                                                  | Appears for            |
 | -------------- | -------------------------------------------------------------------------------------- | ---------------------- |
@@ -289,18 +246,26 @@ A canvas-based visualization that maps the request lifecycle. The layout adapts 
 | **OIDC + DPoP** | DPoP proof detected                 | Client -> Auth Server -> Token+DPoP -> Result   |
 | **OIDC + PAR**  | PAR request detected                | Client -> PAR -> Auth Server -> Token -> Result |
 
-Each card shows a labelled icon with animated connector arrows. Clicking a card expands an accordion detail panel with contextual data — request parameters for the client card, response status and callbacks for the server card, token summary for the result card. Error states are highlighted with red borders and a pulse animation on the error source. Cards are draggable and the canvas supports pan and zoom.
-
-When both SDK bridge events and network OIDC annotations are present, the Learn tab gathers data from both sources — the rail shows SDK events while the card details are populated from network-level OIDC semantics (which carry the rich token and PKCE data).
-
 ![Learn tab showing request lifecycle with error highlighting](screenshots/Learn-Tab-Error-Screen.png)
 
 ---
 
-## Packages
+## Security and privacy
 
-| Package                        | Description                                                      |
-| ------------------------------ | ---------------------------------------------------------------- |
-| `@wolfcola/devtools-extension` | The browser extension (this package — private, not published)    |
-| `@wolfcola/devtools-bridge`    | Opt-in SDK adapter — emits `AuthEvent`s from subscribable clients |
-| `@wolfcola/devtools-types`     | Shared `AuthEvent` Effect Schema definitions and TypeScript types |
+The extension requests only `storage` and `clipboardWrite`/`clipboardRead` — no `cookies`, `webRequest`, `tabs`, or other sensitive APIs. Content scripts use a two-world architecture: `content-script.ts` runs in the MAIN world (page access, no extension runtime), while `relay.ts` runs in the isolated world (runtime access, guarded by a sentinel flag and same-source check). All SDK events are decoded through `AuthEventSchema` (Effect Schema) before reaching the EventStore — malformed payloads are dropped. Captured data is stored in `storage.local` under a namespaced key and never transmitted off-device. No remote code is loaded or executed.
+
+---
+
+## Testing
+
+```bash
+pnpm test    # unit tests (vitest)
+```
+
+E2E tests are in the [`e2e/`](../../e2e) package at the repo root.
+
+---
+
+## License
+
+MIT
