@@ -6,9 +6,10 @@ import { injectSdkCapture } from './cdp/sdk-injector.js';
 import { TimelineTreeProvider } from './providers/timeline-tree.js';
 import { StatusBar } from './status-bar.js';
 import { FlowWebviewPanel } from './panels/flow-webview.js';
-import { buildNetworkEvent } from '@wolfcola/devtools-core';
+import { buildNetworkEvent, redactFlowState, renderFlowMarkdown, runDiagnosis } from '@wolfcola/devtools-core';
 import type { HarEntry } from '@wolfcola/devtools-core';
 import type { AuthEvent } from '@wolfcola/devtools-types';
+import type { FlowState } from '@wolfcola/devtools-types';
 
 let cdpClient: CdpClient | null = null;
 
@@ -88,8 +89,49 @@ export function activate(context: vscode.ExtensionContext): void {
     statusBar.setEventCount(0);
   });
 
-  const exportCmd = vscode.commands.registerCommand('oidc-devtools.exportFlow', () => {
-    vscode.window.showInformationMessage('Export: coming in Task 15');
+  const exportCmd = vscode.commands.registerCommand('oidc-devtools.exportFlow', async () => {
+    const events = timeline.getEvents();
+    if (events.length === 0) {
+      vscode.window.showWarningMessage('No events captured yet.');
+      return;
+    }
+
+    const format = await vscode.window.showQuickPick(['JSON', 'Markdown'], {
+      placeHolder: 'Export format',
+    });
+    if (!format) return;
+
+    const flowState: FlowState = {
+      flowId: null,
+      capturedAt: new Date().toISOString(),
+      events,
+      summary: { nodeCount: 0, errorCount: 0, corsFlags: [], duration: 0, sdkConnected: false },
+      lastSdkEventId: null,
+    };
+
+    const redacted = redactFlowState(flowState);
+
+    if (format === 'JSON') {
+      const envelope = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        redacted: true,
+        flow: redacted,
+      };
+      const doc = await vscode.workspace.openTextDocument({
+        content: JSON.stringify(envelope, null, 2),
+        language: 'json',
+      });
+      await vscode.window.showTextDocument(doc);
+    } else {
+      const diagnosis = runDiagnosis(redacted.events);
+      const md = renderFlowMarkdown(redacted, diagnosis);
+      const doc = await vscode.workspace.openTextDocument({
+        content: md,
+        language: 'markdown',
+      });
+      await vscode.window.showTextDocument(doc);
+    }
   });
 
   const selectCmd = vscode.commands.registerCommand(
