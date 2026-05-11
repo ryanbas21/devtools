@@ -552,7 +552,7 @@ update msg model =
                     model.learnCanvas
 
                 newZoom =
-                    clamp 0.5 3.0 (canvas.zoom + delta * 0.001)
+                    clamp 0.5 3.0 (canvas.zoom - delta * 0.001)
             in
             ( { model | learnCanvas = { canvas | zoom = newZoom } }
             , Cmd.none

@@ -949,25 +949,32 @@ learnDragTests =
 learnZoomTests : Test
 learnZoomTests =
     describe "Learn zoom interactions"
-        [ test "LearnZoom adjusts zoom level" <|
+        [ test "LearnZoom with positive delta zooms out" <|
             \_ ->
                 let
                     ( model, _ ) =
                         update (LearnZoom 100) initModel
+                in
+                Expect.within (Expect.Absolute 0.001) 0.9 model.learnCanvas.zoom
+        , test "LearnZoom with negative delta zooms in" <|
+            \_ ->
+                let
+                    ( model, _ ) =
+                        update (LearnZoom -100) initModel
                 in
                 Expect.within (Expect.Absolute 0.001) 1.1 model.learnCanvas.zoom
         , test "LearnZoom clamps to minimum 0.5" <|
             \_ ->
                 let
                     ( model, _ ) =
-                        update (LearnZoom -10000) initModel
+                        update (LearnZoom 10000) initModel
                 in
                 Expect.within (Expect.Absolute 0.001) 0.5 model.learnCanvas.zoom
         , test "LearnZoom clamps to maximum 3.0" <|
             \_ ->
                 let
                     ( model, _ ) =
-                        update (LearnZoom 10000) initModel
+                        update (LearnZoom -10000) initModel
                 in
                 Expect.within (Expect.Absolute 0.001) 3.0 model.learnCanvas.zoom
         ]
