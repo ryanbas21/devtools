@@ -41,3 +41,14 @@ export { serializeDiagnosis } from './diagnosis/serialize-diagnosis.js';
 export type { SerializableDiagnosisResult } from './diagnosis/serialize-diagnosis.js';
 export { renderFlowMarkdown } from './export/markdown.js';
 export { redactFlowState } from './export/redact.js';
+export {
+  EventStoreService,
+  EventStoreInMemory,
+  makeEmptyFlowState,
+  updateSummary,
+} from './event-store/event-store.service.js';
+export type {
+  ExtendedFlowState,
+  EventStoreServiceShape,
+} from './event-store/event-store.service.js';
+export { handleMessage } from './message-handler/message-handler.js';
