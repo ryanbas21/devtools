@@ -5,9 +5,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 function makeJwt(payload: Record<string, unknown>): string {
-  const header = Buffer.from(
-    JSON.stringify({ alg: 'RS256', typ: 'JWT' }),
-  ).toString('base64url');
+  const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sig = Buffer.from('mock-signature').toString('base64url');
   return `${header}.${body}.${sig}`;
@@ -39,10 +37,7 @@ export async function createMockOidcServer(
     const state = c.req.query('state') ?? '';
     const code = `mock-auth-code-${Date.now()}`;
     const separator = redirectUri.includes('?') ? '&' : '?';
-    return c.redirect(
-      `${redirectUri}${separator}code=${code}&state=${state}`,
-      302,
-    );
+    return c.redirect(`${redirectUri}${separator}code=${code}&state=${state}`, 302);
   });
 
   app.post('/token', (c) => {
@@ -77,20 +72,14 @@ export async function createMockOidcServer(
   });
 
   app.get('/test-app', (c) => {
-    const html = readFileSync(
-      path.join(import.meta.dirname, '../fixtures/test-page.html'),
-      'utf8',
-    );
+    const html = readFileSync(path.join(import.meta.dirname, '../fixtures/test-page.html'), 'utf8');
     return c.html(html);
   });
 
   return new Promise((resolve) => {
     const server = serve({ fetch: app.fetch, port }, () => {
       const addr = server.address();
-      const actualPort =
-        port === 0 && typeof addr === 'object' && addr !== null
-          ? addr.port
-          : port;
+      const actualPort = port === 0 && typeof addr === 'object' && addr !== null ? addr.port : port;
       resolve({ server, baseUrl: `http://localhost:${actualPort}` });
     });
   });

@@ -34,10 +34,7 @@ export const test = base.extend<TestFixtures>({
 
       const context = await chromium.launchPersistentContext('', {
         headless: false,
-        args: [
-          `--disable-extensions-except=${EXT_DIST}`,
-          `--load-extension=${EXT_DIST}`,
-        ],
+        args: [`--disable-extensions-except=${EXT_DIST}`, `--load-extension=${EXT_DIST}`],
       });
       await use(context);
       await context.close();

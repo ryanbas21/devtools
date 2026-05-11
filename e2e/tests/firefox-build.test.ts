@@ -10,22 +10,15 @@ const DIST = path.resolve(import.meta.dirname, '../../packages/devtools-extensio
 
 test.describe('firefox build', () => {
   test('produces a valid Firefox manifest', () => {
-    const manifest = JSON.parse(
-      readFileSync(path.join(DIST, 'manifest.json'), 'utf8'),
-    );
+    const manifest = JSON.parse(readFileSync(path.join(DIST, 'manifest.json'), 'utf8'));
 
-    expect(manifest.background.scripts).toEqual([
-      'background/service-worker.js',
-    ]);
+    expect(manifest.background.scripts).toEqual(['background/service-worker.js']);
     expect(manifest.background).not.toHaveProperty('service_worker');
 
-    expect(manifest.browser_specific_settings.gecko.id).toBe(
-      'oidc-devtool@wolfcola',
-    );
-    expect(
-      manifest.browser_specific_settings.gecko.data_collection_permissions
-        .required,
-    ).toEqual(['none']);
+    expect(manifest.browser_specific_settings.gecko.id).toBe('oidc-devtool@wolfcola');
+    expect(manifest.browser_specific_settings.gecko.data_collection_permissions.required).toEqual([
+      'none',
+    ]);
   });
 
   test('all expected files exist in dist', () => {
@@ -45,10 +38,7 @@ test.describe('firefox build', () => {
     ];
 
     for (const file of expectedFiles) {
-      expect(
-        existsSync(path.join(DIST, file)),
-        `missing: ${file}`,
-      ).toBe(true);
+      expect(existsSync(path.join(DIST, file)), `missing: ${file}`).toBe(true);
     }
   });
 });

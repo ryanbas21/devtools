@@ -84,9 +84,7 @@ test.describe('network capture pipeline', () => {
           request: {
             url,
             method: 'POST',
-            headers: [
-              { name: 'content-type', value: 'application/x-www-form-urlencoded' },
-            ],
+            headers: [{ name: 'content-type', value: 'application/x-www-form-urlencoded' }],
             postData: {
               text: 'grant_type=authorization_code&code=mock&client_id=test',
             },

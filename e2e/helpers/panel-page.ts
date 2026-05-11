@@ -1,9 +1,6 @@
 import type { Page } from '@playwright/test';
 
-export async function openPanelPage(
-  page: Page,
-  extensionId: string,
-): Promise<Page> {
+export async function openPanelPage(page: Page, extensionId: string): Promise<Page> {
   await page.goto(`chrome-extension://${extensionId}/panel/panel.html`);
   await page.waitForSelector('#app', { state: 'attached' });
   return page;
@@ -25,10 +22,7 @@ export async function getEventCount(page: Page): Promise<number> {
   return page.locator('.tl-row').count();
 }
 
-export async function hasOidcBadge(
-  page: Page,
-  phase: string,
-): Promise<boolean> {
+export async function hasOidcBadge(page: Page, phase: string): Promise<boolean> {
   const badges = page.locator('.tag-oidc');
   const count = await badges.count();
   for (let i = 0; i < count; i++) {

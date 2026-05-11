@@ -2,10 +2,7 @@ import { test, expect } from '../fixtures/extension.js';
 import { openPanelPage } from '../helpers/panel-page.js';
 
 test.describe('panel renders events', () => {
-  test('displays injected SDK event in timeline', async ({
-    context,
-    extensionId,
-  }) => {
+  test('displays injected SDK event in timeline', async ({ context, extensionId }) => {
     const panelPage = await context.newPage();
     await openPanelPage(panelPage, extensionId);
 
@@ -38,10 +35,7 @@ test.describe('panel renders events', () => {
     await panelPage.close();
   });
 
-  test('clear button resets the timeline', async ({
-    context,
-    extensionId,
-  }) => {
+  test('clear button resets the timeline', async ({ context, extensionId }) => {
     const panelPage = await context.newPage();
     await openPanelPage(panelPage, extensionId);
 
