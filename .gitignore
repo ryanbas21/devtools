@@ -10,3 +10,5 @@ elm-stuff/
 *.zip
 packged/
 out-tsc/
+.direnv/
+.corepack/
