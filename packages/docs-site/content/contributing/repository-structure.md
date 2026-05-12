@@ -77,4 +77,4 @@ The `devtools-types` package is the shared foundation. It defines the `AuthEvent
 4. Add a `tsconfig.json` extending the root config
 5. Add the package to the sidebar in `packages/docs-site/app/Shared.elm`
 6. Create a content page in `packages/docs-site/content/packages/`
-7. Create an API docs module in `packages/docs-site/src/ApiDocs/`
+7. Create a content page in `packages/docs-site/content/docs/` for integration guides

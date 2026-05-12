@@ -121,7 +121,7 @@ Test files live in `packages/<name>/test/` directories, mirroring the source str
 The docs site follows standard Elm conventions:
 
 - **elm-format** — All Elm files must be formatted with `elm-format`. The pre-commit hook runs this automatically.
-- **Module naming** — Modules use PascalCase and match their file path (e.g. `ApiDocs.TreeshakeCheck` lives at `src/ApiDocs/TreeshakeCheck.elm`).
+- **Module naming** — Modules use PascalCase and match their file path (e.g. `Search` lives at `src/Search.elm`).
 - **Type annotations** — Every top-level function must have a type annotation.
 - **No partial functions** — Never use `List.head`, `Maybe.withDefault` without documenting why, or any function that can crash. Use pattern matching instead.
 

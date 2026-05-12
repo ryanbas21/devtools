@@ -1,13 +1,13 @@
 ---
 title: 'Generic OIDC Integration'
-description: 'Integrate wolfcola devtools with any OIDC client using the generic adapter'
+description: 'Integrate wolfcola devtools with OIDC clients using the OIDC bridge adapter'
 section: guides
 order: 7
 ---
 
 # Generic OIDC Integration
 
-If your OIDC client does not have a dedicated adapter (like DaVinci or Journey), you can use the generic OIDC adapter. It works with any client library by letting you provide hook functions that the bridge calls to subscribe to events.
+The OIDC bridge adapter instruments OIDC clients that expose their state via an RTK Query-style subscribable store. It maps mutation endpoint results to OIDC protocol phases.
 
 ## Setup
 
@@ -17,89 +17,81 @@ If your OIDC client does not have a dedicated adapter (like DaVinci or Journey),
 npm install @wolfcola/devtools-bridge
 ```
 
-### Create a Generic OIDC Bridge
+### Attach the OIDC Bridge
 
 ```typescript
-import { createBridge } from '@wolfcola/devtools-bridge';
-import { oidc } from '@wolfcola/devtools-bridge/adapters/oidc';
+import { attachOidcBridge } from '@wolfcola/devtools-bridge';
 
-const bridge = createBridge(
-  oidc({
-    onAuthorize: (cb) => myClient.on('authorize', cb),
-    onToken: (cb) => myClient.on('token', cb),
-    onError: (cb) => myClient.on('error', cb),
-  }),
-);
+const handle = attachOidcBridge(oidcClient);
+
+// Optionally pass config with clientId and devtools options
+const handle = attachOidcBridge(oidcClient, { clientId: 'my-app' }, { consoleLog: true });
 ```
 
-You provide three hook functions that subscribe to your client's events. The adapter translates these into standard `AuthEvent` objects.
-
-## Hook Functions
-
-| Hook          | Called when                               | Event type emitted |
-| ------------- | ----------------------------------------- | ------------------ |
-| `onAuthorize` | Authorization request starts or completes | `authorize`        |
-| `onToken`     | Tokens are issued or refreshed            | `token`            |
-| `onError`     | An authentication error occurs            | `error`            |
-
-### Optional Hooks
-
-You can also provide additional hooks for more detailed event capture:
-
-```typescript
-const bridge = createBridge(
-  oidc({
-    onAuthorize: (cb) => myClient.on('authorize', cb),
-    onToken: (cb) => myClient.on('token', cb),
-    onError: (cb) => myClient.on('error', cb),
-    onRedirect: (cb) => myClient.on('redirect', cb),
-    onLogout: (cb) => myClient.on('logout', cb),
-  }),
-);
-```
-
-## What Gets Captured
-
-With the generic OIDC adapter active, the bridge emits events for:
-
-- **Authorization start** -- when the auth flow begins
-- **Token issuance** -- access tokens, refresh tokens, ID tokens
-- **Token refresh** -- automatic or manual token renewal
-- **Errors** -- failed auth requests, expired tokens, network errors
-- **Redirects** -- OIDC redirect events (if `onRedirect` hook provided)
-- **Logout** -- session termination (if `onLogout` hook provided)
-
-## Advanced Configuration
-
-### Filtering Events
-
-```typescript
-const bridge = createBridge(oidc({ onAuthorize, onToken, onError }), {
-  filter: (event) => event.type !== 'redirect',
-});
-```
-
-### Custom Metadata
-
-```typescript
-const bridge = createBridge(oidc({ onAuthorize, onToken, onError }), {
-  metadata: {
-    provider: 'auth0',
-    environment: 'staging',
-  },
-});
-```
+The bridge subscribes to the client via `client.subscribe()` and reads state via `client.getState()`.
 
 ### Cleanup
 
 ```typescript
-bridge.destroy();
+handle.detach();
 ```
 
-<callout type="info">The generic adapter has the smallest bundle footprint (~0.8 kB minified + gzipped) since it delegates all event subscription to your hook functions.</callout>
+<callout type="warning">Always call `handle.detach()` when you are done. Failing to do so may cause memory leaks from lingering event listeners.</callout>
+
+## What Gets Captured
+
+With the OIDC bridge attached, the following events are emitted:
+
+- **`sdk:config`** -- Emitted once on the first mutation (when `config` is provided). Contains the SDK configuration object.
+- **`sdk:oidc-state`** -- Emitted for each fulfilled or rejected mutation that maps to a known OIDC endpoint. Contains `OidcData` with the protocol phase, status, and error details.
+
+## How It Works
+
+The bridge monitors RTK Query state at `oidc.mutations`. It expects an `OidcSubscribable` interface:
+
+```typescript
+interface OidcSubscribable {
+  subscribe: (listener: () => void) => () => void;
+  getState: () => unknown;
+}
+```
+
+### Endpoint-to-Phase Mapping
+
+The bridge maps RTK Query mutation endpoint names to OIDC protocol phases:
+
+| Endpoint          | Phase       |
+| ----------------- | ----------- |
+| `authorizeFetch`  | `authorize` |
+| `authorizeIframe` | `authorize` |
+| `exchange`        | `exchange`  |
+| `revoke`          | `revoke`    |
+| `userInfo`        | `userinfo`  |
+| `endSession`      | `logout`    |
+
+Mutations with endpoint names not in this map are silently ignored.
+
+### Processing
+
+On each subscription callback:
+
+1. The bridge decodes the state with `Schema.decodeUnknownOption` looking for `oidc.mutations`
+2. For each mutation entry not yet emitted, it checks if `status` is `'fulfilled'` or `'rejected'`
+3. The `endpointName` is mapped to an OIDC phase
+4. **Fulfilled mutations:** An `OidcData` event is emitted with `status: 'success'`
+5. **Rejected mutations:** An `OidcData` event is emitted with `status: 'error'`, including `errorCode` and `errorMessage` extracted from the error payload
+6. Stale mutation IDs no longer in the cache are automatically pruned from the deduplication set
+
+### OidcData Fields
+
+- `phase`: `'authorize'` | `'exchange'` | `'revoke'` | `'userinfo'` | `'logout'`
+- `status`: `'success'` | `'error'`
+- `clientId`: From the config object (if provided)
+- `errorCode`: Extracted from `error.data.error` or HTTP status
+- `errorMessage`: Extracted from `error.data.error_description`, `error.data.message`, or `error.message`
 
 ## Troubleshooting
 
-- **No events appearing** -- Verify that your hook functions are correctly subscribing to your client's events. The callbacks must be invoked when events fire.
-- **Missing event types** -- The generic adapter only captures what you wire up. If you need redirect or logout events, provide the optional hooks.
-- **Redacted fields showing as empty** -- The bridge redacts sensitive fields by default. Pass `redact: false` during development only.
+- **No events appearing** -- Verify that `window.__PING_DEVTOOLS_EXTENSION__` exists. The bridge only emits events when the Ping DevTools extension is detected.
+- **Missing OIDC events** -- Only mutations with recognized endpoint names are emitted. Custom endpoints not in the mapping table are ignored.
+- **Pending mutations ignored** -- Only `fulfilled` and `rejected` mutations are emitted. Pending mutations are skipped.

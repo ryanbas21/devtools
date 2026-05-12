@@ -13,7 +13,7 @@ Ping Identity DaVinci is an orchestration platform for identity flows. The wolfc
 
 DaVinci flows consist of a series of nodes that the user progresses through. Each node may involve user interaction (login forms, MFA challenges), server-side decisions (risk evaluation, policy checks), or external service calls (social login providers, identity verification).
 
-The devtools bridge captures every node transition as an `AuthEvent` and the overall flow progress as a `FlowState`, giving you full visibility into what is happening during authentication.
+The devtools bridge monitors a DaVinci client's `Subscribable` interface and emits an `AuthEvent` on every node status transition, giving you full visibility into what is happening during authentication.
 
 ## Setup
 
@@ -23,79 +23,68 @@ The devtools bridge captures every node transition as an `AuthEvent` and the ove
 npm install @wolfcola/devtools-bridge
 ```
 
-### Create a DaVinci Bridge
+### Attach the DaVinci Bridge
 
 ```typescript
-import { createBridge } from '@wolfcola/devtools-bridge';
-import { davinci } from '@wolfcola/devtools-bridge/adapters/davinci';
+import { attachDaVinciBridge } from '@wolfcola/devtools-bridge';
 
-// Pass your DaVinci client instance to the adapter
-const bridge = createBridge(davinci(daVinciClient));
-```
+// Pass your DaVinci client instance
+const handle = attachDaVinciBridge(daVinciClient);
 
-The `davinci` adapter hooks into the DaVinci SDK's event system and translates its internal events into the standard `AuthEvent` schema that the devtools panel understands.
-
-## What Gets Captured
-
-With the DaVinci adapter active, the bridge emits events for:
-
-- **Flow start** — when `daVinciClient.start()` is called
-- **Node transitions** — each time the flow advances to a new node
-- **User submissions** — form data submitted at each node (passwords are redacted)
-- **Collector callbacks** — interactions with individual collectors within a node
-- **Errors** — authentication failures, network errors, timeout errors
-- **Flow completion** — successful authentication with token issuance
-
-## Flow State Tracking
-
-The bridge also maintains a `FlowState` object that represents the current position in the DaVinci flow:
-
-```typescript
-// FlowState is updated automatically
-// Access it from the DevTools panel or programmatically:
-bridge.getFlowState();
-// => { step: "username-password", tokens: null, error: null }
-```
-
-The DevTools extension visualizes this as a node graph in the Flow view, where each step is a node and transitions are edges.
-
-## Advanced Configuration
-
-### Filtering Events
-
-You can filter which events are emitted to the devtools panel:
-
-```typescript
-const bridge = createBridge(davinci(daVinciClient), {
-  filter: (event) => event.type !== 'collector_callback',
-});
-```
-
-### Custom Metadata
-
-Attach custom metadata to every event for debugging:
-
-```typescript
-const bridge = createBridge(davinci(daVinciClient), {
-  metadata: {
-    environment: 'staging',
-    flowId: 'login-v2',
+// Optionally pass SDK config and devtools options
+const handle = attachDaVinciBridge(
+  daVinciClient,
+  {
+    clientId: 'my-app',
+    redirectUri: 'https://example.com/callback',
   },
-});
+  { consoleLog: true },
+);
 ```
+
+The bridge subscribes to the client via `client.subscribe()` and reads node state via `client.getNode()`. It decodes each node using an internal schema and only emits events when the node status actually changes.
 
 ### Cleanup
 
-When the component unmounts or the flow completes, destroy the bridge to stop event capture and release resources:
-
 ```typescript
-bridge.destroy();
+handle.detach();
 ```
 
-<callout type="warning">Always call `bridge.destroy()` when you are done. Failing to do so may cause memory leaks from lingering event listeners.</callout>
+<callout type="warning">Always call `handle.detach()` when you are done. Failing to do so may cause memory leaks from lingering event listeners.</callout>
+
+## What Gets Captured
+
+With the DaVinci bridge attached, the following events are emitted:
+
+- **`sdk:config`** -- Emitted once on the first node transition (when `config` is provided). Contains the SDK configuration object.
+- **`sdk:node-change`** -- Emitted on every node status transition. Contains `SdkData` with `nodeStatus`, `previousStatus`, `interactionId`, `interactionToken`, `nodeId`, `nodeName`, `nodeDescription`, `eventName`, `httpStatus`, `collectors`, `error`, `authorization`, `session`, and `responseBody`.
+- **`session:cookie`** -- Emitted when `document.cookie` changes between node transitions.
+- **`session:storage`** -- Emitted when `localStorage` values change between node transitions.
+
+## How It Works
+
+The bridge uses the `Subscribable` interface expected by the DaVinci SDK:
+
+```typescript
+interface Subscribable {
+  subscribe: (listener: () => void) => () => void;
+  getNode: () => unknown;
+  cache?: {
+    getCache: (requestId: string) => unknown;
+  };
+}
+```
+
+On each subscription callback:
+
+1. The bridge calls `client.getNode()` and decodes the result with `Schema.decodeUnknownOption`
+2. If the node status matches the previous status, the event is skipped (deduplication)
+3. If `window.__PING_DEVTOOLS_EXTENSION__` is not present, the event is dropped (no extension installed)
+4. The node data is mapped to `SdkData` via the pure `nodeToSdkData` function
+5. Session snapshots (cookies + localStorage) are taken before and after, with diffs emitted as separate events
 
 ## Troubleshooting
 
-- **No events appearing** — Verify that the DaVinci SDK version is compatible. The adapter supports `@ping-identity/davinci-client`.
-- **Missing node transitions** — Some custom DaVinci nodes may not emit standard events. Contact the node author to ensure compatibility.
-- **Redacted fields showing as empty** — The bridge redacts sensitive fields by default. To see raw values during development, pass `redact: false` in the bridge options (never do this in production).
+- **No events appearing** -- Verify that `window.__PING_DEVTOOLS_EXTENSION__` exists. The bridge only emits events when the Ping DevTools extension is detected.
+- **Missing node transitions** -- The bridge deduplicates by `nodeStatus`. If two consecutive nodes have the same status string, only the first is emitted.
+- **Optional peer dependency** -- The bridge has `@forgerock/davinci-client` as an optional peer dependency. You do not need to install it separately if you are already using the DaVinci SDK.

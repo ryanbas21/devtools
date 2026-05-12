@@ -17,70 +17,63 @@ Ping Identity Journey (formerly Tree-based authentication) uses a series of call
 npm install @wolfcola/devtools-bridge
 ```
 
-### Create a Journey Bridge
+### Attach the Journey Bridge
 
 ```typescript
-import { createBridge } from '@wolfcola/devtools-bridge';
-import { journey } from '@wolfcola/devtools-bridge/adapters/journey';
+import { attachJourneyBridge } from '@wolfcola/devtools-bridge';
 
-const bridge = createBridge(journey(journeyConfig));
+const handle = attachJourneyBridge(journeyClient);
+
+// Optionally pass SDK config and devtools options
+const handle = attachJourneyBridge(journeyClient, sdkConfig, { consoleLog: true });
 ```
 
-The `journey` adapter hooks into the Journey SDK's callback mechanism and translates each step into the standard `AuthEvent` schema.
-
-## What Gets Captured
-
-With the Journey adapter active, the bridge emits events for:
-
-- **Flow start** -- when the Journey tree begins
-- **Callback transitions** -- each time the flow presents a new set of callbacks
-- **User submissions** -- data submitted at each callback step (passwords are redacted)
-- **Step transitions** -- progression through the authentication tree
-- **Session token issuance** -- successful authentication with token delivery
-- **Errors** -- authentication failures and timeout errors
-
-## Flow State Tracking
-
-The bridge maintains a `FlowState` object representing the current position in the Journey tree:
-
-```typescript
-bridge.getFlowState();
-// => { step: "username-password", tokens: null, error: null }
-```
-
-The DevTools extension visualizes this in the Flow view, showing each callback step as a node in the tree.
-
-## Advanced Configuration
-
-### Filtering Events
-
-```typescript
-const bridge = createBridge(journey(journeyConfig), {
-  filter: (event) => event.type !== 'callback_transition',
-});
-```
-
-### Custom Metadata
-
-```typescript
-const bridge = createBridge(journey(journeyConfig), {
-  metadata: {
-    environment: 'staging',
-    tree: 'login-v2',
-  },
-});
-```
+The bridge subscribes to the client via `client.subscribe()` and reads state via `client.getState()`.
 
 ### Cleanup
 
 ```typescript
-bridge.destroy();
+handle.detach();
 ```
 
-<callout type="warning">Always call `bridge.destroy()` when you are done. Failing to do so may cause memory leaks from lingering event listeners.</callout>
+<callout type="warning">Always call `handle.detach()` when you are done. Failing to do so may cause memory leaks from lingering event listeners.</callout>
+
+## What Gets Captured
+
+With the Journey bridge attached, the following events are emitted:
+
+- **`sdk:config`** -- Emitted once on the first mutation (when `config` is provided). Contains the SDK configuration object.
+- **`sdk:journey-step`** -- Emitted for each fulfilled or rejected mutation. Contains `JourneyData` with the step type and associated fields.
+
+## How It Works
+
+The bridge monitors RTK Query state at `journeyReducer.mutations`. It expects a `JourneySubscribable` interface:
+
+```typescript
+interface JourneySubscribable {
+  subscribe: (listener: () => void) => () => void;
+  getState: () => unknown;
+}
+```
+
+On each subscription callback:
+
+1. The bridge decodes the state with `Schema.decodeUnknownOption` looking for `journeyReducer.mutations`
+2. For each mutation entry not yet emitted, it checks if `status` is `'fulfilled'` or `'rejected'`
+3. **Fulfilled mutations:** The step payload is decoded and mapped to `JourneyData`. The `stepType` is determined by: `authId` present = `'Step'`, `successUrl` present = `'LoginSuccess'`, otherwise `'LoginFailure'`
+4. **Rejected mutations:** A `LoginFailure` event is emitted with the extracted error message
+5. Stale mutation IDs no longer in the cache are automatically pruned from the deduplication set
+
+### JourneyData Fields
+
+- `stepType`: `'Step'` | `'LoginSuccess'` | `'LoginFailure'`
+- `callbacks`: Array of callback objects from the step
+- `authId`, `tokenId`, `successUrl`: Step identifiers
+- `realm`, `stage`, `header`, `description`: Step metadata
+- `errorCode`, `errorMessage`, `errorReason`: Error details (for `LoginFailure`)
 
 ## Troubleshooting
 
-- **No events appearing** -- Verify that the Journey SDK is correctly configured and the adapter receives the config object.
-- **Missing step transitions** -- Some custom callback handlers may not emit standard events. Ensure callbacks follow the Ping Identity SDK conventions.
-- **Redacted fields showing as empty** -- The bridge redacts sensitive fields by default. Pass `redact: false` in bridge options during development only.
+- **No events appearing** -- Verify that `window.__PING_DEVTOOLS_EXTENSION__` exists. The bridge only emits events when the Ping DevTools extension is detected.
+- **Missing step transitions** -- The bridge deduplicates by mutation request ID. Each mutation is only emitted once.
+- **Pending mutations ignored** -- Only `fulfilled` and `rejected` mutations are emitted. Pending mutations are skipped.

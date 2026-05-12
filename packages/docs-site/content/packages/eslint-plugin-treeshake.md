@@ -1,6 +1,6 @@
 ---
 title: '@wolfcola/eslint-plugin-treeshake'
-description: 'ESLint plugin that flags tree-breaking patterns'
+description: 'ESLint plugin that flags tree-shaking hazards in your code'
 section: packages
 order: 2
 ---
@@ -17,100 +17,86 @@ npm install -D @wolfcola/eslint-plugin-treeshake
 
 ## Configuration
 
-### ESLint Flat Config (recommended)
+### Flat Config (recommended)
 
 ```javascript
 import treeshake from '@wolfcola/eslint-plugin-treeshake';
 
+// Warns on all hazard patterns
 export default [treeshake.configs.recommended];
 ```
 
-### Legacy `.eslintrc`
-
-```json
-{
-  "plugins": ["@wolfcola/treeshake"],
-  "extends": ["plugin:@wolfcola/treeshake/recommended"]
-}
-```
-
-## Rules
-
-### `treeshake/no-top-level-side-effects`
-
-Disallows expressions at module scope that produce side effects. Side effects at the top level prevent bundlers from removing the module even when none of its exports are used.
-
-**Bad:**
-
-```typescript
-// This runs when the module is imported, even if nothing is used
-console.log('module loaded');
-const el = document.createElement('div');
-```
-
-**Good:**
-
-```typescript
-// Side effects are deferred to function calls
-export const init = () => {
-  console.log('module loaded');
-  const el = document.createElement('div');
-  return el;
-};
-```
-
-### `treeshake/no-mutable-module-scope`
-
-Flags `let` and `var` declarations at module scope that are read by exported functions. Mutable bindings create implicit dependencies that bundlers cannot safely eliminate.
-
-**Bad:**
-
-```typescript
-let count = 0;
-export const increment = () => ++count;
-```
-
-**Good:**
-
-```typescript
-export const createCounter = () => {
-  let count = 0;
-  return { increment: () => ++count };
-};
-```
-
-### `treeshake/no-export-star`
-
-Warns against `export * from "..."` patterns. Barrel files that re-export everything from sub-modules make it difficult for bundlers to determine which exports are actually used.
-
-**Bad:**
-
-```typescript
-export * from './utils';
-export * from './helpers';
-```
-
-**Good:**
-
-```typescript
-export { formatDate, parseDate } from './utils';
-export { capitalize } from './helpers';
-```
-
-### `treeshake/no-class-side-effects`
-
-Detects class declarations with static initializers that call external functions. Static blocks and property initializers run at class definition time, creating side effects.
-
-<callout type="info">All rules are enabled by the `recommended` config preset. You can disable individual rules in your ESLint config if needed.</callout>
-
-## Programmatic API
-
-The plugin exports its rules for use in custom ESLint configurations:
+### Strict Config
 
 ```javascript
 import treeshake from '@wolfcola/eslint-plugin-treeshake';
 
-// Access individual rules
-treeshake.rules['no-top-level-side-effects'];
-treeshake.rules['no-mutable-module-scope'];
+// Errors on all hazard patterns + enables bundle check
+export default [treeshake.configs.strict];
+```
+
+The `strict` config sets the rule to `error` level and enables `bundleCheck: true`, which runs `treeshake-check --json` as part of linting to cross-reference static findings with actual bundle analysis.
+
+## Rule: `no-treeshake-hazard`
+
+A single rule that detects multiple categories of tree-shaking hazards. Each category can be individually toggled.
+
+### Detected Patterns
+
+| Pattern               | Option                   | Default | Description                                                             |
+| --------------------- | ------------------------ | ------- | ----------------------------------------------------------------------- |
+| Enum declarations     | `checkEnums`             | `true`  | TypeScript `enum` compiles to an IIFE that bundlers cannot remove       |
+| Unannotated calls     | `checkUnannotatedCalls`  | `true`  | Top-level function calls without `/*#__PURE__*/` annotation             |
+| Prototype mutations   | `checkPrototypeMutation` | `true`  | `Object.defineProperty`, `Object.setPrototypeOf`, `X.prototype.y = ...` |
+| Global assignments    | `checkGlobalAssignment`  | `true`  | Assignments to `window`, `globalThis`, `self`, `global`                 |
+| CommonJS patterns     | `checkCjsPatterns`       | `true`  | `require()`, `module.exports`, `exports.x`                              |
+| Missing `sideEffects` | `checkSideEffectsField`  | `true`  | Warns when nearest `package.json` lacks a `sideEffects` field           |
+| Bundle check (opt-in) | `bundleCheck`            | `false` | Runs `treeshake-check --json` and maps results to source locations      |
+
+### Rule Options
+
+```javascript
+'wolfcola/no-treeshake-hazard': ['warn', {
+  checkEnums: true,
+  checkUnannotatedCalls: true,
+  checkPrototypeMutation: true,
+  checkGlobalAssignment: true,
+  checkCjsPatterns: true,
+  checkSideEffectsField: true,
+  additionalPureFunctions: ['myPureHelper'],
+  bundleCheck: false,
+  bundleCheckCwd: undefined,
+}]
+```
+
+### `additionalPureFunctions`
+
+An array of function names that should be treated as pure (side-effect-free). Calls to these functions at module scope will not trigger the `unannotatedCall` warning.
+
+### Auto-fix and Suggestions
+
+- **Enum declarations:** Provides a suggestion to replace `enum` with an `as const` object and type alias
+- **Unannotated calls:** Auto-fixes by inserting `/*#__PURE__*/` before the call
+
+### Bundle Check Mode
+
+When `bundleCheck: true`, the rule runs `npx treeshake-check --json` (with a 60-second timeout) and maps the bundle analysis results back to source file locations. Static findings are deduplicated against bundle check results to avoid double-reporting.
+
+## Configs
+
+| Config        | Rule Level | `bundleCheck` |
+| ------------- | ---------- | ------------- |
+| `recommended` | `warn`     | `false`       |
+| `strict`      | `error`    | `true`        |
+
+## Programmatic API
+
+```javascript
+import treeshake from '@wolfcola/eslint-plugin-treeshake';
+
+// Access the rule directly
+treeshake.rules['no-treeshake-hazard'];
+
+// Access the named export
+import { noTreeshakeHazard } from '@wolfcola/eslint-plugin-treeshake';
 ```
