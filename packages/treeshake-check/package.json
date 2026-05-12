@@ -4,6 +4,14 @@
   "description": "Check whether a package can be fully tree-shaken by Rollup",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ryanbas21/devtools.git",
+    "directory": "packages/treeshake-check"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
