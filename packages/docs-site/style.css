@@ -21,6 +21,18 @@
   --border: #334155;
   --accent: #60a5fa;
   --accent-hover: #93bbfd;
+  color-scheme: dark;
+  background: var(--bg);
+  color: var(--text);
+}
+
+[data-theme='light'] {
+  background: var(--bg);
+  color: var(--text);
+}
+
+[data-theme] {
+  min-height: 100vh;
 }
 
 * {

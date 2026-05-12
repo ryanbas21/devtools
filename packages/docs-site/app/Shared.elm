@@ -226,11 +226,11 @@ viewHeader sharedData model toMsg =
             [ Html.text "wolfcola devtools" ]
         , viewSearch sharedData model toMsg
         , Html.nav [ Attr.class "header-nav" ]
-            [ Html.a [ Attr.href "/packages" ] [ Html.text "Packages" ]
-            , Html.a [ Attr.href "/guides" ] [ Html.text "Guides" ]
-            , Html.a [ Attr.href "/api" ] [ Html.text "API" ]
+            [ Html.a [ Attr.href "/packages/treeshake-check" ] [ Html.text "Packages" ]
+            , Html.a [ Attr.href "/docs/getting-started" ] [ Html.text "Guides" ]
+            , Html.a [ Attr.href "/api/treeshake-check/treeshake-check" ] [ Html.text "API" ]
             , Html.a [ Attr.href "/architecture" ] [ Html.text "Architecture" ]
-            , Html.a [ Attr.href "/contributing" ] [ Html.text "Contributing" ]
+            , Html.a [ Attr.href "/contributing/development-setup" ] [ Html.text "Contributing" ]
             ]
         , Html.button
             [ Attr.class "theme-toggle"
