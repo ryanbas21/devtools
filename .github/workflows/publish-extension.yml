@@ -102,26 +102,3 @@ jobs:
           manifest: packages/devtools-extension/dist/manifest.json
           api-key: ${{ secrets.AMO_JWT_ISSUER }}
           api-secret: ${{ secrets.AMO_JWT_SECRET }}
-
-  publish-vscode:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Build all packages
-        run: pnpm build
-
-      - name: Publish to VS Code Marketplace
-        working-directory: packages/vscode-extension
-        run: pnpm vsce publish --no-dependencies --pat "$VSCE_PAT"
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
