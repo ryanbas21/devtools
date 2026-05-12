@@ -2,7 +2,7 @@
   "name": "wolfcola-devtools",
   "version": "0.0.0",
   "private": true,
-  "description": "WolfCola DevTools — Chrome extension and SDK bridges",
+  "description": "WolfCola DevTools — OIDC diagnostics, tree-shaking analysis, and developer tools",
   "license": "MIT",
   "repository": {
     "type": "git",
