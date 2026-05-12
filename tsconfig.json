@@ -6,6 +6,7 @@
     { "path": "packages/devtools-core" },
     { "path": "packages/devtools-extension" },
     { "path": "packages/vscode-extension" },
-    { "path": "packages/treeshake-check" }
+    { "path": "packages/treeshake-check" },
+    { "path": "packages/eslint-plugin-treeshake" }
   ]
 }
