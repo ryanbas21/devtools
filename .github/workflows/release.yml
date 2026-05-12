@@ -80,8 +80,13 @@ jobs:
         env:
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
-          BASE=$(node -p "require('./package.json').version")
-          npm version "${BASE}.${BUILD_NUMBER}" --no-git-tag-version
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            const [major, minor] = pkg.version.split('.');
+            pkg.version = major + '.' + minor + '.' + process.env.BUILD_NUMBER;
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
 
       - name: Publish VS Code extension (pre-release)
         if: inputs.extension
