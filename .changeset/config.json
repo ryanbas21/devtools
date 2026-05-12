@@ -7,5 +7,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": ["oidc-devtools", "@wolfcola/e2e", "@wolfcola/devtools-ui"]
 }
