@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { ESLintUtils, type TSESTree } from '@typescript-eslint/utils';
 import { EXPLANATIONS } from './explanations.js';
 import { isKnownPure } from './known-pure.js';
@@ -23,6 +25,7 @@ type RuleOptions = [
     checkPrototypeMutation?: boolean;
     checkGlobalAssignment?: boolean;
     checkCjsPatterns?: boolean;
+    checkSideEffectsField?: boolean;
     additionalPureFunctions?: string[];
     bundleCheck?: boolean;
     bundleCheckCwd?: string;
@@ -63,6 +66,7 @@ export const noTreeshakeHazard = createRule<RuleOptions, MessageIds>({
           checkPrototypeMutation: { type: 'boolean' },
           checkGlobalAssignment: { type: 'boolean' },
           checkCjsPatterns: { type: 'boolean' },
+          checkSideEffectsField: { type: 'boolean' },
           additionalPureFunctions: {
             type: 'array',
             items: { type: 'string' },
@@ -92,6 +96,7 @@ export const noTreeshakeHazard = createRule<RuleOptions, MessageIds>({
       checkPrototypeMutation: true,
       checkGlobalAssignment: true,
       checkCjsPatterns: true,
+      checkSideEffectsField: true,
       additionalPureFunctions: [],
       bundleCheck: false,
       bundleCheckCwd: undefined,
@@ -104,6 +109,7 @@ export const noTreeshakeHazard = createRule<RuleOptions, MessageIds>({
       checkPrototypeMutation = true,
       checkGlobalAssignment = true,
       checkCjsPatterns = true,
+      checkSideEffectsField = true,
       additionalPureFunctions = [],
     } = options;
 
@@ -253,6 +259,35 @@ export const noTreeshakeHazard = createRule<RuleOptions, MessageIds>({
           node,
           messageId: 'cjsPatterns',
         });
+      },
+
+      // 9. Check nearest package.json for missing sideEffects field
+      Program(node: TSESTree.Program) {
+        if (!checkSideEffectsField) return;
+
+        let dir = dirname(context.filename);
+
+        for (let i = 0; i < 20; i++) {
+          const candidate = join(dir, 'package.json');
+          if (existsSync(candidate)) {
+            try {
+              const pkg = JSON.parse(readFileSync(candidate, 'utf-8'));
+              if (pkg.sideEffects === undefined) {
+                context.report({
+                  node,
+                  loc: { line: 1, column: 0 },
+                  messageId: 'missingSideEffectsField',
+                });
+              }
+            } catch {
+              // Ignore parse errors in package.json
+            }
+            break;
+          }
+          const parent = dirname(dir);
+          if (parent === dir) break;
+          dir = parent;
+        }
       },
     };
   },
