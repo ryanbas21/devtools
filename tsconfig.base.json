@@ -4,6 +4,7 @@
     "declaration": true,
     "declarationMap": true,
     "skipLibCheck": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "plugins": [{ "name": "@effect/language-service" }]
   }
 }
