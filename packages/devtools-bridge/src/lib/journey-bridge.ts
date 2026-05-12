@@ -1,11 +1,7 @@
 import { Schema, Option, pipe } from 'effect';
 import { emitAuthEvent, emitConfigEvent } from './emit.js';
-import type { DevtoolsOptions } from './emit.js';
+import type { BridgeHandle, DevtoolsOptions } from './emit.js';
 import type { JourneyData } from '@wolfcola/devtools-types';
-
-export interface JourneyBridgeHandle {
-  detach: () => void;
-}
 
 interface JourneySubscribable {
   subscribe: (listener: () => void) => () => void;
@@ -104,7 +100,7 @@ export function attachJourneyBridge(
   client: JourneySubscribable,
   config?: object,
   devtoolsOptions?: DevtoolsOptions,
-): JourneyBridgeHandle {
+): BridgeHandle {
   if (typeof window === 'undefined') {
     return { detach: () => undefined };
   }

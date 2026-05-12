@@ -119,6 +119,34 @@ describe('emitAuthEvent options', () => {
   });
 });
 
+describe('emitAuthEvent ring buffer', () => {
+  beforeEach(() => {
+    delete window.__PING_DEVTOOLS_STATE__;
+  });
+
+  it('caps __PING_DEVTOOLS_STATE__ at 500 entries and drops the oldest', () => {
+    for (let i = 0; i < 501; i++) {
+      emitAuthEvent(makeEvent({ id: `evt-${i}` }));
+    }
+
+    expect(window.__PING_DEVTOOLS_STATE__).toHaveLength(500);
+    // The first event (evt-0) should have been evicted
+    expect(window.__PING_DEVTOOLS_STATE__![0].id).toBe('evt-1');
+    // The last event should be the most recent
+    expect(window.__PING_DEVTOOLS_STATE__![499].id).toBe('evt-500');
+  });
+
+  it('continues to evict as more events arrive beyond the cap', () => {
+    for (let i = 0; i < 510; i++) {
+      emitAuthEvent(makeEvent({ id: `evt-${i}` }));
+    }
+
+    expect(window.__PING_DEVTOOLS_STATE__).toHaveLength(500);
+    expect(window.__PING_DEVTOOLS_STATE__![0].id).toBe('evt-10');
+    expect(window.__PING_DEVTOOLS_STATE__![499].id).toBe('evt-509');
+  });
+});
+
 describe('emitConfigEvent', () => {
   beforeEach(() => {
     delete window.__PING_DEVTOOLS_STATE__;

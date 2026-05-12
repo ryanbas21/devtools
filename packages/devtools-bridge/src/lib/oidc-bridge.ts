@@ -1,11 +1,7 @@
 import { Schema, Option, pipe } from 'effect';
 import { emitAuthEvent, emitConfigEvent } from './emit.js';
-import type { DevtoolsOptions } from './emit.js';
+import type { BridgeHandle, DevtoolsOptions } from './emit.js';
 import type { OidcData } from '@wolfcola/devtools-types';
-
-export interface OidcBridgeHandle {
-  detach: () => void;
-}
 
 interface OidcSubscribable {
   subscribe: (listener: () => void) => () => void;
@@ -99,7 +95,7 @@ export function attachOidcBridge(
   client: OidcSubscribable,
   config?: { clientId?: string } & object,
   devtoolsOptions?: DevtoolsOptions,
-): OidcBridgeHandle {
+): BridgeHandle {
   if (typeof window === 'undefined') {
     return { detach: () => undefined };
   }

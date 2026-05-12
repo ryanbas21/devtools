@@ -2,7 +2,7 @@ import { Schema, Option, pipe } from 'effect';
 import type { SdkData } from '@wolfcola/devtools-types';
 import { SdkErrorSchema, SdkAuthorizationSchema } from '@wolfcola/devtools-types';
 import { emitAuthEvent, emitConfigEvent } from './emit.js';
-import type { DevtoolsOptions } from './emit.js';
+import type { BridgeHandle, DevtoolsOptions } from './emit.js';
 
 interface Subscribable {
   subscribe: (listener: () => void) => () => void;
@@ -10,10 +10,6 @@ interface Subscribable {
   cache?: {
     getCache: (requestId: string) => unknown;
   };
-}
-
-export interface BridgeHandle {
-  detach: () => void;
 }
 
 export interface SdkConfig {
@@ -198,7 +194,7 @@ function emitNodeChange(data: SdkData, options?: DevtoolsOptions): void {
  *
  * Returns a no-op handle when run outside a browser. Always call `detach()` on cleanup.
  */
-export function attachDevToolsBridge(
+export function attachDaVinciBridge(
   client: Subscribable,
   config?: object,
   devtoolsOptions?: DevtoolsOptions,

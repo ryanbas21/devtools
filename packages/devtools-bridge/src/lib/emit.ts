@@ -6,6 +6,10 @@ export interface DevtoolsOptions {
   consoleLog?: boolean;
 }
 
+export interface BridgeHandle {
+  detach: () => void;
+}
+
 declare global {
   interface Window {
     __PING_DEVTOOLS_STATE__?: AuthEvent[];
