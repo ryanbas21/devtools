@@ -308,6 +308,8 @@ viewSidebar model toMsg =
             , ( "/docs/vscode-extension", "VS Code Extension" )
             , ( "/docs/tree-shaking", "Tree-Shaking" )
             , ( "/docs/davinci-integration", "DaVinci Integration" )
+            , ( "/docs/journey-integration", "Journey Integration" )
+            , ( "/docs/oidc-integration", "Generic OIDC Integration" )
             ]
         , viewSidebarSection "Contributing"
             [ ( "/contributing/development-setup", "Development Setup" )

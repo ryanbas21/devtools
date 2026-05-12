@@ -1,13 +1,13 @@
 ---
 title: 'DaVinci Integration'
-description: 'Integrate wolfcola devtools with ForgeRock DaVinci flows'
+description: 'Integrate wolfcola devtools with Ping Identity DaVinci flows'
 section: guides
 order: 5
 ---
 
 # DaVinci Integration
 
-ForgeRock DaVinci is an orchestration platform for identity flows. The wolfcola devtools suite provides first-class support for instrumenting DaVinci flows through the `@wolfcola/devtools-bridge` package.
+Ping Identity DaVinci is an orchestration platform for identity flows. The wolfcola devtools suite provides first-class support for instrumenting DaVinci flows through the `@wolfcola/devtools-bridge` package.
 
 ## Overview
 
@@ -96,6 +96,6 @@ bridge.destroy();
 
 ## Troubleshooting
 
-- **No events appearing** — Verify that the DaVinci SDK version is compatible. The adapter supports `@forgerock/davinci-client` v1.x and v2.x.
+- **No events appearing** — Verify that the DaVinci SDK version is compatible. The adapter supports `@ping-identity/davinci-client`.
 - **Missing node transitions** — Some custom DaVinci nodes may not emit standard events. Contact the node author to ensure compatibility.
 - **Redacted fields showing as empty** — The bridge redacts sensitive fields by default. To see raw values during development, pass `redact: false` in the bridge options (never do this in production).

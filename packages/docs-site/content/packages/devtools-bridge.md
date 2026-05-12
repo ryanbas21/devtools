@@ -40,7 +40,7 @@ import { davinci } from '@wolfcola/devtools-bridge/adapters/davinci';
 const bridge = createBridge(davinci(daVinciClient));
 ```
 
-Supports `@forgerock/davinci-client` v1.x and v2.x. Captures node transitions, collector callbacks, and flow completion.
+Supports `@ping-identity/davinci-client`. Captures node transitions, collector callbacks, and flow completion.
 
 ### Journey Adapter
 
@@ -50,7 +50,7 @@ import { journey } from '@wolfcola/devtools-bridge/adapters/journey';
 const bridge = createBridge(journey(journeyConfig));
 ```
 
-Supports ForgeRock Journey/Tree-based authentication. Captures callbacks, step transitions, and session token issuance.
+Supports Ping Identity Journey/Tree-based authentication. Captures callbacks, step transitions, and session token issuance.
 
 ### Generic OIDC Adapter
 
