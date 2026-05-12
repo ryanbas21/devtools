@@ -12,11 +12,23 @@
     "directory": "packages/vscode-extension"
   },
   "icon": "icons/oidc-devtools-marketplace.png",
-  "keywords": ["oidc", "oauth", "oauth2", "authentication", "debugger", "devtools", "chrome", "cdp"],
+  "keywords": [
+    "oidc",
+    "oauth",
+    "oauth2",
+    "authentication",
+    "debugger",
+    "devtools",
+    "chrome",
+    "cdp"
+  ],
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Debuggers", "Other"],
+  "categories": [
+    "Debuggers",
+    "Other"
+  ],
   "activationEvents": [
     "onCommand:oidc-devtools.startCapture",
     "onDebugResolve:oidc-devtools"
@@ -68,7 +80,9 @@
         "label": "OIDC DevTools",
         "configurationAttributes": {
           "launch": {
-            "required": ["url"],
+            "required": [
+              "url"
+            ],
             "properties": {
               "url": {
                 "type": "string",

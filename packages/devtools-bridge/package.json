@@ -1,6 +1,6 @@
 {
   "name": "@wolfcola/devtools-bridge",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Opt-in SDK adapter that emits AuthEvents to the WolfCola DevTools extension",
   "license": "MIT",
   "repository": {
@@ -24,7 +24,9 @@
   "main": "./dist/src/index.js",
   "module": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.lib.json",
     "lint": "eslint .",
@@ -38,6 +40,8 @@
     "@forgerock/davinci-client": "*"
   },
   "peerDependenciesMeta": {
-    "@forgerock/davinci-client": { "optional": true }
+    "@forgerock/davinci-client": {
+      "optional": true
+    }
   }
 }

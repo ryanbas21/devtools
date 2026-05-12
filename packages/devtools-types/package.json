@@ -1,6 +1,6 @@
 {
   "name": "@wolfcola/devtools-types",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Shared AuthEvent schema and types for WolfCola DevTools",
   "license": "MIT",
   "repository": {
@@ -24,7 +24,9 @@
   "main": "./dist/src/index.js",
   "module": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.lib.json",
     "lint": "eslint .",
