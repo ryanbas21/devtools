@@ -5,6 +5,7 @@ import FatalError exposing (FatalError)
 import Head
 import Head.Seo as Seo
 import Html
+import Html.Attributes as Attr
 import Pages.Url
 import PagesMsg exposing (PagesMsg)
 import UrlPath
@@ -27,8 +28,7 @@ type alias RouteParams =
 
 
 type alias Data =
-    { message : String
-    }
+    {}
 
 
 type alias ActionData =
@@ -46,9 +46,7 @@ route =
 
 data : BackendTask FatalError Data
 data =
-    BackendTask.succeed Data
-        |> BackendTask.andMap
-            (BackendTask.succeed "Hello!")
+    BackendTask.succeed {}
 
 
 head :
@@ -57,16 +55,16 @@ head :
 head app =
     Seo.summary
         { canonicalUrlOverride = Nothing
-        , siteName = "elm-pages"
+        , siteName = "wolfcola devtools"
         , image =
             { url = [ "images", "icon-png.png" ] |> UrlPath.join |> Pages.Url.fromPath
-            , alt = "elm-pages logo"
+            , alt = "wolfcola devtools logo"
             , dimensions = Nothing
             , mimeType = Nothing
             }
-        , description = "Welcome to elm-pages!"
+        , description = "Developer tools for OIDC debugging and tree-shake verification"
         , locale = Nothing
-        , title = "elm-pages is running"
+        , title = "wolfcola devtools"
         }
         |> Seo.website
 
@@ -76,13 +74,83 @@ view :
     -> Shared.Model
     -> View (PagesMsg Msg)
 view app shared =
-    { title = "elm-pages is running"
+    { title = "wolfcola devtools"
     , body =
-        [ Html.h1 [] [ Html.text "elm-pages is up and running!" ]
-        , Html.p []
-            [ Html.text <| "The message is: " ++ app.data.message
-            ]
-        , Route.Blog__Slug_ { slug = "hello" }
-            |> Route.link [] [ Html.text "My blog post" ]
+        [ viewHero
+        , viewPackageGrid
+        , viewQuickLinks
         ]
     }
+
+
+viewHero : Html.Html (PagesMsg Msg)
+viewHero =
+    Html.section [ Attr.class "hero" ]
+        [ Html.h1 [] [ Html.text "wolfcola devtools" ]
+        , Html.p [ Attr.class "hero-subtitle" ]
+            [ Html.text "Developer tools for OIDC debugging and tree-shake verification" ]
+        ]
+
+
+viewPackageGrid : Html.Html (PagesMsg Msg)
+viewPackageGrid =
+    Html.div [ Attr.class "package-grid" ]
+        [ viewPackageCard
+            { name = "@wolfcola/treeshake-check"
+            , description = "CLI & library to verify packages are tree-shakeable by Rollup"
+            , href = "/packages/treeshake-check"
+            , tag = "Published"
+            }
+        , viewPackageCard
+            { name = "@wolfcola/eslint-plugin-treeshake"
+            , description = "ESLint plugin that flags tree-breaking patterns"
+            , href = "/packages/eslint-plugin-treeshake"
+            , tag = "Published"
+            }
+        , viewPackageCard
+            { name = "@wolfcola/devtools-bridge"
+            , description = "SDK adapter for emitting events from DaVinci, Journey, OIDC clients"
+            , href = "/packages/devtools-bridge"
+            , tag = "Published"
+            }
+        , viewPackageCard
+            { name = "@wolfcola/devtools-types"
+            , description = "Effect Schema definitions for AuthEvent and FlowState"
+            , href = "/packages/devtools-types"
+            , tag = "Published"
+            }
+        ]
+
+
+viewPackageCard :
+    { name : String, description : String, href : String, tag : String }
+    -> Html.Html (PagesMsg Msg)
+viewPackageCard pkg =
+    Html.a [ Attr.class "package-card", Attr.href pkg.href ]
+        [ Html.div [ Attr.class "package-card-header" ]
+            [ Html.h3 [] [ Html.text pkg.name ]
+            , Html.span [ Attr.class "package-tag" ] [ Html.text pkg.tag ]
+            ]
+        , Html.p [] [ Html.text pkg.description ]
+        ]
+
+
+viewQuickLinks : Html.Html (PagesMsg Msg)
+viewQuickLinks =
+    Html.section [ Attr.class "quick-links" ]
+        [ Html.h2 [] [ Html.text "Quick Links" ]
+        , Html.ul []
+            [ Html.li []
+                [ Html.a [ Attr.href "/docs/getting-started" ]
+                    [ Html.text "Installation & Setup" ]
+                ]
+            , Html.li []
+                [ Html.a [ Attr.href "/architecture" ]
+                    [ Html.text "Architecture Overview" ]
+                ]
+            , Html.li []
+                [ Html.a [ Attr.href "/contributing/development-setup" ]
+                    [ Html.text "Contributing" ]
+                ]
+            ]
+        ]
