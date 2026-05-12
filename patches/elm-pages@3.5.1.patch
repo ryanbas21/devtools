@@ -1,0 +1,25 @@
+diff --git a/codegen/elm-pages-codegen.cjs b/codegen/elm-pages-codegen.cjs
+index 23614931f4601b018de0551b2991afdbdf64ddf9..9b9d540dde9a20ffba31cb82dfe8fb6dfd0e44f9 100644
+--- a/codegen/elm-pages-codegen.cjs
++++ b/codegen/elm-pages-codegen.cjs
+@@ -23712,11 +23712,18 @@ var $author$project$Generate$file$ = function (templates, basePath) {
+ 							_Utils_Tuple2('path', $mdgriffith$elm_codegen$Elm$Annotation$string)
+ 						]))),
+ 			function (url) {
++				var urlPath = $mdgriffith$elm_codegen$Elm$get$('path', url);
++				var strippedPath = $mdgriffith$elm_codegen$Elm$ifThen$(
++					A2($author$project$Gen$String$call_.startsWith, $mdgriffith$elm_codegen$Elm$string(basePath), urlPath),
++					A2(
++						$author$project$Gen$String$call_.dropLeft,
++						$author$project$Gen$String$call_.length($mdgriffith$elm_codegen$Elm$string(basePath)),
++						urlPath),
++					urlPath);
+ 				return $mdgriffith$elm_codegen$Elm$withType$(
+ 					$mdgriffith$elm_codegen$Elm$Annotation$maybe(routeType.annotation),
+ 					segmentsToRouteFn.call(
+-						$author$project$Generate$splitPath.call(
+-							$mdgriffith$elm_codegen$Elm$get$('path', url))));
++						$author$project$Generate$splitPath.call(strippedPath)));
+ 			}));
+ 	var routeToPathFn = $author$project$Generate$routeToPath$(routeType, routes);
+ 	var baseUrl = $mdgriffith$elm_codegen$Elm$Declare$value$(
