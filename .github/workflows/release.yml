@@ -1,11 +1,6 @@
 name: Release
 on:
   workflow_dispatch:
-    inputs:
-      extension:
-        description: Publish Firefox + VS Code extensions (snapshot)
-        type: boolean
-        default: true
   push:
     branches: [main]
 
@@ -38,62 +33,11 @@ jobs:
 
       - name: Build
         run: pnpm build
-        env:
-          BUILD_NUMBER: ${{ github.run_number }}
-          SNAPSHOT: 'true'
 
       - name: Publish npm snapshots
         run: pnpm changeset publish --tag snapshot
         env:
           NPM_CONFIG_PROVENANCE: true
-
-      - name: Build Firefox extension
-        if: inputs.extension
-        working-directory: packages/devtools-extension
-        run: node --experimental-strip-types build.mjs --target=firefox
-        env:
-          BUILD_NUMBER: ${{ github.run_number }}
-          SNAPSHOT: 'true'
-
-      - name: Zip Firefox extension
-        if: inputs.extension
-        working-directory: packages/devtools-extension
-        run: cd dist && zip -r ../extension-firefox.zip .
-
-      - name: Zip source for AMO review
-        if: inputs.extension
-        run: zip -r source.zip . -x 'node_modules/*' '*/node_modules/*' '*/dist/*' '.git/*' '*.zip'
-
-      - name: Publish Firefox extension (unlisted)
-        if: inputs.extension
-        uses: trmcnvn/firefox-addon@0d05671269b82c69c3f22ed86d8e772e89d47cf4 # v1
-        with:
-          uuid: oidc-devtool@wolfcola
-          xpi: packages/devtools-extension/extension-firefox.zip
-          manifest: packages/devtools-extension/dist/manifest.json
-          api-key: ${{ secrets.AMO_JWT_ISSUER }}
-          api-secret: ${{ secrets.AMO_JWT_SECRET }}
-
-      - name: Stamp VS Code extension version
-        if: inputs.extension
-        working-directory: packages/vscode-extension
-        env:
-          BUILD_NUMBER: ${{ github.run_number }}
-        run: |
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            const [major, minor] = pkg.version.split('.');
-            pkg.version = major + '.' + minor + '.' + process.env.BUILD_NUMBER;
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
-
-      - name: Publish VS Code extension (pre-release)
-        if: inputs.extension
-        working-directory: packages/vscode-extension
-        run: pnpm vsce publish --no-dependencies --pre-release --pat "$VSCE_PAT"
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
   release:
     if: github.event_name == 'push'
