@@ -1,7 +1,7 @@
 import { Schema, Option, pipe } from 'effect';
 import type { SdkData } from '@wolfcola/devtools-types';
 import { SdkErrorSchema, SdkAuthorizationSchema } from '@wolfcola/devtools-types';
-import { emitAuthEvent, emitConfigEvent, configureDevtools } from './emit.js';
+import { emitAuthEvent, emitConfigEvent } from './emit.js';
 import type { DevtoolsOptions } from './emit.js';
 
 interface Subscribable {
@@ -95,34 +95,48 @@ interface SessionSnapshot {
 
 function snapshotSession(): SessionSnapshot {
   const storage: Record<string, string> = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k) storage[k] = localStorage.getItem(k) ?? '';
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k) storage[k] = localStorage.getItem(k) ?? '';
+    }
+  } catch {
+    // localStorage access blocked (e.g. privacy mode, opaque origin)
   }
-  return { cookie: document.cookie, storage };
+  let cookie = '';
+  try {
+    cookie = document.cookie;
+  } catch {
+    // cookie access blocked
+  }
+  return { cookie, storage };
 }
 
 function emitSessionDiffs(
   before: SessionSnapshot,
   after: SessionSnapshot,
   flowId: string | null,
+  options?: DevtoolsOptions,
 ): void {
   if (before.cookie !== after.cookie) {
-    emitAuthEvent({
-      id: crypto.randomUUID(),
-      timestamp: performance.now(),
-      type: 'session:cookie',
-      source: 'session',
-      flowId,
-      causedBy: null,
-      data: {
-        _tag: 'session',
-        key: 'document.cookie',
-        before: before.cookie || undefined,
-        after: after.cookie || undefined,
+    emitAuthEvent(
+      {
+        id: crypto.randomUUID(),
+        timestamp: performance.now(),
+        type: 'session:cookie',
+        source: 'session',
+        flowId,
+        causedBy: null,
+        data: {
+          _tag: 'session',
+          key: 'document.cookie',
+          before: before.cookie || undefined,
+          after: after.cookie || undefined,
+        },
+        flags: { isCors: false, isError: false, isAuthRelated: true },
       },
-      flags: { isCors: false, isError: false, isAuthRelated: true },
-    });
+      options,
+    );
   }
 
   const allKeys = new Set([...Object.keys(before.storage), ...Object.keys(after.storage)]);
@@ -130,16 +144,19 @@ function emitSessionDiffs(
     const beforeVal = before.storage[key];
     const afterVal = after.storage[key];
     if (beforeVal !== afterVal) {
-      emitAuthEvent({
-        id: crypto.randomUUID(),
-        timestamp: performance.now(),
-        type: 'session:storage',
-        source: 'session',
-        flowId,
-        causedBy: null,
-        data: { _tag: 'session', key, before: beforeVal, after: afterVal },
-        flags: { isCors: false, isError: false, isAuthRelated: true },
-      });
+      emitAuthEvent(
+        {
+          id: crypto.randomUUID(),
+          timestamp: performance.now(),
+          type: 'session:storage',
+          source: 'session',
+          flowId,
+          causedBy: null,
+          data: { _tag: 'session', key, before: beforeVal, after: afterVal },
+          flags: { isCors: false, isError: false, isAuthRelated: true },
+        },
+        options,
+      );
     }
   }
 }
@@ -148,21 +165,24 @@ function emitSessionDiffs(
 // Event builders
 // ---------------------------------------------------------------------------
 
-function emitNodeChange(data: SdkData): void {
-  emitAuthEvent({
-    id: crypto.randomUUID(),
-    timestamp: performance.now(),
-    type: 'sdk:node-change',
-    source: 'sdk',
-    flowId: data.interactionId ?? null,
-    causedBy: null,
-    data,
-    flags: {
-      isCors: false,
-      isError: data.nodeStatus === 'error' || data.nodeStatus === 'failure',
-      isAuthRelated: true,
+function emitNodeChange(data: SdkData, options?: DevtoolsOptions): void {
+  emitAuthEvent(
+    {
+      id: crypto.randomUUID(),
+      timestamp: performance.now(),
+      type: 'sdk:node-change',
+      source: 'sdk',
+      flowId: data.interactionId ?? null,
+      causedBy: null,
+      data,
+      flags: {
+        isCors: false,
+        isError: data.nodeStatus === 'error' || data.nodeStatus === 'failure',
+        isAuthRelated: true,
+      },
     },
-  });
+    options,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -187,10 +207,6 @@ export function attachDevToolsBridge(
     return { detach: () => undefined };
   }
 
-  if (devtoolsOptions) {
-    configureDevtools(devtoolsOptions);
-  }
-
   let previousStatus: string | undefined;
   let configEmitted = false;
   let lastSnapshot: SessionSnapshot = snapshotSession();
@@ -212,14 +228,19 @@ export function attachDevToolsBridge(
       Option.map((data) => {
         if (config && !configEmitted) {
           configEmitted = true;
-          emitConfigEvent(config);
+          emitConfigEvent(config, devtoolsOptions);
         }
-        emitNodeChange(data);
+        emitNodeChange(data, devtoolsOptions);
         // Snapshot before deferring so mutations in the same call stack are captured.
         const snapshotBefore = lastSnapshot;
         setTimeout(() => {
           const snapshotAfter = snapshotSession();
-          emitSessionDiffs(snapshotBefore, snapshotAfter, data.interactionId ?? null);
+          emitSessionDiffs(
+            snapshotBefore,
+            snapshotAfter,
+            data.interactionId ?? null,
+            devtoolsOptions,
+          );
           lastSnapshot = snapshotAfter;
         }, 0);
       }),

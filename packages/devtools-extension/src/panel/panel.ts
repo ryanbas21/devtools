@@ -230,6 +230,8 @@ app.ports.loadSnapshot?.subscribe((snapshotId: string) => {
     chrome.runtime.sendMessage({ type: 'CLEAR' });
     const state = snapshot.flowState;
 
+    if (!state || !Array.isArray(state.events)) return;
+
     for (const event of state.events) {
       app.ports.receiveEvent.send(event);
     }

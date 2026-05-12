@@ -27,7 +27,7 @@ jobs:
         run: cd dist && zip -r ../extension-chrome.zip .
 
       - name: Upload to Chrome Web Store
-        uses: mnao305/chrome-extension-upload@v5.0.0
+        uses: mnao305/chrome-extension-upload@4008e29e13c144d0f6725462cbd49b7c291b4928 # v5.0.0
         with:
           file-path: packages/devtools-extension/extension-chrome.zip
           extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
@@ -65,7 +65,7 @@ jobs:
         run: zip -r source.zip . -x 'node_modules/*' '*/node_modules/*' '*/dist/*' '.git/*' '*.zip'
 
       - name: Upload to Firefox Add-ons
-        uses: trmcnvn/firefox-addon@v1
+        uses: trmcnvn/firefox-addon@0d05671269b82c69c3f22ed86d8e772e89d47cf4 # v1
         with:
           uuid: oidc-devtool@wolfcola
           xpi: packages/devtools-extension/extension-firefox.zip

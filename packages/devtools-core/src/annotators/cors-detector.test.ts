@@ -69,9 +69,12 @@ describe('detectCorsFlags', () => {
     expect(flags.some((f: CorsFlag) => f.reason === 'wildcard-with-credentials')).toBe(true);
   });
 
-  it('flags credentials mismatch when allow-credentials is false', () => {
+  it('flags credentials mismatch when request sends credentials and allow-credentials is false', () => {
     const entry = makeEntry({
-      requestHeaders: { origin: 'https://app.example.com' },
+      requestHeaders: {
+        origin: 'https://app.example.com',
+        cookie: 'session=abc',
+      },
       responseHeaders: {
         'access-control-allow-origin': 'https://app.example.com',
         'access-control-allow-credentials': 'false',
@@ -81,9 +84,12 @@ describe('detectCorsFlags', () => {
     expect(flags.some((f: CorsFlag) => f.reason === 'credentials-mismatch')).toBe(true);
   });
 
-  it('flags credentials mismatch when allow-credentials header is absent', () => {
+  it('flags credentials mismatch when request sends authorization and allow-credentials is absent', () => {
     const entry = makeEntry({
-      requestHeaders: { origin: 'https://app.example.com' },
+      requestHeaders: {
+        origin: 'https://app.example.com',
+        authorization: 'Bearer token',
+      },
       responseHeaders: {
         'access-control-allow-origin': 'https://app.example.com',
         // no access-control-allow-credentials header
@@ -91,5 +97,16 @@ describe('detectCorsFlags', () => {
     });
     const flags = detectCorsFlags(entry);
     expect(flags.some((f: CorsFlag) => f.reason === 'credentials-mismatch')).toBe(true);
+  });
+
+  it('does NOT flag credentials mismatch when request sends no credentials', () => {
+    const entry = makeEntry({
+      requestHeaders: { origin: 'https://app.example.com' },
+      responseHeaders: {
+        'access-control-allow-origin': 'https://app.example.com',
+      },
+    });
+    const flags = detectCorsFlags(entry);
+    expect(flags.some((f: CorsFlag) => f.reason === 'credentials-mismatch')).toBe(false);
   });
 });

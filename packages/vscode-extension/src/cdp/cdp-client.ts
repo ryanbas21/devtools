@@ -80,9 +80,15 @@ export class CdpClient extends EventEmitter {
   disconnect(): void {
     this.ws?.close();
     this.ws = null;
+    // Reject any pending RPC calls so their promises don't leak
+    for (const [id, cb] of this.pendingCalls) {
+      cb(undefined, 'Disconnected');
+      this.pendingCalls.delete(id);
+    }
+    this.pendingRequests.clear();
   }
 
-  private send(method: string, params?: Record<string, unknown>): Promise<unknown> {
+  send(method: string, params?: Record<string, unknown>): Promise<unknown> {
     return new Promise((resolve, reject) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
         reject(new Error('WebSocket is not connected'));

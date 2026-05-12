@@ -136,7 +136,7 @@ export const OidcDataSchema = Schema.Struct({
 });
 
 export const OidcPkceSchema = Schema.Struct({
-  challengeMethod: Schema.String,
+  challengeMethod: Schema.optional(Schema.String),
   hasVerifier: Schema.Boolean,
 });
 

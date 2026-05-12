@@ -25,8 +25,21 @@ export const EventStoreChromeLive = Layer.effect(
           Effect.tryPromise(() => chrome.storage.local.get('ping:auth-flow')),
           Effect.orDie,
           Effect.flatMap((result) => {
-            const stored = result['ping:auth-flow'] as ExtendedFlowState | undefined;
-            return stored ? Ref.set(stateRef, stored) : Effect.void;
+            const stored = result['ping:auth-flow'];
+            if (
+              stored &&
+              typeof stored === 'object' &&
+              Array.isArray((stored as Record<string, unknown>).events)
+            ) {
+              // Ensure required fields exist (handles schema evolution across versions)
+              const state = stored as Record<string, unknown>;
+              const hydrated: ExtendedFlowState = {
+                ...makeEmptyFlowState(),
+                ...(state as unknown as ExtendedFlowState),
+              };
+              return Ref.set(stateRef, hydrated);
+            }
+            return Effect.void;
           }),
         ),
       setOidcConfig: (config: OidcConfig) =>

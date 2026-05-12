@@ -1,5 +1,5 @@
 import { Schema, Option, pipe } from 'effect';
-import { emitAuthEvent, emitConfigEvent, configureDevtools } from './emit.js';
+import { emitAuthEvent, emitConfigEvent } from './emit.js';
 import type { DevtoolsOptions } from './emit.js';
 import type { JourneyData } from '@wolfcola/devtools-types';
 
@@ -109,10 +109,6 @@ export function attachJourneyBridge(
     return { detach: () => undefined };
   }
 
-  if (devtoolsOptions) {
-    configureDevtools(devtoolsOptions);
-  }
-
   let configEmitted = false;
   let emittedRequests = new Set<string>();
 
@@ -137,43 +133,49 @@ export function attachJourneyBridge(
               emittedRequests.add(requestId);
 
               if (config && !configEmitted) {
-                emitConfigEvent(config);
+                emitConfigEvent(config, devtoolsOptions);
                 configEmitted = true;
               }
 
               if (entry.status === 'fulfilled') {
                 const journeyData = stepPayloadToJourneyData(entry.data);
                 if (!journeyData) return;
-                emitAuthEvent({
-                  id: crypto.randomUUID(),
-                  timestamp: performance.now(),
-                  type: 'sdk:journey-step',
-                  source: 'sdk',
-                  flowId: null,
-                  causedBy: null,
-                  data: journeyData,
-                  flags: {
-                    isCors: false,
-                    isError: journeyData.stepType === 'LoginFailure',
-                    isAuthRelated: true,
+                emitAuthEvent(
+                  {
+                    id: crypto.randomUUID(),
+                    timestamp: performance.now(),
+                    type: 'sdk:journey-step',
+                    source: 'sdk',
+                    flowId: null,
+                    causedBy: null,
+                    data: journeyData,
+                    flags: {
+                      isCors: false,
+                      isError: journeyData.stepType === 'LoginFailure',
+                      isAuthRelated: true,
+                    },
                   },
-                });
+                  devtoolsOptions,
+                );
               } else {
                 const journeyData: JourneyData = {
                   _tag: 'journey',
                   stepType: 'LoginFailure',
                   errorMessage: extractErrorMessage(entry.error),
                 };
-                emitAuthEvent({
-                  id: crypto.randomUUID(),
-                  timestamp: performance.now(),
-                  type: 'sdk:journey-step',
-                  source: 'sdk',
-                  flowId: null,
-                  causedBy: null,
-                  data: journeyData,
-                  flags: { isCors: false, isError: true, isAuthRelated: true },
-                });
+                emitAuthEvent(
+                  {
+                    id: crypto.randomUUID(),
+                    timestamp: performance.now(),
+                    type: 'sdk:journey-step',
+                    source: 'sdk',
+                    flowId: null,
+                    causedBy: null,
+                    data: journeyData,
+                    flags: { isCors: false, isError: true, isAuthRelated: true },
+                  },
+                  devtoolsOptions,
+                );
               }
             }),
           );

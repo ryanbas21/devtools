@@ -1,5 +1,5 @@
 import { Schema, Option, pipe } from 'effect';
-import { emitAuthEvent, emitConfigEvent, configureDevtools } from './emit.js';
+import { emitAuthEvent, emitConfigEvent } from './emit.js';
 import type { DevtoolsOptions } from './emit.js';
 import type { OidcData } from '@wolfcola/devtools-types';
 
@@ -104,10 +104,6 @@ export function attachOidcBridge(
     return { detach: () => undefined };
   }
 
-  if (devtoolsOptions) {
-    configureDevtools(devtoolsOptions);
-  }
-
   let configEmitted = false;
   let emittedRequests = new Set<string>();
 
@@ -135,7 +131,7 @@ export function attachOidcBridge(
               emittedRequests.add(requestId);
 
               if (config && !configEmitted) {
-                emitConfigEvent(config);
+                emitConfigEvent(config, devtoolsOptions);
                 configEmitted = true;
               }
 
@@ -147,20 +143,23 @@ export function attachOidcBridge(
               );
               if (!oidcData) return;
 
-              emitAuthEvent({
-                id: crypto.randomUUID(),
-                timestamp: performance.now(),
-                type: 'sdk:oidc-state',
-                source: 'sdk',
-                flowId: null,
-                causedBy: null,
-                data: oidcData,
-                flags: {
-                  isCors: false,
-                  isError: oidcData.status === 'error',
-                  isAuthRelated: true,
+              emitAuthEvent(
+                {
+                  id: crypto.randomUUID(),
+                  timestamp: performance.now(),
+                  type: 'sdk:oidc-state',
+                  source: 'sdk',
+                  flowId: null,
+                  causedBy: null,
+                  data: oidcData,
+                  flags: {
+                    isCors: false,
+                    isError: oidcData.status === 'error',
+                    isAuthRelated: true,
+                  },
                 },
-              });
+                devtoolsOptions,
+              );
             }),
           );
         }

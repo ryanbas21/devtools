@@ -9,19 +9,18 @@ import {
 import type { SerializableDiagnosisResult } from '@wolfcola/devtools-core';
 
 const AppLayer = EventStoreChromeLive;
-let runtime = ManagedRuntime.make(AppLayer);
+const runtime = ManagedRuntime.make(AppLayer);
 
-self.addEventListener('activate', () => {
-  runtime = ManagedRuntime.make(AppLayer);
-  runtime
-    .runPromise(
-      Effect.gen(function* () {
-        const store = yield* EventStoreService;
-        yield* store.rehydrate();
-      }),
-    )
-    .catch(console.error);
-});
+// Rehydrate on every SW start-up (module evaluation runs each time
+// Chrome wakes the service worker, unlike `activate` which fires once).
+runtime
+  .runPromise(
+    Effect.gen(function* () {
+      const store = yield* EventStoreService;
+      yield* store.rehydrate();
+    }),
+  )
+  .catch(console.error);
 
 function broadcastToPanel(event: unknown, diagnosis: SerializableDiagnosisResult): void {
   chrome.runtime.sendMessage({ type: 'PANEL_EVENT', payload: event, diagnosis }).catch(() => {
@@ -71,6 +70,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }),
     )
     .then(sendResponse)
-    .catch(console.error);
+    .catch((err) => {
+      console.error(err);
+      sendResponse(null);
+    });
   return true; // keep channel open for async response
 });

@@ -15,7 +15,7 @@
     "lib": ["es2022"]
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
+  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts", "src/webview/**/*.ts"],
   "references": [
     { "path": "../devtools-types/tsconfig.lib.json" },
     { "path": "../devtools-core/tsconfig.lib.json" }

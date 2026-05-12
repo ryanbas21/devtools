@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AuthEvent } from '@wolfcola/devtools-types';
-import { DEVTOOLS_EVENT_NAME, emitAuthEvent, emitConfigEvent, configureDevtools } from './emit.js';
+import { DEVTOOLS_EVENT_NAME, emitAuthEvent, emitConfigEvent } from './emit.js';
 
 // Minimal valid AuthEvent fixture — _tag: 'sdk' satisfies the SdkDataSchema discriminant.
 const makeEvent = (overrides: Partial<AuthEvent> = {}): AuthEvent => ({
@@ -24,8 +24,6 @@ const makeEvent = (overrides: Partial<AuthEvent> = {}): AuthEvent => ({
 
 describe('emitAuthEvent', () => {
   beforeEach(() => {
-    // Reset options between tests by calling configureDevtools with defaults
-    configureDevtools({});
     delete window.__PING_DEVTOOLS_STATE__;
   });
 
@@ -83,18 +81,16 @@ describe('emitAuthEvent', () => {
   });
 });
 
-describe('configureDevtools', () => {
+describe('emitAuthEvent options', () => {
   beforeEach(() => {
-    configureDevtools({});
     delete window.__PING_DEVTOOLS_STATE__;
   });
 
   it('enables console logging when consoleLog is true', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
-    configureDevtools({ consoleLog: true });
     const event = makeEvent();
-    emitAuthEvent(event);
+    emitAuthEvent(event, { consoleLog: true });
 
     expect(spy).toHaveBeenCalledOnce();
     expect(spy).toHaveBeenCalledWith('[ping-devtools]', event.type, event);
@@ -105,8 +101,7 @@ describe('configureDevtools', () => {
   it('does not console.log when consoleLog is false', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
-    configureDevtools({ consoleLog: false });
-    emitAuthEvent(makeEvent());
+    emitAuthEvent(makeEvent(), { consoleLog: false });
 
     expect(spy).not.toHaveBeenCalled();
 
@@ -116,7 +111,6 @@ describe('configureDevtools', () => {
   it('does not console.log by default (no options)', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
-    configureDevtools({});
     emitAuthEvent(makeEvent());
 
     expect(spy).not.toHaveBeenCalled();
@@ -127,7 +121,6 @@ describe('configureDevtools', () => {
 
 describe('emitConfigEvent', () => {
   beforeEach(() => {
-    configureDevtools({});
     delete window.__PING_DEVTOOLS_STATE__;
   });
 

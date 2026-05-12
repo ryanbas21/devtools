@@ -92,7 +92,7 @@ describe('annotateOidc', () => {
     expect(result!.oidcPhase).toBe('token');
     expect(result!.grantType).toBe('authorization_code');
     expect(result!.clientId).toBe('app1');
-    expect(result!.pkce).toEqual({ challengeMethod: 'S256', hasVerifier: true });
+    expect(result!.pkce).toEqual({ hasVerifier: true });
     expect(result!.tokens).toEqual({
       accessToken: true,
       refreshToken: true,
@@ -192,7 +192,7 @@ describe('annotateOidc', () => {
     expect(result).not.toBeNull();
     expect(result!.grantType).toBe('authorization_code');
     expect(result!.clientId).toBe('myapp');
-    expect(result!.pkce).toEqual({ challengeMethod: 'S256', hasVerifier: true });
+    expect(result!.pkce).toEqual({ hasVerifier: true });
   });
 
   it('handles authorize with no query params', () => {

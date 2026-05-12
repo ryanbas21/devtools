@@ -34,13 +34,13 @@ test.describe('panel renders events', () => {
       makeSdkEvent('test-sdk-1', 'test-flow-sdk-1'),
     );
 
-    await panelPage.waitForTimeout(500);
-    await panelPage.reload();
-    await panelPage.waitForSelector('.toolbar', { state: 'visible' });
-    await panelPage.waitForTimeout(500);
-
-    const after = await panelPage.locator('.tl-row').count();
-    expect(after).toBeGreaterThan(before);
+    // Wait for the event to be persisted, then reload to verify
+    await expect(async () => {
+      await panelPage.reload();
+      await panelPage.waitForSelector('.toolbar', { state: 'visible' });
+      const after = await panelPage.locator('.tl-row').count();
+      expect(after).toBeGreaterThan(before);
+    }).toPass({ timeout: 5000 });
 
     await panelPage.close();
   });
@@ -56,22 +56,19 @@ test.describe('panel renders events', () => {
       makeSdkEvent('test-sdk-clear', 'test-flow-clear'),
     );
 
-    await panelPage.waitForTimeout(500);
-    await panelPage.reload();
-    await panelPage.waitForSelector('.toolbar', { state: 'visible' });
-    await panelPage.waitForTimeout(500);
-
-    let rows = await panelPage.locator('.tl-row').count();
-    expect(rows).toBeGreaterThan(0);
+    // Wait for event to appear
+    await expect(async () => {
+      await panelPage.reload();
+      await panelPage.waitForSelector('.toolbar', { state: 'visible' });
+      const rows = await panelPage.locator('.tl-row').count();
+      expect(rows).toBeGreaterThan(0);
+    }).toPass({ timeout: 5000 });
 
     const clearBtn = panelPage.locator('.tb-btn', { hasText: 'Clear' });
-    if (await clearBtn.isVisible()) {
-      await clearBtn.click();
-      await panelPage.waitForTimeout(500);
+    await expect(clearBtn).toBeVisible();
+    await clearBtn.click();
 
-      rows = await panelPage.locator('.tl-row').count();
-      expect(rows).toBe(0);
-    }
+    await expect(panelPage.locator('.tl-row')).toHaveCount(0, { timeout: 3000 });
 
     await panelPage.close();
   });
