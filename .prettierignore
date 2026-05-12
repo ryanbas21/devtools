@@ -1,0 +1,7 @@
+dist
+node_modules
+coverage
+elm-stuff
+out-tsc
+pnpm-lock.yaml
+**/__fixtures__/bad-syntax/**

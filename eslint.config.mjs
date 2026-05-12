@@ -19,6 +19,8 @@ export default [
       '**/coverage',
       '**/elm-stuff',
       '**/vite.config.*.timestamp*',
+      '**/__fixtures__/**',
+      '**/out-tsc/**',
     ],
   },
   ...compat.extends('plugin:@typescript-eslint/recommended', 'plugin:prettier/recommended'),
@@ -44,7 +46,6 @@ export default [
       '@typescript-eslint/no-use-before-define': 'warn',
       '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
       'max-len': 'off',
-      quotes: ['error', 'single', { allowTemplateLiterals: true }],
     },
   },
   {

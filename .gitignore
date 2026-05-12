@@ -9,3 +9,4 @@ elm-stuff/
 *.crx.zip
 *.zip
 packged/
+out-tsc/
