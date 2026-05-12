@@ -86,12 +86,10 @@ export type PackageJsonHints = typeof PackageJsonHints.Type;
 // ─── Top-level result ────────────────────────────────────────────────────────
 
 export const TreeshakeResult = Schema.Union(
-  Schema.Struct({
-    _tag: Schema.Literal('FullyTreeshakeable'),
+  Schema.TaggedStruct('FullyTreeshakeable', {
     hints: PackageJsonHints,
   }),
-  Schema.Struct({
-    _tag: Schema.Literal('HasSideEffects'),
+  Schema.TaggedStruct('HasSideEffects', {
     totalOriginalBytes: Schema.Number,
     totalRenderedBytes: Schema.Number,
     modules: Schema.Array(ModuleAnalysis),

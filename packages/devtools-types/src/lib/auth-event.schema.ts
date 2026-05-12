@@ -38,8 +38,7 @@ export const CorsFlagSchema = Schema.Struct({
 
 export type CorsFlag = Schema.Schema.Type<typeof CorsFlagSchema>;
 
-export const NetworkDataSchema = Schema.Struct({
-  _tag: Schema.Literal('network'),
+export const NetworkDataSchema = Schema.TaggedStruct('network', {
   url: Schema.String,
   method: Schema.String,
   status: Schema.Number,
@@ -63,8 +62,7 @@ export const SdkAuthorizationSchema = Schema.Struct({
   state: Schema.optional(Schema.String),
 });
 
-export const SdkDataSchema = Schema.Struct({
-  _tag: Schema.Literal('sdk'),
+export const SdkDataSchema = Schema.TaggedStruct('sdk', {
   nodeStatus: Schema.String,
   previousStatus: Schema.optional(Schema.String),
   interactionId: Schema.optional(Schema.String),
@@ -82,26 +80,22 @@ export const SdkDataSchema = Schema.Struct({
   responseBody: Schema.optional(Schema.Unknown),
 });
 
-export const SdkConfigDataSchema = Schema.Struct({
-  _tag: Schema.Literal('sdk-config'),
+export const SdkConfigDataSchema = Schema.TaggedStruct('sdk-config', {
   config: Schema.Unknown,
 });
 
-export const DomDataSchema = Schema.Struct({
-  _tag: Schema.Literal('dom'),
+export const DomDataSchema = Schema.TaggedStruct('dom', {
   element: Schema.optional(Schema.String),
   url: Schema.optional(Schema.String),
 });
 
-export const SessionDataSchema = Schema.Struct({
-  _tag: Schema.Literal('session'),
+export const SessionDataSchema = Schema.TaggedStruct('session', {
   key: Schema.String,
   before: Schema.optional(Schema.String),
   after: Schema.optional(Schema.String),
 });
 
-export const JourneyDataSchema = Schema.Struct({
-  _tag: Schema.Literal('journey'),
+export const JourneyDataSchema = Schema.TaggedStruct('journey', {
   stepType: Schema.Union(
     Schema.Literal('Step'),
     Schema.Literal('LoginSuccess'),
@@ -120,8 +114,7 @@ export const JourneyDataSchema = Schema.Struct({
   errorReason: Schema.optional(Schema.String),
 });
 
-export const OidcDataSchema = Schema.Struct({
-  _tag: Schema.Literal('oidc'),
+export const OidcDataSchema = Schema.TaggedStruct('oidc', {
   phase: Schema.Union(
     Schema.Literal('authorize'),
     Schema.Literal('exchange'),
@@ -164,8 +157,7 @@ export const OidcErrorSchema = Schema.Struct({
   errorDescription: Schema.optional(Schema.String),
 });
 
-export const OidcSemanticsSchema = Schema.Struct({
-  _tag: Schema.Literal('oidc-semantics'),
+export const OidcSemanticsSchema = Schema.TaggedStruct('oidc-semantics', {
   oidcPhase: Schema.Union(
     Schema.Literal('discovery'),
     Schema.Literal('authorize'),
