@@ -307,3 +307,55 @@ a:hover {
 .quick-links h2 {
   margin-bottom: 1rem;
 }
+
+/* API Reference */
+.api-reference {
+  max-width: var(--content-max);
+}
+.api-description {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+}
+.api-item {
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.api-item:last-child {
+  border-bottom: none;
+}
+.api-item-name {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.api-signature {
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+.api-example {
+  margin-top: 0.75rem;
+}
+.api-example h4 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+/* Architecture */
+.architecture-diagram {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: var(--bg-sidebar);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}

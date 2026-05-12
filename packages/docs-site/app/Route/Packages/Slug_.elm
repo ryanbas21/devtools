@@ -116,6 +116,8 @@ view app _ =
     { title = app.data.title
     , body =
         [ Html.article [ Attr.class "markdown-content" ]
-            (renderMarkdown app.data.markdownBody)
+            (Html.p [ Attr.class "page-description" ] [ Html.text app.data.description ]
+                :: renderMarkdown app.data.markdownBody
+            )
         ]
     }

@@ -82,5 +82,5 @@ view :
     -> View (PagesMsg Msg)
 view app sharedModel =
     { title = "Placeholder - Blog.Slug_"
-    , body = [ Html.text "You're on the page Blog.Slug_" ]
+    , body = [ Html.text app.data.something ]
     }
