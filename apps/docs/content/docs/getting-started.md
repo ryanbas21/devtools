@@ -42,3 +42,4 @@ npm install @wolfcola/devtools-bridge
 - Read the [Tree-Shaking Guide](/docs/tree-shaking)
 - Explore the [Architecture](/architecture)
 - Learn about the [DevTools Extension](/docs/devtools-extension)
+- Check out the [VS Code Extension](/docs/vscode-extension)
