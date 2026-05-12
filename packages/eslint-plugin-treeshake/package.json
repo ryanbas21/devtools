@@ -1,0 +1,48 @@
+{
+  "name": "@wolfcola/eslint-plugin-treeshake",
+  "version": "0.0.0",
+  "description": "ESLint plugin that flags code patterns known to break tree-shaking",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ryanbas21/devtools.git",
+    "directory": "packages/eslint-plugin-treeshake"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "!dist/*.tsbuildinfo"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@typescript-eslint/utils": "8.59.2"
+  },
+  "peerDependencies": {
+    "eslint": ">=9.0.0",
+    "@typescript-eslint/parser": ">=8.0.0"
+  },
+  "optionalDependencies": {
+    "@wolfcola/treeshake-check": "workspace:*"
+  },
+  "devDependencies": {
+    "@typescript-eslint/rule-tester": "8.59.2",
+    "vitest": "catalog:vitest"
+  }
+}
