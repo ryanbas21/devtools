@@ -74,6 +74,15 @@ jobs:
           api-key: ${{ secrets.AMO_JWT_ISSUER }}
           api-secret: ${{ secrets.AMO_JWT_SECRET }}
 
+      - name: Stamp VS Code extension version
+        if: inputs.extension
+        working-directory: packages/vscode-extension
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          BASE=$(node -p "require('./package.json').version")
+          npm version "${BASE}.${BUILD_NUMBER}" --no-git-tag-version
+
       - name: Publish VS Code extension (pre-release)
         if: inputs.extension
         working-directory: packages/vscode-extension
