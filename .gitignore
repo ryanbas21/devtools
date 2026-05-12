@@ -11,3 +11,4 @@ elm-stuff/
 packged/
 out-tsc/
 .direnv/
+.corepack/

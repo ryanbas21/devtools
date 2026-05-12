@@ -3,34 +3,48 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
+    systems.url = "github:nix-systems/default";
   };
 
   outputs =
     {
       nixpkgs,
-      flake-utils,
+      systems,
       ...
     }:
-    flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-      in
-      {
-        devShells.default = pkgs.mkShell {
-          packages = with pkgs; [
-            nodejs_24
-            pnpm
-            lefthook
-          ];
+    let
+      eachSystem = nixpkgs.lib.genAttrs (import systems);
+    in
+    {
+      devShells = eachSystem (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          default = pkgs.mkShell {
+            packages = with pkgs; [
+              nodejs_24
+              corepack
+              lefthook
+            ];
 
-          shellHook = ''
-            echo "wolfcola-devtools dev shell"
-            echo "  node $(node --version)"
-            echo "  pnpm $(pnpm --version)"
-          '';
-        };
-      }
-    );
+            shellHook = ''
+              corepack enable --install-directory "$PWD/.corepack" >/dev/null 2>&1
+              export PATH="$PWD/.corepack:$PATH"
+
+              if [ ! -d node_modules ]; then
+                echo "node_modules missing — running pnpm install..."
+                pnpm install
+              elif [ pnpm-lock.yaml -nt node_modules ]; then
+                echo "pnpm-lock.yaml is newer than node_modules — running pnpm install..."
+                pnpm install
+              fi
+            '';
+          };
+        }
+      );
+
+      formatter = eachSystem (system: nixpkgs.legacyPackages.${system}.nixfmt);
+    };
 }
