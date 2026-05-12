@@ -27,6 +27,7 @@
               nodejs_24
               corepack
               lefthook
+              elmPackages.elm
             ];
 
             shellHook = ''
