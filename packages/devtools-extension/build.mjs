@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { stampVersion } from './src/stamp-version.ts';
 
 const target = process.argv.includes('--target=firefox') ? 'firefox' : 'chrome';
 const cwd = import.meta.dirname;
@@ -67,6 +68,16 @@ cpSync(`${uiDir}/dist/panel.html`, 'dist/panel/panel.html');
 
 // Manifest
 const manifest = JSON.parse(readFileSync('manifest.json', 'utf8'));
+
+// Stamp version: append build number as 4th segment for Chrome Web Store
+const buildNumber = parseInt(process.env.BUILD_NUMBER || '0', 10);
+const isSnapshot = process.env.SNAPSHOT === 'true';
+const stamped = stampVersion(manifest.version, buildNumber, isSnapshot);
+manifest.version = stamped.version;
+if (stamped.version_name) {
+  manifest.version_name = stamped.version_name;
+}
+
 if (target === 'firefox') {
   manifest.background = { scripts: ['background/service-worker.js'], type: 'module' };
   manifest.browser_specific_settings = {
