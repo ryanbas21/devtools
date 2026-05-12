@@ -1,0 +1,15 @@
+pre-commit:
+  commands:
+    syncpack-lint:
+      run: pnpm syncpack lint
+      stage_fixed: true
+    eslint:
+      glob: '*.{js,mjs,ts,mts,tsx}'
+      exclude: '(out-tsc|__fixtures__|dist|node_modules)/'
+      run: pnpm eslint --no-warn-ignored --fix {staged_files}
+      stage_fixed: true
+    prettier:
+      glob: '*.{js,mjs,ts,mts,tsx,json,yaml,yml,md,css,html}'
+      exclude: '(out-tsc|__fixtures__/bad-syntax|dist|node_modules)/'
+      run: pnpm prettier --write {staged_files}
+      stage_fixed: true
