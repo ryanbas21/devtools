@@ -4,6 +4,32 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  effect:
+    '@effect/cli':
+      specifier: ^0.75.1
+      version: 0.75.1
+    '@effect/platform':
+      specifier: ^0.96.0
+      version: 0.96.1
+    '@effect/platform-node':
+      specifier: ^0.106.0
+      version: 0.106.0
+    '@effect/vitest':
+      specifier: ^0.29.0
+      version: 0.29.0
+    effect:
+      specifier: ^3.21.1
+      version: 3.21.2
+  vite:
+    vite:
+      specifier: ^7.3.2
+      version: 7.3.3
+  vitest:
+    vitest:
+      specifier: ^3.2.0
+      version: 3.2.4
+
 importers:
 
   .:
@@ -146,6 +172,10 @@ importers:
         version: 5.47.1
 
   packages/docs-site:
+    dependencies:
+      prismjs:
+        specifier: ^1.30.0
+        version: 1.30.0
     devDependencies:
       elm-codegen:
         specifier: ^0.6.3
@@ -3795,6 +3825,10 @@ packages:
   pretty-format@27.5.1:
     resolution: {integrity: sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
+
+  prismjs@1.30.0:
+    resolution: {integrity: sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==}
+    engines: {node: '>=6'}
 
   proc-log@6.1.0:
     resolution: {integrity: sha512-iG+GYldRf2BQ0UDUAd6JQ/RwzaQy6mXmsk/IzlYyal4A4SNFw54MeH4/tLkF4I5WoWG9SQwuqWzS99jaFQHBuQ==}
@@ -8650,6 +8684,8 @@ snapshots:
       ansi-regex: 5.0.1
       ansi-styles: 5.2.0
       react-is: 17.0.2
+
+  prismjs@1.30.0: {}
 
   proc-log@6.1.0: {}
 
