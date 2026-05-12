@@ -12,3 +12,4 @@ packged/
 out-tsc/
 .direnv/
 .corepack/
+.worktrees/
