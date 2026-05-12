@@ -30,15 +30,21 @@ npm install -D @wolfcola/treeshake-check
 ### Running the Check
 
 ```bash
-npx treeshake-check your-package-name
+npx treeshake-check
+```
+
+Run from inside your package directory. Or specify a path:
+
+```bash
+npx treeshake-check --cwd packages/my-lib
 ```
 
 The tool will:
 
-1. Discover all named exports from your package
-2. Create a minimal Rollup bundle importing each export individually
-3. Compare the bundle size against a threshold
-4. Report which exports are tree-shakeable and which are not
+1. Read `package.json` to find the entry point (`module`, `main`, or `exports`)
+2. Bundle the entry through Rollup as the sole import
+3. Analyze the output — if rendered bytes are zero, the package is fully tree-shakeable
+4. Report which modules survived shaking, with per-file diagnostics and suggested fixes
 
 ### CI Integration
 
@@ -47,7 +53,7 @@ Add a check to your CI pipeline to catch tree-shaking regressions:
 ```json
 {
   "scripts": {
-    "check:treeshake": "treeshake-check your-package-name"
+    "check:treeshake": "treeshake-check"
   }
 }
 ```
@@ -78,10 +84,12 @@ export default [treeshake.configs.recommended];
 
 The plugin includes rules that flag:
 
-- **Top-level side effects** — code that runs at module evaluation time prevents the export from being eliminated
-- **Mutable module-scope variables** — `let` or `var` at module scope that are read by exported functions create implicit dependencies
-- **Class static initializers with side effects** — static blocks or property initializers that call external functions
-- **Barrel file anti-patterns** — re-export-all patterns (`export * from`) that defeat bundler analysis
+- **Enum declarations** — TypeScript `enum` compiles to an IIFE that bundlers cannot eliminate
+- **Unannotated top-level calls** — function calls at module scope without `/*#__PURE__*/` annotation
+- **Prototype mutations** — `Object.defineProperty`, `Object.defineProperties`, `Object.setPrototypeOf`, and `.prototype` assignments
+- **Global assignments** — writes to `window`, `globalThis`, `self`, or `global`
+- **CommonJS patterns** — `require()`, `module.exports`, and `exports` usage
+- **Missing `sideEffects` field** — warns when `package.json` lacks `"sideEffects": false`
 
 <callout type="info">The `treeshake-check` CLI and `eslint-plugin-treeshake` complement each other. The CLI tests your built output; the ESLint plugin catches problems in source code.</callout>
 

@@ -43,15 +43,15 @@ A single rule that detects multiple categories of tree-shaking hazards. Each cat
 
 ### Detected Patterns
 
-| Pattern               | Option                   | Default | Description                                                             |
-| --------------------- | ------------------------ | ------- | ----------------------------------------------------------------------- |
-| Enum declarations     | `checkEnums`             | `true`  | TypeScript `enum` compiles to an IIFE that bundlers cannot remove       |
-| Unannotated calls     | `checkUnannotatedCalls`  | `true`  | Top-level function calls without `/*#__PURE__*/` annotation             |
-| Prototype mutations   | `checkPrototypeMutation` | `true`  | `Object.defineProperty`, `Object.setPrototypeOf`, `X.prototype.y = ...` |
-| Global assignments    | `checkGlobalAssignment`  | `true`  | Assignments to `window`, `globalThis`, `self`, `global`                 |
-| CommonJS patterns     | `checkCjsPatterns`       | `true`  | `require()`, `module.exports`, `exports.x`                              |
-| Missing `sideEffects` | `checkSideEffectsField`  | `true`  | Warns when nearest `package.json` lacks a `sideEffects` field           |
-| Bundle check (opt-in) | `bundleCheck`            | `false` | Runs `treeshake-check --json` and maps results to source locations      |
+| Pattern               | Option                   | Default | Description                                                                                        |
+| --------------------- | ------------------------ | ------- | -------------------------------------------------------------------------------------------------- |
+| Enum declarations     | `checkEnums`             | `true`  | TypeScript `enum` compiles to an IIFE that bundlers cannot remove                                  |
+| Unannotated calls     | `checkUnannotatedCalls`  | `true`  | Top-level function calls without `/*#__PURE__*/` annotation                                        |
+| Prototype mutations   | `checkPrototypeMutation` | `true`  | `Object.defineProperty`, `Object.defineProperties`, `Object.setPrototypeOf`, `X.prototype.y = ...` |
+| Global assignments    | `checkGlobalAssignment`  | `true`  | Assignments to `window`, `globalThis`, `self`, `global`                                            |
+| CommonJS patterns     | `checkCjsPatterns`       | `true`  | `require()`, `module.exports`, `exports.x`                                                         |
+| Missing `sideEffects` | `checkSideEffectsField`  | `true`  | Warns when nearest `package.json` lacks a `sideEffects` field                                      |
+| Bundle check (opt-in) | `bundleCheck`            | `false` | Runs `treeshake-check --json` and maps results to source locations                                 |
 
 ### Rule Options
 

@@ -15,10 +15,16 @@ Install the wolfcola devtools packages you need.
 npm install -D @wolfcola/treeshake-check
 ```
 
-Run the CLI:
+Run the CLI from your package directory:
 
 ```bash
-npx treeshake-check your-package
+npx treeshake-check
+```
+
+Or point it at a specific package:
+
+```bash
+npx treeshake-check --cwd packages/my-lib
 ```
 
 ## OIDC DevTools
@@ -35,3 +41,4 @@ npm install @wolfcola/devtools-bridge
 
 - Read the [Tree-Shaking Guide](/docs/tree-shaking)
 - Explore the [Architecture](/architecture)
+- Learn about the [DevTools Extension](/docs/devtools-extension)

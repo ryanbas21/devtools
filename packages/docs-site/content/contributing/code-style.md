@@ -114,7 +114,7 @@ assert.strictEqual(result, 42);
 
 ### Test File Location
 
-Test files live in `packages/<name>/test/` directories, mirroring the source structure.
+Test files are co-located with source files in `packages/<name>/src/` (e.g. `davinci-bridge.test.ts` next to `davinci-bridge.ts`).
 
 ## Elm Conventions
 

@@ -15,13 +15,13 @@ Install from the VS Code Marketplace:
 
 1. Open VS Code
 2. Go to Extensions (Ctrl+Shift+X / Cmd+Shift+X)
-3. Search for "wolfcola devtools"
+3. Search for "OIDC DevTools"
 4. Click Install
 
 Alternatively, install from the command line:
 
 ```bash
-code --install-extension wolfcola.devtools-vscode
+code --install-extension ryanbasmajian.oidc-devtools
 ```
 
 ## CDP WebSocket Connection
@@ -64,7 +64,7 @@ A webview panel renders the current `FlowState` as an interactive diagram, simil
 
 ### CodeLens Integration
 
-When the extension detects that your workspace contains `@wolfcola/devtools-bridge` import statements, it adds CodeLens annotations above `createBridge()` calls showing the connection status and last event received.
+When the extension detects that your workspace contains `@wolfcola/devtools-bridge` import statements, it adds CodeLens annotations above bridge attachment calls (e.g. `attachDaVinciBridge()`) showing the connection status and last event received.
 
 ### Diagnostics
 

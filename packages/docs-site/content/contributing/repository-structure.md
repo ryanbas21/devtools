@@ -17,8 +17,10 @@ The wolfcola-devtools repository is a pnpm workspace monorepo. All publishable p
 | `@wolfcola/eslint-plugin-treeshake` | `packages/eslint-plugin-treeshake` | ESLint plugin that flags patterns breaking tree-shaking   |
 | `@wolfcola/devtools-bridge`         | `packages/devtools-bridge`         | SDK adapter for emitting AuthEvent objects to DevTools    |
 | `@wolfcola/devtools-types`          | `packages/devtools-types`          | Effect Schema definitions for AuthEvent and FlowState     |
+| `@wolfcola/devtools-core`           | `packages/devtools-core`           | Shared annotators, diagnosis engine, event store          |
+| `@wolfcola/devtools-ui`             | `packages/devtools-ui`             | Elm UI components for Timeline, Flow, and Learn views     |
 | `@wolfcola/devtools-extension`      | `packages/devtools-extension`      | Browser extension for Chrome and Firefox                  |
-| `@wolfcola/devtools-vscode`         | `packages/devtools-vscode`         | VS Code extension with CDP connection                     |
+| `oidc-devtools`                     | `packages/vscode-extension`        | VS Code extension with CDP connection                     |
 | `@wolfcola/docs-site`               | `packages/docs-site`               | This documentation site (elm-pages)                       |
 
 ## Root Files
@@ -52,19 +54,24 @@ The packages have the following dependency relationships:
 
 ```
 devtools-extension
+  ├── devtools-core
+  ├── devtools-ui (Elm)
   └── devtools-types
 
 devtools-bridge
   └── devtools-types
 
-devtools-vscode
+vscode-extension
+  └── devtools-types
+
+devtools-core
   └── devtools-types
 
 treeshake-check
   (standalone)
 
 eslint-plugin-treeshake
-  (standalone)
+  (standalone, optional dep on treeshake-check)
 ```
 
 The `devtools-types` package is the shared foundation. It defines the `AuthEvent` and `FlowState` schemas that the bridge, browser extension, and VS Code extension all depend on.

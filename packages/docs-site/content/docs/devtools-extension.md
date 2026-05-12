@@ -30,7 +30,7 @@ pnpm install
 pnpm --filter @wolfcola/devtools-extension build
 ```
 
-Then load the unpacked extension from `packages/devtools-extension/dist/` in your browser's extension management page.
+Then load the unpacked extension from `packages/devtools-extension/` in your browser's extension management page (the `manifest.json` is in the package root).
 
 ## Using the DevTools Panel
 
@@ -44,7 +44,7 @@ The extension provides three views, accessible via tabs at the top of the panel.
 
 The Timeline view shows a chronological list of every `AuthEvent` emitted by the bridge. Each event displays:
 
-- **Event type** (e.g. `authorize`, `token_exchange`, `refresh`)
+- **Event type** (e.g. `sdk:node-change`, `session:cookie`, `sdk:oidc-state`)
 - **Timestamp** relative to the page load
 - **Payload** expandable JSON tree with the full event data
 
