@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { attachDevToolsBridge, nodeToSdkData } from './bridge.js';
+import { attachDaVinciBridge, nodeToSdkData } from './davinci-bridge.js';
 import { DEVTOOLS_EVENT_NAME } from './emit.js';
 import type { AuthEvent } from '@wolfcola/devtools-types';
 
@@ -100,13 +100,22 @@ describe('nodeToSdkData', () => {
     const result = nodeToSdkData({ status: 'continue', cache: null } as never, undefined);
     expect(result.requestId).toBeUndefined();
   });
+
+  it('passes responseBody through to the result', () => {
+    const body = { access_token: 'tok-abc', token_type: 'Bearer' };
+    const result = nodeToSdkData({ status: 'success' }, 'continue', body);
+    expect(result.responseBody).toBe(body);
+  });
 });
 
 // ---------------------------------------------------------------------------
 // Mock client factory
 // ---------------------------------------------------------------------------
 
-function makeClient(initialNode: Record<string, unknown>) {
+function makeClient(
+  initialNode: Record<string, unknown>,
+  cache?: { getCache: (key: string) => unknown },
+) {
   let listener: (() => void) | null = null;
   let node = initialNode;
   return {
@@ -117,6 +126,7 @@ function makeClient(initialNode: Record<string, unknown>) {
       };
     }),
     getNode: vi.fn(() => node),
+    cache,
     /** Test helper: update internal node and fire the subscribed listener. */
     trigger: (newNode: Record<string, unknown>) => {
       node = newNode;
@@ -140,7 +150,7 @@ function captureDevtoolsEvents(): { events: CustomEvent<AuthEvent>[]; stop: () =
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('attachDevToolsBridge', () => {
+describe('attachDaVinciBridge', () => {
   beforeEach(() => {
     // Simulate extension presence for all tests except the no-op test.
     (window as unknown as Record<string, unknown>)['__PING_DEVTOOLS_EXTENSION__'] = true;
@@ -154,7 +164,7 @@ describe('attachDevToolsBridge', () => {
 
   it('returns a BridgeHandle with a detach function', () => {
     const client = makeClient({ status: 'start' });
-    const handle = attachDevToolsBridge(client);
+    const handle = attachDaVinciBridge(client);
 
     expect(handle).toHaveProperty('detach');
     expect(typeof handle.detach).toBe('function');
@@ -166,7 +176,7 @@ describe('attachDevToolsBridge', () => {
     const client = makeClient({ status: 'start' });
     const { events, stop } = captureDevtoolsEvents();
 
-    const handle = attachDevToolsBridge(client);
+    const handle = attachDaVinciBridge(client);
 
     // Trigger a status transition.
     client.trigger({ status: 'continue' });
@@ -202,7 +212,7 @@ describe('attachDevToolsBridge', () => {
     const client = makeClient({ status: 'start' });
     const { events, stop } = captureDevtoolsEvents();
 
-    const handle = attachDevToolsBridge(client);
+    const handle = attachDaVinciBridge(client);
     client.trigger(continueNode);
 
     handle.detach();
@@ -228,7 +238,7 @@ describe('attachDevToolsBridge', () => {
     const client = makeClient({ status: 'start' });
     const { events, stop } = captureDevtoolsEvents();
 
-    const handle = attachDevToolsBridge(client);
+    const handle = attachDaVinciBridge(client);
 
     // First trigger sets previousStatus = 'start'.
     client.trigger({ status: 'start' });
@@ -249,7 +259,7 @@ describe('attachDevToolsBridge', () => {
     const client = makeClient({ status: 'start' });
     const { events, stop } = captureDevtoolsEvents();
 
-    const handle = attachDevToolsBridge(client);
+    const handle = attachDaVinciBridge(client);
 
     // Verify subscribe was wired up.
     expect(client.subscribe).toHaveBeenCalledTimes(1);
@@ -268,7 +278,7 @@ describe('attachDevToolsBridge', () => {
     const client = makeClient({ status: 'start' });
     const { events, stop } = captureDevtoolsEvents();
 
-    const handle = attachDevToolsBridge(client, {
+    const handle = attachDaVinciBridge(client, {
       clientId: 'my-app',
       redirectUri: 'https://app.example.com/callback',
     });
@@ -293,7 +303,7 @@ describe('attachDevToolsBridge', () => {
     const client = makeClient({ status: 'start' });
     const { events, stop } = captureDevtoolsEvents();
 
-    const handle = attachDevToolsBridge(client, { clientId: 'my-app' });
+    const handle = attachDaVinciBridge(client, { clientId: 'my-app' });
 
     client.trigger({ status: 'continue' });
     client.trigger({ status: 'success' });
@@ -309,7 +319,7 @@ describe('attachDevToolsBridge', () => {
     const client = makeClient({ status: 'start' });
     const { events, stop } = captureDevtoolsEvents();
 
-    const handle = attachDevToolsBridge(client);
+    const handle = attachDaVinciBridge(client);
 
     client.trigger({ status: 'continue' });
 
@@ -327,7 +337,7 @@ describe('attachDevToolsBridge', () => {
     const client = makeClient({ status: 'start' });
     const { events, stop } = captureDevtoolsEvents();
 
-    const handle = attachDevToolsBridge(client);
+    const handle = attachDaVinciBridge(client);
 
     // subscribe is called (the bridge still subscribes), but no events should be dispatched.
     expect(client.subscribe).toHaveBeenCalledTimes(1);
@@ -346,7 +356,7 @@ describe('attachDevToolsBridge', () => {
     const client = makeClient({ status: 'start' });
     const { events, stop } = captureDevtoolsEvents();
 
-    const handle = attachDevToolsBridge(client, { clientId: 'my-app' });
+    const handle = attachDaVinciBridge(client, { clientId: 'my-app' });
     client.trigger({ status: 'continue' });
 
     handle.detach();
@@ -360,7 +370,7 @@ describe('attachDevToolsBridge', () => {
   });
 });
 
-describe('attachDevToolsBridge session tracking', () => {
+describe('attachDaVinciBridge session tracking', () => {
   beforeEach(() => {
     (window as unknown as Record<string, unknown>)['__PING_DEVTOOLS_EXTENSION__'] = true;
     localStorage.clear();
@@ -380,7 +390,7 @@ describe('attachDevToolsBridge session tracking', () => {
     const client = makeClient({ status: 'start' });
     const { events, stop } = captureDevtoolsEvents();
 
-    const handle = attachDevToolsBridge(client);
+    const handle = attachDaVinciBridge(client);
 
     // Trigger a node transition, then mutate storage in the same tick
     client.trigger({ status: 'continue' });
@@ -410,7 +420,7 @@ describe('attachDevToolsBridge session tracking', () => {
     const client = makeClient({ status: 'start' });
     const { events, stop } = captureDevtoolsEvents();
 
-    const handle = attachDevToolsBridge(client);
+    const handle = attachDaVinciBridge(client);
     client.trigger({ status: 'continue' });
 
     await new Promise((r) => setTimeout(r, 10));
@@ -422,5 +432,117 @@ describe('attachDevToolsBridge session tracking', () => {
       (e) => e.detail.type === 'session:storage' || e.detail.type === 'session:cookie',
     );
     expect(sessionEvents).toHaveLength(0);
+  });
+
+  it('emits session:cookie event when document.cookie changes after a node transition', async () => {
+    const client = makeClient({ status: 'start' });
+    const { events, stop } = captureDevtoolsEvents();
+
+    const handle = attachDaVinciBridge(client);
+
+    client.trigger({ status: 'continue' });
+    // Mutate cookie after the transition in the same tick
+    document.cookie = 'sid=new-session-id';
+
+    await new Promise((r) => setTimeout(r, 10));
+
+    handle.detach();
+    stop();
+
+    const cookieEvents = events.filter((e) => e.detail.type === 'session:cookie');
+    expect(cookieEvents).toHaveLength(1);
+    const data = cookieEvents[0].detail.data as {
+      _tag: string;
+      key: string;
+      before?: string;
+      after?: string;
+    };
+    expect(data._tag).toBe('session');
+    expect(data.key).toBe('document.cookie');
+    expect(data.before).toBeUndefined();
+    expect(data.after).toBe('sid=new-session-id');
+  });
+
+  it('emits separate session:storage events for multiple keys changing at once', async () => {
+    const client = makeClient({ status: 'start' });
+    const { events, stop } = captureDevtoolsEvents();
+
+    // Pre-populate a key that will be removed
+    localStorage.setItem('old-key', 'old-value');
+
+    const handle = attachDaVinciBridge(client);
+
+    // First transition to capture the initial snapshot (which includes old-key)
+    client.trigger({ status: 'continue' });
+    await new Promise((r) => setTimeout(r, 10));
+
+    // Now mutate multiple keys and trigger another transition
+    localStorage.setItem('new-key', 'new-value');
+    localStorage.setItem('old-key', 'changed-value');
+    localStorage.setItem('another-key', 'another-value');
+
+    client.trigger({ status: 'success' });
+    await new Promise((r) => setTimeout(r, 10));
+
+    handle.detach();
+    stop();
+
+    const storageEvents = events.filter((e) => e.detail.type === 'session:storage');
+    const changedKeys = storageEvents.map((e) => (e.detail.data as { key: string }).key);
+
+    expect(changedKeys).toContain('new-key');
+    expect(changedKeys).toContain('old-key');
+    expect(changedKeys).toContain('another-key');
+    expect(storageEvents).toHaveLength(3);
+  });
+});
+
+describe('attachDaVinciBridge cache passthrough', () => {
+  beforeEach(() => {
+    (window as unknown as Record<string, unknown>)['__PING_DEVTOOLS_EXTENSION__'] = true;
+  });
+
+  afterEach(async () => {
+    delete (window as unknown as Record<string, unknown>)['__PING_DEVTOOLS_EXTENSION__'];
+    await new Promise((r) => setTimeout(r, 10));
+  });
+
+  it('passes cached response body through to the emitted SdkData', () => {
+    const cachedResponse = { access_token: 'tok-xyz', token_type: 'Bearer' };
+    const cache = { getCache: vi.fn(() => cachedResponse) };
+    const client = makeClient({ status: 'start' }, cache);
+    const { events, stop } = captureDevtoolsEvents();
+
+    const handle = attachDaVinciBridge(client);
+    client.trigger({
+      status: 'continue',
+      cache: { key: 'req-42' },
+      server: { interactionId: 'iid-1' },
+    });
+
+    handle.detach();
+    stop();
+
+    expect(cache.getCache).toHaveBeenCalledWith('req-42');
+    expect(events).toHaveLength(1);
+    const data = events[0].detail.data as { responseBody?: unknown };
+    expect(data.responseBody).toBe(cachedResponse);
+  });
+
+  it('does not call getCache when node has no cache key', () => {
+    const cache = { getCache: vi.fn() };
+    const client = makeClient({ status: 'start' }, cache);
+    const { events, stop } = captureDevtoolsEvents();
+
+    const handle = attachDaVinciBridge(client);
+    client.trigger({ status: 'continue' });
+
+    handle.detach();
+    stop();
+
+    expect(cache.getCache).not.toHaveBeenCalled();
+    expect(events).toHaveLength(1);
+    const data = events[0].detail.data as { responseBody?: unknown };
+    expect(data.responseBody).toBeUndefined();
   });
 });

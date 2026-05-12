@@ -10,9 +10,9 @@
     "./panel.css": "./dist/panel.css",
     "./panel.html": "./dist/panel.html",
     "./ports": {
-      "types": "./src/ports.d.ts",
-      "import": "./src/ports.js",
-      "default": "./src/ports.js"
+      "types": "./src/ports.ts",
+      "import": "./src/ports.ts",
+      "default": "./src/ports.ts"
     },
     "./package.json": "./package.json"
   },

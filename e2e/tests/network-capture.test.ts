@@ -29,14 +29,13 @@ test.describe('network capture pipeline', () => {
       });
     }, `${mockServer.baseUrl}/.well-known/openid-configuration`);
 
-    await panelPage.waitForTimeout(1000);
-
-    await panelPage.reload();
-    await panelPage.waitForSelector('.toolbar', { state: 'visible' });
-    await panelPage.waitForTimeout(500);
-
-    const eventCount = await getEventCount(panelPage);
-    expect(eventCount).toBeGreaterThanOrEqual(1);
+    // Wait for the service worker to persist the event, then reload to verify
+    await expect(async () => {
+      await panelPage.reload();
+      await panelPage.waitForSelector('.toolbar', { state: 'visible' });
+      const eventCount = await getEventCount(panelPage);
+      expect(eventCount).toBeGreaterThanOrEqual(1);
+    }).toPass({ timeout: 5000 });
 
     await panelPage.close();
   });
@@ -75,8 +74,6 @@ test.describe('network capture pipeline', () => {
       });
     }, `${mockServer.baseUrl}/.well-known/openid-configuration`);
 
-    await panelPage.waitForTimeout(500);
-
     await panelPage.evaluate((url) => {
       chrome.runtime.sendMessage({
         type: 'NETWORK_EVENT',
@@ -104,13 +101,13 @@ test.describe('network capture pipeline', () => {
       });
     }, `${mockServer.baseUrl}/token`);
 
-    await panelPage.waitForTimeout(1000);
-    await panelPage.reload();
-    await panelPage.waitForSelector('.toolbar', { state: 'visible' });
-    await panelPage.waitForTimeout(500);
-
-    const eventCount = await getEventCount(panelPage);
-    expect(eventCount).toBeGreaterThanOrEqual(2);
+    // Wait for both events to be persisted, then reload to verify
+    await expect(async () => {
+      await panelPage.reload();
+      await panelPage.waitForSelector('.toolbar', { state: 'visible' });
+      const eventCount = await getEventCount(panelPage);
+      expect(eventCount).toBeGreaterThanOrEqual(2);
+    }).toPass({ timeout: 5000 });
 
     await panelPage.close();
   });

@@ -142,8 +142,10 @@ function annotateToken(data: NetworkData, result: MutableOidcSemantics): void {
 
   const hasVerifier = !!formBody['code_verifier'];
   if (hasVerifier) {
+    // Only the authorize request knows the challenge method — the token
+    // request just sends the verifier. Leave challengeMethod undefined so
+    // downstream consumers don't see a misleading hard-coded value.
     result.pkce = {
-      challengeMethod: 'S256',
       hasVerifier: true,
     };
   }

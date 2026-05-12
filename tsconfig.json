@@ -3,6 +3,8 @@
   "references": [
     { "path": "packages/devtools-types" },
     { "path": "packages/devtools-bridge" },
-    { "path": "packages/devtools-extension" }
+    { "path": "packages/devtools-core" },
+    { "path": "packages/devtools-extension" },
+    { "path": "packages/vscode-extension" }
   ]
 }

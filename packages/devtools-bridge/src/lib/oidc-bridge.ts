@@ -1,11 +1,7 @@
 import { Schema, Option, pipe } from 'effect';
-import { emitAuthEvent, emitConfigEvent, configureDevtools } from './emit.js';
-import type { DevtoolsOptions } from './emit.js';
+import { emitAuthEvent, emitConfigEvent } from './emit.js';
+import type { BridgeHandle, DevtoolsOptions } from './emit.js';
 import type { OidcData } from '@wolfcola/devtools-types';
-
-export interface OidcBridgeHandle {
-  detach: () => void;
-}
 
 interface OidcSubscribable {
   subscribe: (listener: () => void) => () => void;
@@ -99,13 +95,9 @@ export function attachOidcBridge(
   client: OidcSubscribable,
   config?: { clientId?: string } & object,
   devtoolsOptions?: DevtoolsOptions,
-): OidcBridgeHandle {
+): BridgeHandle {
   if (typeof window === 'undefined') {
     return { detach: () => undefined };
-  }
-
-  if (devtoolsOptions) {
-    configureDevtools(devtoolsOptions);
   }
 
   let configEmitted = false;
@@ -135,7 +127,7 @@ export function attachOidcBridge(
               emittedRequests.add(requestId);
 
               if (config && !configEmitted) {
-                emitConfigEvent(config);
+                emitConfigEvent(config, devtoolsOptions);
                 configEmitted = true;
               }
 
@@ -147,20 +139,23 @@ export function attachOidcBridge(
               );
               if (!oidcData) return;
 
-              emitAuthEvent({
-                id: crypto.randomUUID(),
-                timestamp: performance.now(),
-                type: 'sdk:oidc-state',
-                source: 'sdk',
-                flowId: null,
-                causedBy: null,
-                data: oidcData,
-                flags: {
-                  isCors: false,
-                  isError: oidcData.status === 'error',
-                  isAuthRelated: true,
+              emitAuthEvent(
+                {
+                  id: crypto.randomUUID(),
+                  timestamp: performance.now(),
+                  type: 'sdk:oidc-state',
+                  source: 'sdk',
+                  flowId: null,
+                  causedBy: null,
+                  data: oidcData,
+                  flags: {
+                    isCors: false,
+                    isError: oidcData.status === 'error',
+                    isAuthRelated: true,
+                  },
                 },
-              });
+                devtoolsOptions,
+              );
             }),
           );
         }

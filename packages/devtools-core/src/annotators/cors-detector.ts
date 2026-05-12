@@ -26,9 +26,11 @@ export function detectCorsFlags(entry: HarEntry): CorsFlag[] {
     flags.push({ url, method, reason: 'wildcard-with-credentials', allowOrigin, allowCredentials });
   }
 
+  const requestSentCredentials =
+    !!headerValue(reqHeaders, 'cookie') || !!headerValue(reqHeaders, 'authorization');
   const credentialsDenied = allowCredentials === 'false' || allowCredentials === undefined;
 
-  if (origin && allowOrigin && allowOrigin !== '*' && credentialsDenied) {
+  if (origin && allowOrigin && allowOrigin !== '*' && requestSentCredentials && credentialsDenied) {
     flags.push({ url, method, reason: 'credentials-mismatch', allowOrigin, allowCredentials });
   }
 

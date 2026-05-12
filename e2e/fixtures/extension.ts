@@ -72,7 +72,7 @@ export const test = base.extend<TestFixtures>({
   mockServer: async ({}, use) => {
     const result = await createMockOidcServer(0);
     await use(result);
-    result.server.close();
+    await new Promise<void>((resolve) => result.server.close(() => resolve()));
   },
 });
 

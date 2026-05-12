@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AuthEvent } from '@wolfcola/devtools-types';
-import { DEVTOOLS_EVENT_NAME, emitAuthEvent, emitConfigEvent, configureDevtools } from './emit.js';
+import { DEVTOOLS_EVENT_NAME, emitAuthEvent, emitConfigEvent } from './emit.js';
 
 // Minimal valid AuthEvent fixture — _tag: 'sdk' satisfies the SdkDataSchema discriminant.
 const makeEvent = (overrides: Partial<AuthEvent> = {}): AuthEvent => ({
@@ -24,8 +24,6 @@ const makeEvent = (overrides: Partial<AuthEvent> = {}): AuthEvent => ({
 
 describe('emitAuthEvent', () => {
   beforeEach(() => {
-    // Reset options between tests by calling configureDevtools with defaults
-    configureDevtools({});
     delete window.__PING_DEVTOOLS_STATE__;
   });
 
@@ -83,18 +81,16 @@ describe('emitAuthEvent', () => {
   });
 });
 
-describe('configureDevtools', () => {
+describe('emitAuthEvent options', () => {
   beforeEach(() => {
-    configureDevtools({});
     delete window.__PING_DEVTOOLS_STATE__;
   });
 
   it('enables console logging when consoleLog is true', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
-    configureDevtools({ consoleLog: true });
     const event = makeEvent();
-    emitAuthEvent(event);
+    emitAuthEvent(event, { consoleLog: true });
 
     expect(spy).toHaveBeenCalledOnce();
     expect(spy).toHaveBeenCalledWith('[ping-devtools]', event.type, event);
@@ -105,8 +101,7 @@ describe('configureDevtools', () => {
   it('does not console.log when consoleLog is false', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
-    configureDevtools({ consoleLog: false });
-    emitAuthEvent(makeEvent());
+    emitAuthEvent(makeEvent(), { consoleLog: false });
 
     expect(spy).not.toHaveBeenCalled();
 
@@ -116,7 +111,6 @@ describe('configureDevtools', () => {
   it('does not console.log by default (no options)', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
-    configureDevtools({});
     emitAuthEvent(makeEvent());
 
     expect(spy).not.toHaveBeenCalled();
@@ -125,9 +119,36 @@ describe('configureDevtools', () => {
   });
 });
 
+describe('emitAuthEvent ring buffer', () => {
+  beforeEach(() => {
+    delete window.__PING_DEVTOOLS_STATE__;
+  });
+
+  it('caps __PING_DEVTOOLS_STATE__ at 500 entries and drops the oldest', () => {
+    for (let i = 0; i < 501; i++) {
+      emitAuthEvent(makeEvent({ id: `evt-${i}` }));
+    }
+
+    expect(window.__PING_DEVTOOLS_STATE__).toHaveLength(500);
+    // The first event (evt-0) should have been evicted
+    expect(window.__PING_DEVTOOLS_STATE__![0].id).toBe('evt-1');
+    // The last event should be the most recent
+    expect(window.__PING_DEVTOOLS_STATE__![499].id).toBe('evt-500');
+  });
+
+  it('continues to evict as more events arrive beyond the cap', () => {
+    for (let i = 0; i < 510; i++) {
+      emitAuthEvent(makeEvent({ id: `evt-${i}` }));
+    }
+
+    expect(window.__PING_DEVTOOLS_STATE__).toHaveLength(500);
+    expect(window.__PING_DEVTOOLS_STATE__![0].id).toBe('evt-10');
+    expect(window.__PING_DEVTOOLS_STATE__![499].id).toBe('evt-509');
+  });
+});
+
 describe('emitConfigEvent', () => {
   beforeEach(() => {
-    configureDevtools({});
     delete window.__PING_DEVTOOLS_STATE__;
   });
 

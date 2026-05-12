@@ -19,11 +19,13 @@ import type { HarEntry } from '@wolfcola/devtools-core';
 import type { AuthEvent, FlowState } from '@wolfcola/devtools-types';
 
 let cdpClient: CdpClient | null = null;
+let activeRuntime: { dispose: () => Promise<void> } | null = null;
 
 export function activate(context: vscode.ExtensionContext): void {
   const timeline = new TimelineTreeProvider();
   const statusBar = new StatusBar();
   const runtime = ManagedRuntime.make(EventStoreInMemory);
+  activeRuntime = runtime;
 
   vscode.window.registerTreeDataProvider('oidc-devtools.timeline', timeline);
 
@@ -186,4 +188,9 @@ export function activate(context: vscode.ExtensionContext): void {
 
 export function deactivate(): void {
   cdpClient?.disconnect();
+  cdpClient = null;
+  if (activeRuntime) {
+    void activeRuntime.dispose();
+    activeRuntime = null;
+  }
 }
