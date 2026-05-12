@@ -33,19 +33,14 @@ jobs:
       - name: Build docs site
         run: pnpm --filter docs-site build
 
-      - name: Prepare deploy directory
+      - name: Fix elm.js script path
         run: |
           cd apps/docs/dist
-          cp -r assets devtools/assets
-          cp elm.*.js devtools/
-          cp style.css devtools/ 2>/dev/null || true
-          cp favicon.ico devtools/ 2>/dev/null || true
-          cp content.dat devtools/ 2>/dev/null || true
-          find devtools -name '*.html' -exec sed -i 's|src="/elm\.|src="/devtools/elm.|g' {} +
+          find . -name '*.html' -exec sed -i 's|src="/elm\.|src="/devtools/elm.|g' {} +
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/docs/dist/devtools
+          path: apps/docs/dist
 
   deploy:
     environment:

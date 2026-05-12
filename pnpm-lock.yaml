@@ -30,6 +30,11 @@ catalogs:
       specifier: ^3.2.0
       version: 3.2.4
 
+patchedDependencies:
+  elm-pages@3.5.1:
+    hash: 9b98923a1e6000f00f537833aef8b2c1f83b93bf044b5339ec5b62848787ff5c
+    path: patches/elm-pages@3.5.1.patch
+
 importers:
 
   .:
@@ -103,7 +108,7 @@ importers:
         version: 0.6.3
       elm-pages:
         specifier: 3.5.1
-        version: 3.5.1(@types/node@22.19.18)(tslib@2.8.1)(yaml@2.9.0)
+        version: 3.5.1(patch_hash=9b98923a1e6000f00f537833aef8b2c1f83b93bf044b5339ec5b62848787ff5c)(@types/node@22.19.18)(tslib@2.8.1)(yaml@2.9.0)
       elm-review:
         specifier: ^2.13.5
         version: 2.13.5
@@ -6921,7 +6926,7 @@ snapshots:
       ts-union: 2.3.0
       typescript: 4.9.5
 
-  elm-pages@3.5.1(@types/node@22.19.18)(tslib@2.8.1)(yaml@2.9.0):
+  elm-pages@3.5.1(patch_hash=9b98923a1e6000f00f537833aef8b2c1f83b93bf044b5339ec5b62848787ff5c)(@types/node@22.19.18)(tslib@2.8.1)(yaml@2.9.0):
     dependencies:
       '@sindresorhus/merge-streams': 4.0.0
       busboy: 1.6.0

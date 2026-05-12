@@ -51,6 +51,9 @@
     "onlyBuiltDependencies": [
       "esbuild",
       "lamdera"
-    ]
+    ],
+    "patchedDependencies": {
+      "elm-pages@3.5.1": "patches/elm-pages@3.5.1.patch"
+    }
   }
 }
