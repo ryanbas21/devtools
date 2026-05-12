@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/docs-site/**'
+      - 'apps/docs/**'
 
 permissions:
   contents: read
@@ -35,7 +35,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: packages/docs-site/dist
+          path: apps/docs/dist
 
   deploy:
     environment:

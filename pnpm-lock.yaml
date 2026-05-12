@@ -92,6 +92,25 @@ importers:
         specifier: catalog:vitest
         version: 3.2.4(@types/node@22.19.18)(jsdom@26.1.0)(terser@5.47.1)(yaml@2.9.0)
 
+  apps/docs:
+    dependencies:
+      prismjs:
+        specifier: ^1.30.0
+        version: 1.30.0
+    devDependencies:
+      elm-codegen:
+        specifier: ^0.6.3
+        version: 0.6.3
+      elm-pages:
+        specifier: 3.5.1
+        version: 3.5.1(@types/node@22.19.18)(tslib@2.8.1)(yaml@2.9.0)
+      elm-review:
+        specifier: ^2.13.5
+        version: 2.13.5
+      lamdera:
+        specifier: ^0.19.1-1.4.0
+        version: 0.19.1-1.4.0
+
   e2e:
     devDependencies:
       '@hono/node-server':
@@ -170,25 +189,6 @@ importers:
       terser:
         specifier: ^5.47.1
         version: 5.47.1
-
-  packages/docs-site:
-    dependencies:
-      prismjs:
-        specifier: ^1.30.0
-        version: 1.30.0
-    devDependencies:
-      elm-codegen:
-        specifier: ^0.6.3
-        version: 0.6.3
-      elm-pages:
-        specifier: 3.5.1
-        version: 3.5.1(@types/node@22.19.18)(tslib@2.8.1)(yaml@2.9.0)
-      elm-review:
-        specifier: ^2.13.5
-        version: 2.13.5
-      lamdera:
-        specifier: ^0.19.1-1.4.0
-        version: 0.19.1-1.4.0
 
   packages/eslint-plugin-treeshake:
     dependencies:

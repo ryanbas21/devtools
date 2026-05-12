@@ -21,7 +21,7 @@ The wolfcola-devtools repository is a pnpm workspace monorepo. All publishable p
 | `@wolfcola/devtools-ui`             | `packages/devtools-ui`             | Elm UI components for Timeline, Flow, and Learn views     |
 | `@wolfcola/devtools-extension`      | `packages/devtools-extension`      | Browser extension for Chrome and Firefox                  |
 | `oidc-devtools`                     | `packages/vscode-extension`        | VS Code extension with CDP connection                     |
-| `@wolfcola/docs-site`               | `packages/docs-site`               | This documentation site (elm-pages)                       |
+| `@wolfcola/docs-site`               | `apps/docs`                        | This documentation site (elm-pages)                       |
 
 ## Root Files
 
@@ -82,6 +82,6 @@ The `devtools-types` package is the shared foundation. It defines the `AuthEvent
 2. Add a `package.json` with the `@wolfcola` scope
 3. Add the package to `pnpm-workspace.yaml` if not using a glob pattern
 4. Add a `tsconfig.json` extending the root config
-5. Add the package to the sidebar in `packages/docs-site/app/Shared.elm`
-6. Create a content page in `packages/docs-site/content/packages/`
-7. Create a content page in `packages/docs-site/content/docs/` for integration guides
+5. Add the package to the sidebar in `apps/docs/app/Shared.elm`
+6. Create a content page in `apps/docs/content/packages/`
+7. Create a content page in `apps/docs/content/docs/` for integration guides

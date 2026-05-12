@@ -24,7 +24,7 @@ export default [
       '**/.elm-pages/**',
       '**/functions/**',
       '**/codegen/**',
-      'packages/docs-site/**',
+      'apps/**',
     ],
   },
   ...compat.extends('plugin:@typescript-eslint/recommended', 'plugin:prettier/recommended'),
