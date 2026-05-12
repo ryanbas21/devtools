@@ -1,9 +1,11 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { ESLintUtils, type TSESTree } from '@typescript-eslint/utils';
-import { EXPLANATIONS } from './explanations.js';
+import { EXPLANATIONS, type HazardCategory } from './explanations.js';
 import { isKnownPure } from './known-pure.js';
 import { isModuleScope, getCalleeName, hasPureAnnotation } from './scope-utils.js';
+import { mapResultToFileReports, deduplicateReports } from './bundle-check.js';
 
 const MUTATION_METHODS = new Set([
   'Object.defineProperty',
@@ -115,6 +117,14 @@ export const noTreeshakeHazard = createRule<RuleOptions, MessageIds>({
 
     const sourceCode = context.sourceCode;
 
+    // Track static findings for dedup with bundle check
+    const staticFindings = new Map<string, Set<HazardCategory>>();
+    const recordStatic = (category: HazardCategory) => {
+      const file = context.filename;
+      if (!staticFindings.has(file)) staticFindings.set(file, new Set());
+      staticFindings.get(file)!.add(category);
+    };
+
     /**
      * Build the replacement text for an enum → as const object suggestion.
      */
@@ -142,6 +152,7 @@ export const noTreeshakeHazard = createRule<RuleOptions, MessageIds>({
         const isExported = node.parent?.type === 'ExportNamedDeclaration';
         const reportNode = isExported ? node.parent! : node;
 
+        recordStatic('EnumPattern');
         context.report({
           node,
           messageId: 'enumPattern',
@@ -168,6 +179,7 @@ export const noTreeshakeHazard = createRule<RuleOptions, MessageIds>({
         // Skip require() calls — handled by CJS check
         if (node.callee.type === 'Identifier' && node.callee.name === 'require') return;
 
+        recordStatic('UnannotatedCall');
         context.report({
           node,
           messageId: 'unannotatedCall',
@@ -183,6 +195,7 @@ export const noTreeshakeHazard = createRule<RuleOptions, MessageIds>({
 
         const calleeName = getCalleeName(node.callee as TSESTree.Expression);
         if (calleeName && MUTATION_METHODS.has(calleeName)) {
+          recordStatic('PrototypeMutation');
           context.report({
             node,
             messageId: 'prototypeMutation',
@@ -201,6 +214,7 @@ export const noTreeshakeHazard = createRule<RuleOptions, MessageIds>({
           node.left.object.property.type === 'Identifier' &&
           node.left.object.property.name === 'prototype'
         ) {
+          recordStatic('PrototypeMutation');
           context.report({
             node,
             messageId: 'prototypeMutation',
@@ -217,6 +231,7 @@ export const noTreeshakeHazard = createRule<RuleOptions, MessageIds>({
           node.left.object.type === 'Identifier' &&
           GLOBAL_OBJECTS.has(node.left.object.name)
         ) {
+          recordStatic('GlobalAssignment');
           context.report({
             node,
             messageId: 'globalAssignment',
@@ -287,6 +302,59 @@ export const noTreeshakeHazard = createRule<RuleOptions, MessageIds>({
           const parent = dirname(dir);
           if (parent === dir) break;
           dir = parent;
+        }
+      },
+
+      // 10. Bundle check (opt-in, synchronous via execFileSync)
+      'Program:exit'(node: TSESTree.Program) {
+        if (!options.bundleCheck) return;
+
+        const cwd = options.bundleCheckCwd ?? process.cwd();
+
+        let jsonOutput: string;
+        try {
+          jsonOutput = execFileSync('npx', ['treeshake-check', '--json'], {
+            cwd,
+            encoding: 'utf-8',
+            timeout: 60_000,
+            stdio: ['pipe', 'pipe', 'pipe'],
+          });
+        } catch (err: unknown) {
+          // treeshake-check exits 1 when not shakeable — stdout still has JSON
+          const execErr = err as { stdout?: string };
+          if (execErr.stdout) {
+            jsonOutput = execErr.stdout;
+          } else {
+            context.report({
+              node,
+              loc: { line: 1, column: 0 },
+              messageId: 'unknown',
+            });
+            return;
+          }
+        }
+
+        let result: unknown;
+        try {
+          result = JSON.parse(jsonOutput);
+        } catch {
+          return;
+        }
+
+        const reports = mapResultToFileReports(result);
+        const deduplicated = deduplicateReports(reports, staticFindings);
+
+        for (const report of deduplicated) {
+          if (report.filePath !== context.filename) continue;
+
+          for (const cause of report.causes) {
+            const explanation = EXPLANATIONS[cause];
+            context.report({
+              node,
+              loc: { line: report.line, column: report.column },
+              messageId: explanation.messageId as MessageIds,
+            });
+          }
         }
       },
     };
