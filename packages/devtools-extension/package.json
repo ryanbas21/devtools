@@ -11,8 +11,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "node build.mjs",
-    "build:firefox": "node build.mjs --target=firefox",
+    "build": "node --experimental-strip-types build.mjs",
+    "build:firefox": "node --experimental-strip-types build.mjs --target=firefox",
     "lint": "eslint .",
     "test": "vitest run"
   },

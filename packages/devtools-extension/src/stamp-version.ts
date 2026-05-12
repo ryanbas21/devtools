@@ -3,6 +3,9 @@ export const stampVersion = (
   buildNumber: number,
   isSnapshot: boolean,
 ): { version: string; version_name?: string } => {
+  if (!Number.isInteger(buildNumber)) {
+    throw new Error(`BUILD_NUMBER must be an integer, got ${buildNumber}`);
+  }
   if (buildNumber < 0) {
     throw new Error(`BUILD_NUMBER ${buildNumber} must be >= 0`);
   }

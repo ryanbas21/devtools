@@ -50,4 +50,10 @@ describe('stampVersion', () => {
     const result = stampVersion('0.1.0', 0, true);
     expect(result).not.toHaveProperty('version_name');
   });
+
+  it('throws for NaN build number', () => {
+    expect(() => stampVersion('1.0.0', NaN, false)).toThrow(
+      'BUILD_NUMBER must be an integer, got NaN',
+    );
+  });
 });
