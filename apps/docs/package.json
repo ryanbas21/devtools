@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "elm-pages dev",
-    "build": "elm-pages build"
+    "build": "elm-pages build --base /devtools/"
   },
   "devDependencies": {
     "elm-codegen": "^0.6.3",

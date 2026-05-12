@@ -8,8 +8,8 @@ import Html
 import Html.Attributes as Attr
 import Pages.Url
 import PagesMsg exposing (PagesMsg)
+import Route exposing (Route)
 import UrlPath
-import Route
 import RouteBuilder exposing (App, StatelessRoute)
 import Shared
 import View exposing (View)
@@ -98,41 +98,42 @@ viewPackageGrid =
         [ viewPackageCard
             { name = "@wolfcola/treeshake-check"
             , description = "CLI & library to verify packages are tree-shakeable by Rollup"
-            , href = "/packages/treeshake-check"
+            , route = Route.Packages__Slug_ { slug = "treeshake-check" }
             , tag = "Published"
             }
         , viewPackageCard
             { name = "@wolfcola/eslint-plugin-treeshake"
             , description = "ESLint plugin that flags tree-breaking patterns"
-            , href = "/packages/eslint-plugin-treeshake"
+            , route = Route.Packages__Slug_ { slug = "eslint-plugin-treeshake" }
             , tag = "Published"
             }
         , viewPackageCard
             { name = "@wolfcola/devtools-bridge"
             , description = "SDK adapter for emitting events from DaVinci, Journey, OIDC clients"
-            , href = "/packages/devtools-bridge"
+            , route = Route.Packages__Slug_ { slug = "devtools-bridge" }
             , tag = "Published"
             }
         , viewPackageCard
             { name = "@wolfcola/devtools-types"
             , description = "Effect Schema definitions for AuthEvent and FlowState"
-            , href = "/packages/devtools-types"
+            , route = Route.Packages__Slug_ { slug = "devtools-types" }
             , tag = "Published"
             }
         ]
 
 
 viewPackageCard :
-    { name : String, description : String, href : String, tag : String }
+    { name : String, description : String, route : Route, tag : String }
     -> Html.Html (PagesMsg Msg)
 viewPackageCard pkg =
-    Html.a [ Attr.class "package-card", Attr.href pkg.href ]
+    Route.link [ Attr.class "package-card" ]
         [ Html.div [ Attr.class "package-card-header" ]
             [ Html.h3 [] [ Html.text pkg.name ]
             , Html.span [ Attr.class "package-tag" ] [ Html.text pkg.tag ]
             ]
         , Html.p [] [ Html.text pkg.description ]
         ]
+        pkg.route
 
 
 viewQuickLinks : Html.Html (PagesMsg Msg)
@@ -141,16 +142,13 @@ viewQuickLinks =
         [ Html.h2 [] [ Html.text "Quick Links" ]
         , Html.ul []
             [ Html.li []
-                [ Html.a [ Attr.href "/docs/getting-started" ]
-                    [ Html.text "Installation & Setup" ]
+                [ Route.link [] [ Html.text "Installation & Setup" ] (Route.Docs__Slug_ { slug = "getting-started" })
                 ]
             , Html.li []
-                [ Html.a [ Attr.href "/architecture" ]
-                    [ Html.text "Architecture Overview" ]
+                [ Route.link [] [ Html.text "Architecture Overview" ] Route.Architecture
                 ]
             , Html.li []
-                [ Html.a [ Attr.href "/contributing/development-setup" ]
-                    [ Html.text "Contributing" ]
+                [ Route.link [] [ Html.text "Contributing" ] (Route.Contributing__Slug_ { slug = "development-setup" })
                 ]
             ]
         ]

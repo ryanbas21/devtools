@@ -137,7 +137,7 @@ globEntries dir section =
                                 (Decode.map2
                                     (\title description ->
                                         { title = title
-                                        , url = "/" ++ sectionToUrlPrefix section ++ "/" ++ slug
+                                        , url = Route.baseUrl ++ sectionToUrlPrefix section ++ "/" ++ slug
                                         , section = section
                                         , excerpt = description
                                         }
@@ -219,18 +219,13 @@ viewHeader sharedData model toMsg =
                     "\u{2630}"
                 )
             ]
-        , Html.a
-            [ Attr.class "logo"
-            , Attr.href "/"
-            ]
-            [ Html.text "wolfcola devtools" ]
+        , Route.link [ Attr.class "logo" ] [ Html.text "wolfcola devtools" ] Route.Index
         , viewSearch sharedData model toMsg
         , Html.nav [ Attr.class "header-nav" ]
-            [ Html.a [ Attr.href "/packages/treeshake-check" ] [ Html.text "Packages" ]
-            , Html.a [ Attr.href "/docs/getting-started" ] [ Html.text "Guides" ]
-
-            , Html.a [ Attr.href "/architecture" ] [ Html.text "Architecture" ]
-            , Html.a [ Attr.href "/contributing/development-setup" ] [ Html.text "Contributing" ]
+            [ Route.link [] [ Html.text "Packages" ] (Route.Packages__Slug_ { slug = "treeshake-check" })
+            , Route.link [] [ Html.text "Guides" ] (Route.Docs__Slug_ { slug = "getting-started" })
+            , Route.link [] [ Html.text "Architecture" ] Route.Architecture
+            , Route.link [] [ Html.text "Contributing" ] (Route.Contributing__Slug_ { slug = "development-setup" })
             ]
         , Html.button
             [ Attr.class "theme-toggle"
@@ -297,38 +292,38 @@ viewSidebar model toMsg =
             )
         ]
         [ viewSidebarSection "Packages"
-            [ ( "/packages/treeshake-check", "treeshake-check" )
-            , ( "/packages/eslint-plugin-treeshake", "eslint-plugin-treeshake" )
-            , ( "/packages/devtools-bridge", "devtools-bridge" )
-            , ( "/packages/devtools-types", "devtools-types" )
+            [ ( Route.Packages__Slug_ { slug = "treeshake-check" }, "treeshake-check" )
+            , ( Route.Packages__Slug_ { slug = "eslint-plugin-treeshake" }, "eslint-plugin-treeshake" )
+            , ( Route.Packages__Slug_ { slug = "devtools-bridge" }, "devtools-bridge" )
+            , ( Route.Packages__Slug_ { slug = "devtools-types" }, "devtools-types" )
             ]
         , viewSidebarSection "Guides"
-            [ ( "/docs/getting-started", "Getting Started" )
-            , ( "/docs/devtools-extension", "DevTools Extension" )
-            , ( "/docs/vscode-extension", "VS Code Extension" )
-            , ( "/docs/tree-shaking", "Tree-Shaking" )
-            , ( "/docs/davinci-integration", "DaVinci Integration" )
-            , ( "/docs/journey-integration", "Journey Integration" )
-            , ( "/docs/oidc-integration", "Generic OIDC Integration" )
+            [ ( Route.Docs__Slug_ { slug = "getting-started" }, "Getting Started" )
+            , ( Route.Docs__Slug_ { slug = "devtools-extension" }, "DevTools Extension" )
+            , ( Route.Docs__Slug_ { slug = "vscode-extension" }, "VS Code Extension" )
+            , ( Route.Docs__Slug_ { slug = "tree-shaking" }, "Tree-Shaking" )
+            , ( Route.Docs__Slug_ { slug = "davinci-integration" }, "DaVinci Integration" )
+            , ( Route.Docs__Slug_ { slug = "journey-integration" }, "Journey Integration" )
+            , ( Route.Docs__Slug_ { slug = "oidc-integration" }, "Generic OIDC Integration" )
             ]
         , viewSidebarSection "Contributing"
-            [ ( "/contributing/development-setup", "Development Setup" )
-            , ( "/contributing/repository-structure", "Repository Structure" )
-            , ( "/contributing/code-style", "Code Style" )
-            , ( "/contributing/release-process", "Release Process" )
+            [ ( Route.Contributing__Slug_ { slug = "development-setup" }, "Development Setup" )
+            , ( Route.Contributing__Slug_ { slug = "repository-structure" }, "Repository Structure" )
+            , ( Route.Contributing__Slug_ { slug = "code-style" }, "Code Style" )
+            , ( Route.Contributing__Slug_ { slug = "release-process" }, "Release Process" )
             ]
         ]
 
 
-viewSidebarSection : String -> List ( String, String ) -> Html msg
+viewSidebarSection : String -> List ( Route, String ) -> Html msg
 viewSidebarSection heading links =
     Html.div [ Attr.class "sidebar-section" ]
         [ Html.h3 [ Attr.class "sidebar-heading" ] [ Html.text heading ]
         , Html.ul [ Attr.class "sidebar-links" ]
             (List.map
-                (\( href, label ) ->
+                (\( route, label ) ->
                     Html.li []
-                        [ Html.a [ Attr.href href ] [ Html.text label ] ]
+                        [ Route.link [] [ Html.text label ] route ]
                 )
                 links
             )

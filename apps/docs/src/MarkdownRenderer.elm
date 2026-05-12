@@ -15,6 +15,7 @@ import Html.Attributes as Attr
 import Markdown.Block as Block exposing (ListItem)
 import Markdown.Html
 import Markdown.Renderer exposing (Renderer)
+import Route
 
 
 {-| The custom renderer for documentation pages.
@@ -94,16 +95,24 @@ viewHeading { level, rawText, children } =
 
 viewLink : { title : Maybe String, destination : String } -> List (Html msg) -> Html msg
 viewLink link children =
+    let
+        resolvedHref =
+            if String.startsWith "/" link.destination then
+                String.dropRight 1 Route.baseUrl ++ link.destination
+
+            else
+                link.destination
+    in
     case link.title of
         Just title ->
             Html.a
-                [ Attr.href link.destination
+                [ Attr.href resolvedHref
                 , Attr.title title
                 ]
                 children
 
         Nothing ->
-            Html.a [ Attr.href link.destination ] children
+            Html.a [ Attr.href resolvedHref ] children
 
 
 
