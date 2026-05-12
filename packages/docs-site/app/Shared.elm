@@ -4,12 +4,13 @@ import BackendTask exposing (BackendTask)
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html exposing (Html)
+import Html.Attributes as Attr
 import Html.Events
 import Pages.Flags
 import Pages.PageUrl exposing (PageUrl)
-import UrlPath exposing (UrlPath)
 import Route exposing (Route)
 import SharedTemplate exposing (SharedTemplate)
+import UrlPath exposing (UrlPath)
 import View exposing (View)
 
 
@@ -26,7 +27,7 @@ template =
 
 type Msg
     = SharedMsg SharedMsg
-    | MenuClicked
+    | ToggleSidebar
 
 
 type alias Data =
@@ -38,7 +39,7 @@ type SharedMsg
 
 
 type alias Model =
-    { showMenu : Bool
+    { sidebarOpen : Bool
     }
 
 
@@ -56,7 +57,7 @@ init :
             }
     -> ( Model, Effect Msg )
 init flags maybePagePath =
-    ( { showMenu = False }
+    ( { sidebarOpen = True }
     , Effect.none
     )
 
@@ -64,11 +65,11 @@ init flags maybePagePath =
 update : Msg -> Model -> ( Model, Effect Msg )
 update msg model =
     case msg of
-        SharedMsg globalMsg ->
+        SharedMsg _ ->
             ( model, Effect.none )
 
-        MenuClicked ->
-            ( { model | showMenu = not model.showMenu }, Effect.none )
+        ToggleSidebar ->
+            ( { model | sidebarOpen = not model.sidebarOpen }, Effect.none )
 
 
 subscriptions : UrlPath -> Model -> Sub Msg
@@ -93,28 +94,90 @@ view :
     -> { body : List (Html msg), title : String }
 view sharedData page model toMsg pageView =
     { body =
-        [ Html.nav []
-            [ Html.button
-                [ Html.Events.onClick MenuClicked ]
-                [ Html.text
-                    (if model.showMenu then
-                        "Close Menu"
-
-                     else
-                        "Open Menu"
-                    )
-                ]
-            , if model.showMenu then
-                Html.ul []
-                    [ Html.li [] [ Html.text "Menu item 1" ]
-                    , Html.li [] [ Html.text "Menu item 2" ]
-                    ]
-
-              else
-                Html.text ""
+        [ viewHeader model toMsg
+        , Html.div [ Attr.class "layout" ]
+            [ viewSidebar model toMsg
+            , Html.main_ [ Attr.class "content" ]
+                pageView.body
             ]
-            |> Html.map toMsg
-        , Html.main_ [] pageView.body
         ]
     , title = pageView.title
     }
+
+
+viewHeader : Model -> (Msg -> msg) -> Html msg
+viewHeader model toMsg =
+    Html.header [ Attr.class "header" ]
+        [ Html.button
+            [ Attr.class "sidebar-toggle"
+            , Html.Events.onClick (toMsg ToggleSidebar)
+            ]
+            [ Html.text
+                (if model.sidebarOpen then
+                    "\u{2630}"
+
+                 else
+                    "\u{2630}"
+                )
+            ]
+        , Html.a
+            [ Attr.class "logo"
+            , Attr.href "/"
+            ]
+            [ Html.text "wolfcola devtools" ]
+        , Html.nav [ Attr.class "header-nav" ]
+            [ Html.a [ Attr.href "/packages" ] [ Html.text "Packages" ]
+            , Html.a [ Attr.href "/guides" ] [ Html.text "Guides" ]
+            , Html.a [ Attr.href "/api" ] [ Html.text "API" ]
+            , Html.a [ Attr.href "/architecture" ] [ Html.text "Architecture" ]
+            , Html.a [ Attr.href "/contributing" ] [ Html.text "Contributing" ]
+            ]
+        ]
+
+
+viewSidebar : Model -> (Msg -> msg) -> Html msg
+viewSidebar model toMsg =
+    Html.aside
+        [ Attr.class
+            (if model.sidebarOpen then
+                "sidebar"
+
+             else
+                "sidebar sidebar--closed"
+            )
+        ]
+        [ viewSidebarSection "Packages"
+            [ ( "/packages/treeshake-check", "treeshake-check" )
+            , ( "/packages/eslint-plugin-treeshake", "eslint-plugin-treeshake" )
+            , ( "/packages/devtools-bridge", "devtools-bridge" )
+            , ( "/packages/devtools-types", "devtools-types" )
+            ]
+        , viewSidebarSection "Guides"
+            [ ( "/docs/getting-started", "Getting Started" )
+            , ( "/docs/devtools-extension", "DevTools Extension" )
+            , ( "/docs/vscode-extension", "VS Code Extension" )
+            , ( "/docs/tree-shaking", "Tree-Shaking" )
+            , ( "/docs/davinci-integration", "DaVinci Integration" )
+            ]
+        , viewSidebarSection "Contributing"
+            [ ( "/contributing/development-setup", "Development Setup" )
+            , ( "/contributing/repository-structure", "Repository Structure" )
+            , ( "/contributing/code-style", "Code Style" )
+            , ( "/contributing/release-process", "Release Process" )
+            ]
+        ]
+
+
+viewSidebarSection : String -> List ( String, String ) -> Html msg
+viewSidebarSection heading links =
+    Html.div [ Attr.class "sidebar-section" ]
+        [ Html.h3 [ Attr.class "sidebar-heading" ] [ Html.text heading ]
+        , Html.ul [ Attr.class "sidebar-links" ]
+            (List.map
+                (\( href, label ) ->
+                    Html.li []
+                        [ Html.a [ Attr.href href ] [ Html.text label ] ]
+                )
+                links
+            )
+        ]
