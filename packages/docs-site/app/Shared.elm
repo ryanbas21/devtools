@@ -6,7 +6,7 @@ import BackendTask.Glob as Glob
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html exposing (Html)
-import Html.Attributes as Attr
+import Html.Attributes as Attr exposing (attribute)
 import Html.Events
 import Json.Decode as Decode
 import Pages.Flags
@@ -32,6 +32,7 @@ template =
 type Msg
     = SharedMsg SharedMsg
     | ToggleSidebar
+    | ToggleTheme
     | SearchInput String
 
 
@@ -47,6 +48,7 @@ type SharedMsg
 type alias Model =
     { sidebarOpen : Bool
     , searchQuery : String
+    , darkMode : Bool
     }
 
 
@@ -64,8 +66,21 @@ init :
             }
     -> ( Model, Effect Msg )
 init flags maybePagePath =
+    let
+        darkMode =
+            case flags of
+                Pages.Flags.BrowserFlags value ->
+                    Decode.decodeValue
+                        (Decode.field "darkMode" Decode.bool)
+                        value
+                        |> Result.withDefault False
+
+                Pages.Flags.PreRenderFlags ->
+                    False
+    in
     ( { sidebarOpen = True
       , searchQuery = ""
+      , darkMode = darkMode
       }
     , Effect.none
     )
@@ -79,6 +94,9 @@ update msg model =
 
         ToggleSidebar ->
             ( { model | sidebarOpen = not model.sidebarOpen }, Effect.none )
+
+        ToggleTheme ->
+            ( { model | darkMode = not model.darkMode }, Effect.none )
 
         SearchInput query ->
             ( { model | searchQuery = query }, Effect.none )
@@ -165,11 +183,21 @@ view :
     -> { body : List (Html msg), title : String }
 view sharedData page model toMsg pageView =
     { body =
-        [ viewHeader sharedData model toMsg
-        , Html.div [ Attr.class "layout" ]
-            [ viewSidebar model toMsg
-            , Html.main_ [ Attr.class "content" ]
-                pageView.body
+        [ Html.div
+            [ attribute "data-theme"
+                (if model.darkMode then
+                    "dark"
+
+                 else
+                    "light"
+                )
+            ]
+            [ viewHeader sharedData model toMsg
+            , Html.div [ Attr.class "layout" ]
+                [ viewSidebar model toMsg
+                , Html.main_ [ Attr.class "content" ]
+                    pageView.body
+                ]
             ]
         ]
     , title = pageView.title
@@ -203,6 +231,18 @@ viewHeader sharedData model toMsg =
             , Html.a [ Attr.href "/api" ] [ Html.text "API" ]
             , Html.a [ Attr.href "/architecture" ] [ Html.text "Architecture" ]
             , Html.a [ Attr.href "/contributing" ] [ Html.text "Contributing" ]
+            ]
+        , Html.button
+            [ Attr.class "theme-toggle"
+            , Html.Events.onClick (toMsg ToggleTheme)
+            ]
+            [ Html.text
+                (if model.darkMode then
+                    "Light"
+
+                 else
+                    "Dark"
+                )
             ]
         ]
 

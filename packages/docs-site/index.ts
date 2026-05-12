@@ -9,7 +9,9 @@ const config: ElmPagesInit = {
     console.log('App loaded', app);
   },
   flags: function () {
-    return 'You can decode this in Shared.elm using Json.Decode.string!';
+    return {
+      darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
+    };
   },
 };
 

@@ -13,16 +13,14 @@
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f172a;
-    --bg-sidebar: #1e293b;
-    --text: #e2e8f0;
-    --text-muted: #94a3b8;
-    --border: #334155;
-    --accent: #60a5fa;
-    --accent-hover: #93bbfd;
-  }
+[data-theme='dark'] {
+  --bg: #0f172a;
+  --bg-sidebar: #1e293b;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --border: #334155;
+  --accent: #60a5fa;
+  --accent-hover: #93bbfd;
 }
 
 * {
@@ -87,6 +85,21 @@ a:hover {
   cursor: pointer;
   color: var(--text);
   font-size: 1rem;
+}
+
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-family: var(--font-sans);
+}
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
 }
 
 /* Layout */
