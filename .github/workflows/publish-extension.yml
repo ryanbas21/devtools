@@ -21,6 +21,8 @@ jobs:
 
       - name: Build all packages
         run: pnpm build
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
 
       - name: Zip extension
         working-directory: packages/devtools-extension
@@ -52,10 +54,14 @@ jobs:
 
       - name: Build all packages
         run: pnpm build
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
 
       - name: Build Firefox extension
         working-directory: packages/devtools-extension
-        run: node build.mjs --target=firefox
+        run: node --experimental-strip-types build.mjs --target=firefox
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
 
       - name: Zip extension
         working-directory: packages/devtools-extension
