@@ -35,7 +35,7 @@ Install the bridge SDK to emit events from your OIDC client:
 npm install @wolfcola/devtools-bridge
 ```
 
-<callout type="info">The devtools bridge is framework-agnostic and works with any OIDC client.</callout>
+<callout type="info">The bridge provides adapters for Ping Identity SDKs: DaVinci (`@forgerock/davinci-client`), Journey, and OIDC (`@forgerock/oidc-client`). See the integration guides for setup details.</callout>
 
 ## Next Steps
 
