@@ -42,6 +42,8 @@ jobs:
   release:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
     permissions:
       contents: write
       pull-requests: write
@@ -65,6 +67,7 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
 
       - name: Create release PR or publish
+        id: changesets
         uses: changesets/action@63a615b9cd06ba9a3e6d13796c7fbcb080a60a0b # v1.8.0
         with:
           publish: pnpm release
@@ -75,3 +78,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
           BUILD_NUMBER: ${{ github.run_number }}
+
+  publish-extensions:
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    uses: ./.github/workflows/publish-extension.yml
+    secrets: inherit
