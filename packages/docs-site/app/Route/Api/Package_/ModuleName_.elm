@@ -1,5 +1,8 @@
 module Route.Api.Package_.ModuleName_ exposing (ActionData, Data, Model, Msg, route)
 
+import ApiDocs.DevtoolsBridge
+import ApiDocs.DevtoolsTypes
+import ApiDocs.EslintPluginTreeshake
 import ApiDocs.TreeshakeCheck
 import ApiDocs.Types exposing (ApiModule, FunctionDoc, TypeDoc)
 import BackendTask exposing (BackendTask)
@@ -51,6 +54,9 @@ route =
 allModules : List ( String, String, ApiModule )
 allModules =
     List.map (\m -> ( "treeshake-check", m.name, m )) ApiDocs.TreeshakeCheck.modules
+        ++ List.map (\m -> ( "eslint-plugin-treeshake", m.name, m )) ApiDocs.EslintPluginTreeshake.modules
+        ++ List.map (\m -> ( "devtools-bridge", m.name, m )) ApiDocs.DevtoolsBridge.modules
+        ++ List.map (\m -> ( "devtools-types", m.name, m )) ApiDocs.DevtoolsTypes.modules
 
 
 pages : BackendTask FatalError (List RouteParams)
