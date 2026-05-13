@@ -19,11 +19,17 @@
   --muted: #8b949e;
   --dim: #484f58;
   --blue: #58a6ff;
+  --blue-rgb: 88, 166, 255;
   --green: #3fb950;
+  --green-rgb: 63, 185, 80;
   --red: #f85149;
+  --red-rgb: 248, 81, 73;
   --orange: #ffa657;
+  --orange-rgb: 255, 166, 87;
   --yellow: #d29922;
+  --yellow-rgb: 210, 153, 34;
   --purple: #bc8cff;
+  --purple-rgb: 188, 140, 255;
   --shadow-alpha: 0.3;
   --font-ui: 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-mono: 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
@@ -46,11 +52,17 @@
   --muted: #636c76;
   --dim: #8c959f;
   --blue: #0969da;
+  --blue-rgb: 9, 105, 218;
   --green: #1a7f37;
+  --green-rgb: 26, 127, 55;
   --red: #cf222e;
+  --red-rgb: 207, 34, 46;
   --orange: #bc4c00;
+  --orange-rgb: 188, 76, 0;
   --yellow: #9a6700;
+  --yellow-rgb: 154, 103, 0;
   --purple: #8250df;
+  --purple-rgb: 130, 80, 223;
   --shadow-alpha: 0.12;
 }
 
@@ -167,7 +179,7 @@ body {
   border-color: var(--red);
 }
 .tb-btn.recording:hover {
-  background: rgba(248, 81, 73, 0.1);
+  background: rgba(var(--red-rgb), 0.1);
 }
 
 .rec-dot {
@@ -256,11 +268,11 @@ body {
 /* ── Error Banner ────────────────────────────────────────── */
 .err-banner {
   padding: 5px 12px;
-  background: rgba(248, 81, 73, 0.08);
+  background: rgba(var(--red-rgb), 0.08);
   color: var(--red);
   font-family: var(--font-mono);
   font-size: 11px;
-  border-bottom: 1px solid rgba(248, 81, 73, 0.25);
+  border-bottom: 1px solid rgba(var(--red-rgb), 0.25);
   flex-shrink: 0;
 }
 
@@ -331,19 +343,19 @@ body {
   flex-shrink: 0;
 }
 .b-net {
-  background: rgba(88, 166, 255, 0.1);
+  background: rgba(var(--blue-rgb), 0.1);
   color: var(--blue);
 }
 .b-sdk {
-  background: rgba(63, 185, 80, 0.1);
+  background: rgba(var(--green-rgb), 0.1);
   color: var(--green);
 }
 .b-ses {
-  background: rgba(255, 166, 87, 0.1);
+  background: rgba(var(--orange-rgb), 0.1);
   color: var(--orange);
 }
 .b-cfg {
-  background: rgba(188, 140, 255, 0.1);
+  background: rgba(var(--purple-rgb), 0.1);
   color: var(--purple);
 }
 
@@ -427,15 +439,15 @@ body {
   overflow: visible;
 }
 .tag-cors {
-  background: rgba(248, 81, 73, 0.12);
+  background: rgba(var(--red-rgb), 0.12);
   color: var(--red);
 }
 .tag-oidc {
-  background: rgba(88, 166, 255, 0.12);
+  background: rgba(var(--blue-rgb), 0.12);
   color: var(--blue);
 }
 .tag-coll {
-  background: rgba(88, 166, 255, 0.12);
+  background: rgba(var(--blue-rgb), 0.12);
   color: var(--blue);
 }
 
@@ -570,7 +582,7 @@ body {
   transition: background 0.12s;
 }
 .cause-btn:hover {
-  background: rgba(88, 166, 255, 0.1);
+  background: rgba(var(--blue-rgb), 0.1);
 }
 
 /* collector card */
@@ -692,8 +704,8 @@ body {
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--purple);
-  background: rgba(188, 140, 255, 0.1);
-  border: 1px solid rgba(188, 140, 255, 0.3);
+  background: rgba(var(--purple-rgb), 0.1);
+  border: 1px solid rgba(var(--purple-rgb), 0.3);
   border-radius: 3px;
   padding: 1px 6px;
   list-style: none;
@@ -712,8 +724,8 @@ details[open] > .jwt-summary::before {
 .jwt-body {
   margin-top: 6px;
   padding: 8px 10px;
-  background: rgba(188, 140, 255, 0.04);
-  border: 1px solid rgba(188, 140, 255, 0.15);
+  background: rgba(var(--purple-rgb), 0.04);
+  border: 1px solid rgba(var(--purple-rgb), 0.15);
   border-radius: 4px;
   font-family: var(--font-mono);
   font-size: 11px;
@@ -765,7 +777,7 @@ details[open] > .jwt-summary::before {
 .jwt-expired {
   display: inline-flex;
   align-items: center;
-  background: rgba(248, 81, 73, 0.15);
+  background: rgba(var(--red-rgb), 0.15);
   color: var(--red);
   font-size: 9px;
   font-weight: 700;
@@ -911,11 +923,11 @@ details[open] > .jwt-summary::before {
   font-size: 11px;
 }
 .fh-error {
-  background: rgba(248, 81, 73, 0.08);
+  background: rgba(var(--red-rgb), 0.08);
   border-left: 3px solid var(--red);
 }
 .fh-warning {
-  background: rgba(210, 153, 34, 0.08);
+  background: rgba(var(--yellow-rgb), 0.08);
   border-left: 3px solid var(--yellow);
 }
 .fh-header {
@@ -1011,11 +1023,11 @@ details[open] > .jwt-summary::before {
 }
 .diag-issue-error {
   border-left-color: var(--red);
-  background: rgba(248, 81, 73, 0.06);
+  background: rgba(var(--red-rgb), 0.06);
 }
 .diag-issue-warning {
   border-left-color: var(--yellow);
-  background: rgba(210, 153, 34, 0.06);
+  background: rgba(var(--yellow-rgb), 0.06);
 }
 .diag-issue-info {
   border-left-color: var(--blue);
@@ -1251,7 +1263,7 @@ body.resizing {
 }
 .snapshot-delete:hover {
   color: var(--red);
-  background: rgba(248, 81, 73, 0.1);
+  background: rgba(var(--red-rgb), 0.1);
 }
 
 /* ── Import banner ────────────────────────────────── */
