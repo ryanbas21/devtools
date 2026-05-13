@@ -116,7 +116,18 @@ const command = Command.make(
       const parseWarnings: string[] = [];
 
       for (const pkg of allPackages) {
-        const files = yield* scanner.scan(pkg.root, ignoreGlobs);
+        const files = yield* scanner.scan(pkg.root, ignoreGlobs).pipe(
+          Effect.catchTag('GlobError', (e) =>
+            Effect.gen(function* () {
+              const msg = `failed to scan files in ${pkg.root}: ${String(e.cause)}`;
+              parseWarnings.push(msg);
+              if (verbose) {
+                yield* Console.log(`Warning: ${msg}`);
+              }
+              return [] as readonly string[];
+            }),
+          ),
+        );
 
         for (const filePath of files) {
           const sourceResult = yield* fs.readFileString(filePath, 'utf-8').pipe(Effect.either);

@@ -2,6 +2,7 @@ import { it } from '@effect/vitest';
 import { expect } from 'vitest';
 import { Effect } from 'effect';
 import { ImportParser, ImportParserLive } from './import-parser.js';
+import { ParseError } from './errors.js';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -94,5 +95,14 @@ it.effect('parses type-only imports', () =>
     expect(symbols[0]?.source).toBe('@myorg/types');
     expect(symbols[0]?.isNamespace).toBe(false);
     expect(symbols[0]?.isDynamic).toBe(false);
+  }),
+);
+
+it.effect('returns ParseError for syntactically invalid source', () =>
+  Effect.gen(function* () {
+    const error = yield* parse('bad.ts', '<<<invalid>>>').pipe(Effect.flip);
+    expect(error).toBeInstanceOf(ParseError);
+    expect(error.filePath).toBe('bad.ts');
+    expect(error.message).toBeTruthy();
   }),
 );

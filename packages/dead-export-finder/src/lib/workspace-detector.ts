@@ -128,7 +128,7 @@ export const WorkspaceDetectorLive = Layer.effect(
       resolveWorkspaceGlobs(path, root, globs).pipe(
         Effect.flatMap((dirs) => Effect.all(dirs.map((d) => readPackageInfo(fs, path, d)))),
         Effect.map((infos) => infos.filter((p): p is PackageInfo => p !== null)),
-        Effect.catchAll(() => Effect.succeed([] as PackageInfo[])),
+        Effect.catchTag('GlobError', () => Effect.succeed([] as PackageInfo[])),
       );
 
     const detect = (cwd: string): Effect.Effect<WorkspaceResult, WorkspaceNotFoundError> =>
@@ -151,13 +151,10 @@ export const WorkspaceDetectorLive = Layer.effect(
 
         if (hasRootPkg) {
           const raw = yield* fs.readFileString(rootPkgPath, 'utf-8').pipe(Effect.orDie);
-          const rootPkg: Record<string, unknown> = (() => {
-            try {
-              return JSON.parse(raw) as Record<string, unknown>;
-            } catch {
-              return {};
-            }
-          })();
+          const rootPkg = yield* Effect.try({
+            try: () => JSON.parse(raw) as Record<string, unknown>,
+            catch: () => new WorkspaceNotFoundError({ cwd }),
+          });
 
           // npm / yarn workspaces
           const workspaces = rootPkg['workspaces'];
