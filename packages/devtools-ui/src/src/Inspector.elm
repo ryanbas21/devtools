@@ -87,8 +87,24 @@ viewTabs maybeEvent activeTab maybeDiagnosis =
           else
             []
          )
-            ++ [ tabButton "Headers"   HeadersTab  activeTab
-               , tabButton "Cookies"   CookiesTab  activeTab
+            ++ [ tabButton "Headers"   HeadersTab  activeTab ]
+            ++ (case maybeEvent of
+                    Just event ->
+                        case event.data of
+                            Network net ->
+                                if net.requestBody /= Nothing || net.responseBody /= Nothing then
+                                    [ tabButton "Payload" PayloadTab activeTab ]
+
+                                else
+                                    []
+
+                            _ ->
+                                []
+
+                    Nothing ->
+                        []
+               )
+            ++ [ tabButton "Cookies"   CookiesTab  activeTab
                , tabButton "CORS"      CorsTab     activeTab
                , tabButton "SDK State" SdkStateTab activeTab
                ]
@@ -166,19 +182,35 @@ viewContent maybeEvent activeTab maybeDiagnosis =
                                     Just h  -> JsonTree.view "Response Headers" h
                                     Nothing -> viewEmptySection "Response Headers"
                                ]
-                            ++ (case net.requestBody of
-                                    Just b  -> [ JsonTree.view "Request Body" b ]
-                                    Nothing -> []
-                               )
-                            ++ (case net.responseBody of
-                                    Just b  -> [ JsonTree.view "Response Body" b ]
-                                    Nothing -> []
-                               )
                         )
 
                 _ ->
                     div [ class "insp-empty" ]
                         [ text "Select a network request to see headers." ]
+
+        ( Just event, PayloadTab ) ->
+            case event.data of
+                Network net ->
+                    div []
+                        ((case net.requestBody of
+                            Just b ->
+                                [ viewPayloadSection "Request Body" b ]
+
+                            Nothing ->
+                                []
+                         )
+                            ++ (case net.responseBody of
+                                    Just b ->
+                                        [ viewPayloadSection "Response Body" b ]
+
+                                    Nothing ->
+                                        []
+                               )
+                        )
+
+                _ ->
+                    div [ class "insp-empty" ]
+                        [ text "No payload data for this event." ]
 
         ( Just event, CookiesTab ) ->
             case event.data of
@@ -404,6 +436,21 @@ viewEmptySection label =
         [ div [ class "jt-label" ] [ text label ]
         , div [ style "color" "var(--dim)", style "font-style" "italic", style "font-size" "11px" ]
             [ text "None" ]
+        ]
+
+
+viewPayloadSection : String -> Decode.Value -> Html Msg
+viewPayloadSection label body =
+    div [ class "payload-section" ]
+        [ div [ class "payload-header" ]
+            [ div [ class "sect-hdr", style "margin" "0", style "border" "none", style "padding" "0" ] [ text label ]
+            , button
+                [ class "fv-copy-btn"
+                , onClick (CopyToClipboard (Encode.encode 4 body))
+                ]
+                [ text "\u{2398}" ]
+            ]
+        , JsonTree.view label body
         ]
 
 

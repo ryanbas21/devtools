@@ -105,6 +105,17 @@ update msg model =
                             else
                                 OidcTab
 
+                        ( PayloadTab, Just e ) ->
+                            case e.data of
+                                Network net ->
+                                    if net.requestBody == Nothing && net.responseBody == Nothing then
+                                        HeadersTab
+                                    else
+                                        PayloadTab
+
+                                _ ->
+                                    HeadersTab
+
                         _ ->
                             model.activeTab
             in
