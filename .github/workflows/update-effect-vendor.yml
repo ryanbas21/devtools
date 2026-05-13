@@ -1,0 +1,27 @@
+name: Update vendored Effect source
+
+on:
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch pullfrog
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'pullfrog.yml',
+              ref: 'main',
+              inputs: {
+                prompt: 'Update the vendored Effect repository at repos/effect/ by running: git subtree pull --prefix=repos/effect https://github.com/Effect-TS/effect.git main --squash. If there are no changes upstream, just close without a PR. If the pull succeeds, commit and open a PR with the title "chore: update vendored Effect source". If there are merge conflicts, open an issue describing the conflict instead of a PR.',
+                name: 'Update vendored Effect source'
+              }
+            });
