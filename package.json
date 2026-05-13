@@ -20,7 +20,7 @@
     "test": "vitest run",
     "typecheck": "tsc --build",
     "changeset": "changeset",
-    "version": "changeset version && prettier --write '**/package.json' pnpm-workspace.yaml",
+    "version": "changeset version && sync-manifest packages/devtools-extension && prettier --write '**/package.json' pnpm-workspace.yaml",
     "release": "pnpm build && changeset publish",
     "syncpack:lint": "syncpack lint",
     "syncpack:fix": "syncpack fix-mismatches",
@@ -45,6 +45,7 @@
     "syncpack": "^15.1.2",
     "typescript": "5.8.3",
     "vite": "catalog:vite",
+    "@wolfcola/changeset-sync-manifest": "workspace:*",
     "vitest": "catalog:vitest"
   },
   "pnpm": {

@@ -63,6 +63,9 @@ importers:
       '@typescript-eslint/parser':
         specifier: ^8.45.0
         version: 8.59.2(eslint@9.39.4)(typescript@5.8.3)
+      '@wolfcola/changeset-sync-manifest':
+        specifier: workspace:*
+        version: link:packages/changeset-sync-manifest
       eslint:
         specifier: ^9.8.0
         version: 9.39.4
@@ -133,6 +136,12 @@ importers:
       typescript:
         specifier: 5.8.3
         version: 5.8.3
+      vitest:
+        specifier: catalog:vitest
+        version: 3.2.4(@types/node@22.19.18)(jsdom@26.1.0)(terser@5.47.1)(yaml@2.9.0)
+
+  packages/changeset-sync-manifest:
+    devDependencies:
       vitest:
         specifier: catalog:vitest
         version: 3.2.4(@types/node@22.19.18)(jsdom@26.1.0)(terser@5.47.1)(yaml@2.9.0)
