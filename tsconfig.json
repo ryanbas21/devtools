@@ -7,6 +7,7 @@
     { "path": "packages/devtools-extension" },
     { "path": "packages/vscode-extension" },
     { "path": "packages/treeshake-check" },
-    { "path": "packages/eslint-plugin-treeshake" }
+    { "path": "packages/eslint-plugin-treeshake" },
+    { "path": "packages/changeset-sync-manifest" }
   ]
 }
