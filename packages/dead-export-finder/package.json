@@ -1,0 +1,48 @@
+{
+  "name": "@wolfcola/dead-export-finder",
+  "version": "0.0.0",
+  "type": "module",
+  "private": false,
+  "description": "Find dead exports across monorepo package boundaries",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "dead-export-finder": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/*.tsbuildinfo"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "effect": "catalog:effect",
+    "@effect/cli": "catalog:effect",
+    "@effect/platform": "catalog:effect",
+    "@effect/platform-node": "catalog:effect",
+    "oxc-parser": "^0.72.0",
+    "fast-glob": "^3.3.3",
+    "ignore": "^7.0.4",
+    "yaml": "^2.7.1"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:effect",
+    "vitest": "catalog:vitest",
+    "vite": "catalog:vite",
+    "typescript": "5.8.3"
+  }
+}
