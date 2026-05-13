@@ -566,6 +566,17 @@ body {
   padding: 2px 8px;
 }
 
+/* ── Payload Tab ─────────────────────────────────────────── */
+.payload-section {
+  margin-bottom: 8px;
+}
+.payload-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
 /* ── JsonTree ────────────────────────────────────────────── */
 .jt-sec {
   margin-bottom: 14px;

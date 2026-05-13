@@ -179,6 +179,7 @@ type alias OidcSemanticData =
 type InspectorTab
     = DiagnosisTab
     | HeadersTab
+    | PayloadTab
     | CookiesTab
     | CorsTab
     | SdkStateTab
