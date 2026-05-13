@@ -129,6 +129,13 @@ function initThemeToggle() {
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
+
+  // Eagerly append if the toolbar already exists (Elm.Main.init runs before
+  // initThemeToggle, so the initial render mutation has already fired).
+  const toolbar = document.querySelector('.toolbar');
+  if (toolbar) {
+    toolbar.appendChild(btn);
+  }
 }
 
 // ── App init ──────────────────────────────────────────────────────────────────
