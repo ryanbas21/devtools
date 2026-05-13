@@ -1,9 +1,11 @@
-import { Context, Data, Effect, Layer, Array as Arr, Option, pipe } from 'effect';
+import { Context, Data, Effect, Layer, Array as Arr, Option, pipe, Schema } from 'effect';
 import { FileSystem, Path } from '@effect/platform';
 import fg from 'fast-glob';
 import YAML from 'yaml';
 import type { PackageInfo, WorkspaceType } from './schemas.js';
 import { WorkspaceNotFoundError } from './errors.js';
+
+const JsonRecord = Schema.parseJson(Schema.Record({ key: Schema.String, value: Schema.Unknown }));
 
 // ─── Result type ──────────────────────────────────────────────────────────────
 
@@ -74,16 +76,12 @@ const readPackageInfo = (
       if (!exists) return Effect.succeed(null);
       return pipe(
         fs.readFileString(pkgPath, 'utf-8'),
-        Effect.map((contents): PackageInfo | null => {
-          try {
-            const parsed = JSON.parse(contents) as Record<string, unknown>;
-            const name =
-              typeof parsed['name'] === 'string' ? parsed['name'] : pathSvc.basename(pkgDir);
-            const entryPoints = extractEntryPoints(parsed);
-            return { name, root: pkgDir, entryPoints: [...entryPoints] } as PackageInfo;
-          } catch {
-            return null;
-          }
+        Effect.flatMap((contents) => Schema.decodeUnknown(JsonRecord)(contents)),
+        Effect.map((parsed): PackageInfo | null => {
+          const name =
+            typeof parsed['name'] === 'string' ? parsed['name'] : pathSvc.basename(pkgDir);
+          const entryPoints = extractEntryPoints(parsed);
+          return { name, root: pkgDir, entryPoints: [...entryPoints] } as PackageInfo;
         }),
         Effect.catchAll(() => Effect.succeed(null)),
       );
@@ -306,10 +304,10 @@ export const WorkspaceDetectorLive = Layer.effect(
                 fs.readFileString(pathSvc.join(cwd, 'package.json'), 'utf-8'),
                 Effect.orDie,
                 Effect.flatMap((raw) =>
-                  Effect.try({
-                    try: () => JSON.parse(raw) as Record<string, unknown>,
-                    catch: () => new WorkspaceNotFoundError({ cwd }),
-                  }),
+                  pipe(
+                    Schema.decodeUnknown(JsonRecord)(raw),
+                    Effect.mapError(() => new WorkspaceNotFoundError({ cwd })),
+                  ),
                 ),
                 Effect.flatMap((rootPkg) =>
                   pipe(
