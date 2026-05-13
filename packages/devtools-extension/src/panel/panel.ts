@@ -107,6 +107,7 @@ function initThemeToggle() {
   const btn = document.createElement('button');
   btn.className = 'theme-toggle';
   btn.title = 'Toggle light/dark mode';
+  btn.ariaLabel = 'Toggle light/dark mode';
   btn.textContent = theme === 'light' ? '☀' : '☾';
 
   btn.addEventListener('click', () => {
@@ -116,18 +117,17 @@ function initThemeToggle() {
     btn.textContent = theme === 'light' ? '☀' : '☾';
   });
 
-  // Insert into the toolbar once Elm renders it
+  // Keep the observer alive — Elm's virtual DOM re-renders the toolbar
+  // on any model change and removes nodes it doesn't know about.
   const observer = new MutationObserver(() => {
     const toolbar = document.querySelector('.toolbar');
-    if (toolbar) {
-      // Insert before the first separator to keep it at the far left
+    if (toolbar && btn.parentElement !== toolbar) {
       const spacer = toolbar.querySelector('.tb-spacer');
       if (spacer) {
         toolbar.insertBefore(btn, spacer);
       } else {
         toolbar.appendChild(btn);
       }
-      observer.disconnect();
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
