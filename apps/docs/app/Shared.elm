@@ -296,6 +296,7 @@ viewSidebar model toMsg =
             , ( Route.Packages__Slug_ { slug = "eslint-plugin-treeshake" }, "eslint-plugin-treeshake" )
             , ( Route.Packages__Slug_ { slug = "devtools-bridge" }, "devtools-bridge" )
             , ( Route.Packages__Slug_ { slug = "devtools-types" }, "devtools-types" )
+            , ( Route.Packages__Slug_ { slug = "dead-export-finder" }, "dead-export-finder" )
             ]
         , viewSidebarSection "Guides"
             [ ( Route.Docs__Slug_ { slug = "getting-started" }, "Getting Started" )

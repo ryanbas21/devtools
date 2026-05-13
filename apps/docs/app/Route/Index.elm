@@ -119,6 +119,12 @@ viewPackageGrid =
             , route = Route.Packages__Slug_ { slug = "devtools-types" }
             , tag = "Published"
             }
+        , viewPackageCard
+            { name = "@wolfcola/dead-export-finder"
+            , description = "CLI to find unused exports across monorepo package boundaries"
+            , route = Route.Packages__Slug_ { slug = "dead-export-finder" }
+            , tag = "Published"
+            }
         ]
 
 

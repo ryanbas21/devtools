@@ -9,6 +9,28 @@ order: 1
 
 Install the wolfcola devtools packages you need.
 
+## OIDC DevTools
+
+### Browser Extension (No SDK Required)
+
+Install the browser extension from the [Chrome Web Store](https://chrome.google.com/webstore) or [Firefox Add-ons](https://addons.mozilla.org). The extension uses **network-first detection** to automatically identify and annotate OIDC traffic without any code changes to your app.
+
+<callout type="info">Network-first detection works by matching URLs against common auth endpoint patterns and parsing `.well-known/openid-configuration` responses. No SDK integration is needed for basic flow visibility.</callout>
+
+### Bridge SDK (Optional, Richer Events)
+
+For deeper visibility into SDK state (node transitions, session diffs, config data), install the bridge:
+
+```bash
+npm install @wolfcola/devtools-bridge
+```
+
+The bridge provides adapters for Ping Identity SDKs: DaVinci (`@forgerock/davinci-client`), Journey, and OIDC (`@forgerock/oidc-client`). See the integration guides for setup details.
+
+### VS Code Extension
+
+Install the VS Code extension for in-editor flow inspection via CDP. See the [VS Code Extension](/docs/vscode-extension) guide.
+
 ## Tree-Shake Verification
 
 ```bash
@@ -27,15 +49,17 @@ Or point it at a specific package:
 npx treeshake-check --cwd packages/my-lib
 ```
 
-## OIDC DevTools
-
-Install the bridge SDK to emit events from your OIDC client:
+## Dead Export Detection
 
 ```bash
-npm install @wolfcola/devtools-bridge
+npm install -D @wolfcola/dead-export-finder
 ```
 
-<callout type="info">The bridge provides adapters for Ping Identity SDKs: DaVinci (`@forgerock/davinci-client`), Journey, and OIDC (`@forgerock/oidc-client`). See the integration guides for setup details.</callout>
+Scan your monorepo for unused exports:
+
+```bash
+npx dead-export-finder
+```
 
 ## Next Steps
 

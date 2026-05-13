@@ -21,6 +21,8 @@ The wolfcola-devtools repository is a pnpm workspace monorepo. All publishable p
 | `@wolfcola/devtools-ui`             | `packages/devtools-ui`             | Elm UI components for Timeline, Flow, and Learn views     |
 | `@wolfcola/devtools-extension`      | `packages/devtools-extension`      | Browser extension for Chrome and Firefox                  |
 | `oidc-devtools`                     | `packages/vscode-extension`        | VS Code extension with CDP connection                     |
+| `@wolfcola/dead-export-finder`      | `packages/dead-export-finder`      | CLI to find unused exports across monorepo boundaries     |
+| `@wolfcola/changeset-sync-manifest` | `packages/changeset-sync-manifest` | Syncs package version from changesets to manifest files   |
 | `@wolfcola/docs-site`               | `apps/docs`                        | This documentation site (elm-pages)                       |
 
 ## Root Files
@@ -72,6 +74,12 @@ treeshake-check
 
 eslint-plugin-treeshake
   (standalone, optional dep on treeshake-check)
+
+dead-export-finder
+  (standalone)
+
+changeset-sync-manifest
+  (standalone)
 ```
 
 The `devtools-types` package is the shared foundation. It defines the `AuthEvent` and `FlowState` schemas that the bridge, browser extension, and VS Code extension all depend on.
