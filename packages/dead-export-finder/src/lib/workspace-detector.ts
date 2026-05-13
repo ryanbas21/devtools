@@ -1,4 +1,4 @@
-import { Context, Data, Effect, Layer } from 'effect';
+import { Context, Data, Effect, Layer, Array as Arr, Option, pipe } from 'effect';
 import { FileSystem, Path } from '@effect/platform';
 import fg from 'fast-glob';
 import YAML from 'yaml';
@@ -32,64 +32,58 @@ class GlobError extends Data.TaggedError('GlobError')<{
   readonly cause: unknown;
 }> {}
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Pure helpers ────────────────────────────────────────────────────────────
 
-/**
- * Walk an exports field value and collect all string leaf values.
- * Handles: string, string[], nested condition/subpath objects.
- */
-function collectExportsStrings(value: unknown): string[] {
+const collectExportsStrings = (value: unknown): ReadonlyArray<string> => {
   if (typeof value === 'string') return [value];
-  if (Array.isArray(value)) return value.flatMap(collectExportsStrings);
+  if (Array.isArray(value)) return pipe(value, Arr.flatMap(collectExportsStrings));
   if (value !== null && typeof value === 'object') {
-    return Object.values(value as Record<string, unknown>).flatMap(collectExportsStrings);
+    return pipe(
+      Object.values(value as Record<string, unknown>),
+      Arr.flatMap(collectExportsStrings),
+    );
   }
   return [];
-}
+};
 
-/**
- * Extract entry points from a parsed package.json object.
- * Prefers `exports` field (all string leaves), falls back to main/module/types.
- */
-function extractEntryPoints(pkg: Record<string, unknown>): string[] {
+const extractEntryPoints = (pkg: Record<string, unknown>): ReadonlyArray<string> => {
   if (pkg['exports'] !== undefined) {
-    const collected = collectExportsStrings(pkg['exports']);
-    return [...new Set(collected)];
+    return pipe(collectExportsStrings(pkg['exports']), Arr.dedupe);
   }
 
-  const fallbacks: string[] = [];
-  for (const field of ['main', 'module', 'types'] as const) {
-    const val = pkg[field];
-    if (typeof val === 'string') fallbacks.push(val);
-  }
-  return [...new Set(fallbacks)];
-}
+  return pipe(
+    ['main', 'module', 'types'] as const,
+    Arr.filterMap((field) => {
+      const val = pkg[field];
+      return typeof val === 'string' ? Option.some(val) : Option.none();
+    }),
+    Arr.dedupe,
+  );
+};
 
-/**
- * Read and parse a package.json, returning a PackageInfo.
- * Absorbs all errors and returns null when the file is missing or unparseable.
- */
 const readPackageInfo = (
   fs: FileSystem.FileSystem,
-  path: Path.Path,
+  pathSvc: Path.Path,
   pkgDir: string,
 ): Effect.Effect<PackageInfo | null> => {
-  const pkgPath = path.join(pkgDir, 'package.json');
+  const pkgPath = pathSvc.join(pkgDir, 'package.json');
 
-  return fs.exists(pkgPath).pipe(
+  return pipe(
+    fs.exists(pkgPath),
     Effect.flatMap((exists) => {
       if (!exists) return Effect.succeed(null);
-      return fs.readFileString(pkgPath, 'utf-8').pipe(
-        Effect.map((contents) => {
-          let parsed: Record<string, unknown>;
+      return pipe(
+        fs.readFileString(pkgPath, 'utf-8'),
+        Effect.map((contents): PackageInfo | null => {
           try {
-            parsed = JSON.parse(contents) as Record<string, unknown>;
+            const parsed = JSON.parse(contents) as Record<string, unknown>;
+            const name =
+              typeof parsed['name'] === 'string' ? parsed['name'] : pathSvc.basename(pkgDir);
+            const entryPoints = extractEntryPoints(parsed);
+            return { name, root: pkgDir, entryPoints: [...entryPoints] } as PackageInfo;
           } catch {
             return null;
           }
-          const name = typeof parsed['name'] === 'string' ? parsed['name'] : path.basename(pkgDir);
-          const entryPoints = extractEntryPoints(parsed);
-          return { name, root: pkgDir, entryPoints } as PackageInfo;
         }),
         Effect.catchAll(() => Effect.succeed(null)),
       );
@@ -98,23 +92,197 @@ const readPackageInfo = (
   );
 };
 
-/**
- * Resolve workspace glob patterns (e.g. "packages/*") relative to root,
- * then return all directories containing a package.json.
- */
 const resolveWorkspaceGlobs = (
-  path: Path.Path,
+  pathSvc: Path.Path,
   root: string,
-  globs: string[],
-): Effect.Effect<string[], GlobError> =>
-  Effect.tryPromise({
-    try: () =>
-      fg(
-        globs.map((g) => `${g}/package.json`),
-        { cwd: root, absolute: true, onlyFiles: true },
+  globs: ReadonlyArray<string>,
+): Effect.Effect<ReadonlyArray<string>, GlobError> =>
+  pipe(
+    Effect.tryPromise({
+      try: () =>
+        fg(
+          pipe(
+            globs,
+            Arr.map((g) => `${g}/package.json`),
+          ),
+          { cwd: root, absolute: true, onlyFiles: true },
+        ),
+      catch: (cause) => new GlobError({ cause }),
+    }),
+    Effect.map((files) =>
+      pipe(
+        files,
+        Arr.map((p) => pathSvc.dirname(p)),
       ),
-    catch: (cause) => new GlobError({ cause }),
-  }).pipe(Effect.map((files) => files.map((p) => path.dirname(p))));
+    ),
+  );
+
+const readPkgDirs = (
+  fs: FileSystem.FileSystem,
+  pathSvc: Path.Path,
+  root: string,
+  globs: ReadonlyArray<string>,
+): Effect.Effect<readonly PackageInfo[]> =>
+  pipe(
+    resolveWorkspaceGlobs(pathSvc, root, globs),
+    Effect.flatMap((dirs) =>
+      Effect.all(
+        pipe(
+          dirs,
+          Arr.map((d) => readPackageInfo(fs, pathSvc, d)),
+        ),
+      ),
+    ),
+    Effect.map((infos) =>
+      pipe(
+        infos,
+        Arr.filter((p): p is PackageInfo => p !== null),
+      ),
+    ),
+    Effect.catchTag('GlobError', () => Effect.succeed([] as PackageInfo[])),
+  );
+
+// ─── Workspace detection strategies ─────────────────────────────────────────
+
+const extractWorkspaceGlobs = (workspaces: unknown): ReadonlyArray<string> => {
+  if (Array.isArray(workspaces)) {
+    return pipe(
+      workspaces,
+      Arr.filter((g): g is string => typeof g === 'string'),
+    );
+  }
+  if (typeof workspaces === 'object' && workspaces !== null) {
+    const obj = workspaces as { packages?: unknown };
+    if (Array.isArray(obj.packages)) {
+      return pipe(
+        obj.packages,
+        Arr.filter((g): g is string => typeof g === 'string'),
+      );
+    }
+  }
+  return [];
+};
+
+const detectPnpm = (
+  fs: FileSystem.FileSystem,
+  pathSvc: Path.Path,
+  cwd: string,
+): Effect.Effect<WorkspaceResult, WorkspaceNotFoundError> =>
+  pipe(
+    fs.exists(pathSvc.join(cwd, 'pnpm-workspace.yaml')),
+    Effect.orDie,
+    Effect.flatMap((exists) =>
+      exists
+        ? pipe(
+            fs.readFileString(pathSvc.join(cwd, 'pnpm-workspace.yaml'), 'utf-8'),
+            Effect.orDie,
+            Effect.map((raw) => {
+              const parsed = YAML.parse(raw) as { packages?: string[] } | null;
+              return parsed?.packages ?? [];
+            }),
+            Effect.flatMap((globs) => readPkgDirs(fs, pathSvc, cwd, globs)),
+            Effect.map(
+              (packages): WorkspaceResult => ({
+                type: 'pnpm' as WorkspaceType,
+                root: cwd,
+                packages,
+              }),
+            ),
+          )
+        : Effect.fail(new WorkspaceNotFoundError({ cwd })),
+    ),
+  );
+
+const detectNpmWorkspaces = (
+  fs: FileSystem.FileSystem,
+  pathSvc: Path.Path,
+  cwd: string,
+  rootPkg: Record<string, unknown>,
+): Effect.Effect<WorkspaceResult, WorkspaceNotFoundError> => {
+  const globs = extractWorkspaceGlobs(rootPkg['workspaces']);
+  return globs.length > 0
+    ? pipe(
+        readPkgDirs(fs, pathSvc, cwd, globs),
+        Effect.map(
+          (packages): WorkspaceResult => ({
+            type: 'npm' as WorkspaceType,
+            root: cwd,
+            packages,
+          }),
+        ),
+      )
+    : Effect.fail(new WorkspaceNotFoundError({ cwd }));
+};
+
+const detectNx = (
+  fs: FileSystem.FileSystem,
+  pathSvc: Path.Path,
+  cwd: string,
+): Effect.Effect<WorkspaceResult, WorkspaceNotFoundError> =>
+  pipe(
+    fs.exists(pathSvc.join(cwd, 'nx.json')),
+    Effect.orDie,
+    Effect.flatMap((exists) =>
+      exists
+        ? pipe(
+            readPkgDirs(fs, pathSvc, cwd, ['packages/*', 'libs/*', 'apps/*']),
+            Effect.flatMap((packages) =>
+              packages.length > 0
+                ? Effect.succeed({
+                    type: 'nx' as WorkspaceType,
+                    root: cwd,
+                    packages,
+                  } as WorkspaceResult)
+                : Effect.fail(new WorkspaceNotFoundError({ cwd })),
+            ),
+          )
+        : Effect.fail(new WorkspaceNotFoundError({ cwd })),
+    ),
+  );
+
+const detectTurbo = (
+  fs: FileSystem.FileSystem,
+  pathSvc: Path.Path,
+  cwd: string,
+): Effect.Effect<WorkspaceResult, WorkspaceNotFoundError> =>
+  pipe(
+    fs.exists(pathSvc.join(cwd, 'turbo.json')),
+    Effect.orDie,
+    Effect.flatMap((exists) =>
+      exists
+        ? pipe(
+            readPkgDirs(fs, pathSvc, cwd, ['packages/*', 'apps/*']),
+            Effect.flatMap((packages) =>
+              packages.length > 0
+                ? Effect.succeed({
+                    type: 'turborepo' as WorkspaceType,
+                    root: cwd,
+                    packages,
+                  } as WorkspaceResult)
+                : Effect.fail(new WorkspaceNotFoundError({ cwd })),
+            ),
+          )
+        : Effect.fail(new WorkspaceNotFoundError({ cwd })),
+    ),
+  );
+
+const detectSingle = (
+  fs: FileSystem.FileSystem,
+  pathSvc: Path.Path,
+  cwd: string,
+): Effect.Effect<WorkspaceResult, WorkspaceNotFoundError> =>
+  pipe(
+    readPackageInfo(fs, pathSvc, cwd),
+    Effect.flatMap((pkg) =>
+      pkg !== null
+        ? Effect.succeed({
+            type: 'single' as WorkspaceType,
+            root: cwd,
+            packages: [pkg],
+          } as WorkspaceResult)
+        : Effect.fail(new WorkspaceNotFoundError({ cwd })),
+    ),
+  );
 
 // ─── Live implementation ──────────────────────────────────────────────────────
 
@@ -122,87 +290,40 @@ export const WorkspaceDetectorLive = Layer.effect(
   WorkspaceDetector,
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    const path = yield* Path.Path;
-
-    const readPkgDirs = (root: string, globs: string[]): Effect.Effect<readonly PackageInfo[]> =>
-      resolveWorkspaceGlobs(path, root, globs).pipe(
-        Effect.flatMap((dirs) => Effect.all(dirs.map((d) => readPackageInfo(fs, path, d)))),
-        Effect.map((infos) => infos.filter((p): p is PackageInfo => p !== null)),
-        Effect.catchTag('GlobError', () => Effect.succeed([] as PackageInfo[])),
-      );
+    const pathSvc = yield* Path.Path;
 
     const detect = (cwd: string): Effect.Effect<WorkspaceResult, WorkspaceNotFoundError> =>
-      Effect.gen(function* () {
-        // 1. Check for pnpm-workspace.yaml
-        const pnpmYamlPath = path.join(cwd, 'pnpm-workspace.yaml');
-        const hasPnpmYaml = yield* fs.exists(pnpmYamlPath).pipe(Effect.orDie);
+      pipe(
+        detectPnpm(fs, pathSvc, cwd),
+        Effect.catchTag('WorkspaceNotFoundError', () =>
+          pipe(
+            fs.exists(pathSvc.join(cwd, 'package.json')),
+            Effect.orDie,
+            Effect.flatMap((hasRootPkg) => {
+              if (!hasRootPkg) return Effect.fail(new WorkspaceNotFoundError({ cwd }));
 
-        if (hasPnpmYaml) {
-          const raw = yield* fs.readFileString(pnpmYamlPath, 'utf-8').pipe(Effect.orDie);
-          const parsed = YAML.parse(raw) as { packages?: string[] } | null;
-          const globs = parsed?.packages ?? [];
-          const packages = yield* readPkgDirs(cwd, globs);
-          return { type: 'pnpm' as WorkspaceType, root: cwd, packages };
-        }
-
-        // 2. Check for package.json with workspaces field
-        const rootPkgPath = path.join(cwd, 'package.json');
-        const hasRootPkg = yield* fs.exists(rootPkgPath).pipe(Effect.orDie);
-
-        if (hasRootPkg) {
-          const raw = yield* fs.readFileString(rootPkgPath, 'utf-8').pipe(Effect.orDie);
-          const rootPkg = yield* Effect.try({
-            try: () => JSON.parse(raw) as Record<string, unknown>,
-            catch: () => new WorkspaceNotFoundError({ cwd }),
-          });
-
-          // npm / yarn workspaces
-          const workspaces = rootPkg['workspaces'];
-          let globs: string[] = [];
-          if (Array.isArray(workspaces)) {
-            globs = workspaces.filter((g): g is string => typeof g === 'string');
-          } else if (typeof workspaces === 'object' && workspaces !== null) {
-            // Yarn classic: workspaces: { packages: ["packages/*"] }
-            const obj = workspaces as { packages?: unknown };
-            if (Array.isArray(obj.packages)) {
-              globs = obj.packages.filter((g): g is string => typeof g === 'string');
-            }
-          }
-          if (globs.length > 0) {
-            const packages = yield* readPkgDirs(cwd, globs);
-            return { type: 'npm' as WorkspaceType, root: cwd, packages };
-          }
-
-          // 3. Check for nx.json
-          const nxJsonPath = path.join(cwd, 'nx.json');
-          const hasNxJson = yield* fs.exists(nxJsonPath).pipe(Effect.orDie);
-          if (hasNxJson) {
-            const packages = yield* readPkgDirs(cwd, ['packages/*', 'libs/*', 'apps/*']);
-            if (packages.length > 0) {
-              return { type: 'nx' as WorkspaceType, root: cwd, packages };
-            }
-          }
-
-          // 4. Check for turbo.json
-          const turboJsonPath = path.join(cwd, 'turbo.json');
-          const hasTurboJson = yield* fs.exists(turboJsonPath).pipe(Effect.orDie);
-          if (hasTurboJson) {
-            const packages = yield* readPkgDirs(cwd, ['packages/*', 'apps/*']);
-            if (packages.length > 0) {
-              return { type: 'turborepo' as WorkspaceType, root: cwd, packages };
-            }
-          }
-
-          // 5. Single package fallback
-          const singlePkg = yield* readPackageInfo(fs, path, cwd);
-          if (singlePkg !== null) {
-            return { type: 'single' as WorkspaceType, root: cwd, packages: [singlePkg] };
-          }
-        }
-
-        // 6. No package.json at cwd — workspace cannot be determined
-        return yield* new WorkspaceNotFoundError({ cwd });
-      });
+              return pipe(
+                fs.readFileString(pathSvc.join(cwd, 'package.json'), 'utf-8'),
+                Effect.orDie,
+                Effect.flatMap((raw) =>
+                  Effect.try({
+                    try: () => JSON.parse(raw) as Record<string, unknown>,
+                    catch: () => new WorkspaceNotFoundError({ cwd }),
+                  }),
+                ),
+                Effect.flatMap((rootPkg) =>
+                  pipe(
+                    detectNpmWorkspaces(fs, pathSvc, cwd, rootPkg),
+                    Effect.catchTag('WorkspaceNotFoundError', () => detectNx(fs, pathSvc, cwd)),
+                    Effect.catchTag('WorkspaceNotFoundError', () => detectTurbo(fs, pathSvc, cwd)),
+                    Effect.catchTag('WorkspaceNotFoundError', () => detectSingle(fs, pathSvc, cwd)),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+      );
 
     return { detect };
   }),

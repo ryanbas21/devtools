@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from 'effect';
+import { Context, Effect, Layer, Array as Arr, pipe } from 'effect';
 import oxc from 'oxc-parser';
 import type { ExportedSymbol } from './schemas.js';
 import { ParseError } from './errors.js';
@@ -130,17 +130,12 @@ interface OxcProgram {
   body: OxcBodyNode[];
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Pure helpers ────────────────────────────────────────────────────────────
 
-function lineFromOffset(source: string, offset: number): number {
-  let line = 1;
-  for (let i = 0; i < offset && i < source.length; i++) {
-    if (source[i] === '\n') line++;
-  }
-  return line;
-}
+const lineFromOffset = (source: string, offset: number): number =>
+  pipe(source.slice(0, offset).split('\n'), Arr.length);
 
-function extractDeclarationNames(decl: OxcDeclaration): string[] {
+const extractDeclarationNames = (decl: OxcDeclaration): ReadonlyArray<string> => {
   switch (decl.type) {
     case 'FunctionDeclaration':
     case 'ClassDeclaration': {
@@ -149,8 +144,9 @@ function extractDeclarationNames(decl: OxcDeclaration): string[] {
     }
     case 'VariableDeclaration': {
       const d = decl as OxcVariableDeclaration;
-      return d.declarations.flatMap((v) =>
-        v.id.type === 'Identifier' ? [(v.id as OxcIdent).name] : [],
+      return pipe(
+        d.declarations,
+        Arr.flatMap((v) => (v.id.type === 'Identifier' ? [(v.id as OxcIdent).name] : [])),
       );
     }
     case 'TSTypeAliasDeclaration':
@@ -161,13 +157,84 @@ function extractDeclarationNames(decl: OxcDeclaration): string[] {
     default:
       return [];
   }
-}
+};
 
-function extractCjsExports(
+const extractNamedDeclaration = (
+  node: OxcExportNamedDeclaration,
+  filePath: string,
+  source: string,
+): ReadonlyArray<ExportedSymbol> => {
+  const isReExport = node.source !== null;
+  const reExportSource = node.source ? String(node.source.value) : undefined;
+
+  if (node.declaration !== null) {
+    return pipe(
+      extractDeclarationNames(node.declaration),
+      Arr.map(
+        (name): ExportedSymbol =>
+          ({
+            name,
+            filePath,
+            line: lineFromOffset(source, node.start),
+            isDefault: false,
+            isReExport: false,
+          }) as ExportedSymbol,
+      ),
+    );
+  }
+
+  return pipe(
+    node.specifiers,
+    Arr.map((spec): ExportedSymbol => {
+      const localName = (spec as { local?: OxcIdent }).local?.name;
+      const isRenamed = localName !== undefined && localName !== spec.exported.name;
+      return {
+        name: spec.exported.name,
+        filePath,
+        line: lineFromOffset(source, spec.start),
+        isDefault: false,
+        isReExport,
+        ...(reExportSource !== undefined ? { reExportSource } : {}),
+        ...(isRenamed ? { reExportLocalName: localName } : {}),
+      } as ExportedSymbol;
+    }),
+  );
+};
+
+const extractDefaultDeclaration = (
+  node: OxcExportDefaultDeclaration,
+  filePath: string,
+  source: string,
+): ReadonlyArray<ExportedSymbol> => [
+  {
+    name: 'default',
+    filePath,
+    line: lineFromOffset(source, node.start),
+    isDefault: true,
+    isReExport: false,
+  } as ExportedSymbol,
+];
+
+const extractAllDeclaration = (
+  node: OxcExportAllDeclaration,
+  filePath: string,
+  source: string,
+): ReadonlyArray<ExportedSymbol> => [
+  {
+    name: node.exported ? node.exported.name : '*',
+    filePath,
+    line: lineFromOffset(source, node.start),
+    isDefault: false,
+    isReExport: true,
+    reExportSource: String(node.source.value),
+  } as ExportedSymbol,
+];
+
+const extractCjsExports = (
   node: OxcExpressionStatement,
   filePath: string,
   source: string,
-): ExportedSymbol[] {
+): ReadonlyArray<ExportedSymbol> => {
   const expr = node.expression;
   if (expr.type !== 'AssignmentExpression') return [];
 
@@ -194,7 +261,7 @@ function extractCjsExports(
     ];
   }
 
-  // module.exports.foo = ...  (nested MemberExpression)
+  // module.exports.foo = ... (nested MemberExpression)
   if (member.object.type === 'MemberExpression') {
     const inner = member.object as OxcMemberExpression;
     const innerObj =
@@ -218,25 +285,47 @@ function extractCjsExports(
     const right = assign.right;
     if (right.type !== 'ObjectExpression') return [];
     const obj = right as OxcObjectExpression;
-    return obj.properties.flatMap((prop) => {
-      if (prop.type === 'Property' && prop.key.type === 'Identifier') {
-        const key = prop.key as OxcIdent;
-        return [
-          {
-            name: key.name,
-            filePath,
-            line: lineFromOffset(source, prop.start),
-            isDefault: false,
-            isReExport: false,
-          } as ExportedSymbol,
-        ];
-      }
-      return [];
-    });
+    return pipe(
+      obj.properties,
+      Arr.flatMap((prop): ReadonlyArray<ExportedSymbol> => {
+        if (prop.type === 'Property' && prop.key.type === 'Identifier') {
+          const key = prop.key as OxcIdent;
+          return [
+            {
+              name: key.name,
+              filePath,
+              line: lineFromOffset(source, prop.start),
+              isDefault: false,
+              isReExport: false,
+            } as ExportedSymbol,
+          ];
+        }
+        return [];
+      }),
+    );
   }
 
   return [];
-}
+};
+
+const extractExportsFromNode = (
+  node: OxcBodyNode,
+  filePath: string,
+  source: string,
+): ReadonlyArray<ExportedSymbol> => {
+  switch (node.type) {
+    case 'ExportNamedDeclaration':
+      return extractNamedDeclaration(node as OxcExportNamedDeclaration, filePath, source);
+    case 'ExportDefaultDeclaration':
+      return extractDefaultDeclaration(node as OxcExportDefaultDeclaration, filePath, source);
+    case 'ExportAllDeclaration':
+      return extractAllDeclaration(node as OxcExportAllDeclaration, filePath, source);
+    case 'ExpressionStatement':
+      return extractCjsExports(node as OxcExpressionStatement, filePath, source);
+    default:
+      return [];
+  }
+};
 
 // ─── Service interface ────────────────────────────────────────────────────────
 
@@ -267,85 +356,11 @@ const parseSource = (
       }
 
       const program = result.program as unknown as OxcProgram;
-      const symbols: ExportedSymbol[] = [];
 
-      for (const node of program.body) {
-        switch (node.type) {
-          case 'ExportNamedDeclaration': {
-            const n = node as OxcExportNamedDeclaration;
-            const isReExport = n.source !== null;
-            const reExportSource = n.source ? String(n.source.value) : undefined;
-
-            if (n.declaration !== null) {
-              // export const foo = ..., export function bar() {}, etc.
-              const names = extractDeclarationNames(n.declaration);
-              for (const name of names) {
-                symbols.push({
-                  name,
-                  filePath,
-                  line: lineFromOffset(source, n.start),
-                  isDefault: false,
-                  isReExport: false,
-                } as ExportedSymbol);
-              }
-            } else {
-              // export { foo, bar } or export { foo } from './other'
-              for (const spec of n.specifiers) {
-                const localName = (spec as { local?: OxcIdent }).local?.name;
-                const isRenamed = localName !== undefined && localName !== spec.exported.name;
-                symbols.push({
-                  name: spec.exported.name,
-                  filePath,
-                  line: lineFromOffset(source, spec.start),
-                  isDefault: false,
-                  isReExport,
-                  ...(reExportSource !== undefined ? { reExportSource } : {}),
-                  ...(isRenamed ? { reExportLocalName: localName } : {}),
-                } as ExportedSymbol);
-              }
-            }
-            break;
-          }
-
-          case 'ExportDefaultDeclaration': {
-            const n = node as OxcExportDefaultDeclaration;
-            symbols.push({
-              name: 'default',
-              filePath,
-              line: lineFromOffset(source, n.start),
-              isDefault: true,
-              isReExport: false,
-            } as ExportedSymbol);
-            break;
-          }
-
-          case 'ExportAllDeclaration': {
-            const n = node as OxcExportAllDeclaration;
-            const name = n.exported ? n.exported.name : '*';
-            symbols.push({
-              name,
-              filePath,
-              line: lineFromOffset(source, n.start),
-              isDefault: false,
-              isReExport: true,
-              reExportSource: String(n.source.value),
-            } as ExportedSymbol);
-            break;
-          }
-
-          case 'ExpressionStatement': {
-            const n = node as OxcExpressionStatement;
-            const cjsExports = extractCjsExports(n, filePath, source);
-            symbols.push(...cjsExports);
-            break;
-          }
-
-          default:
-            break;
-        }
-      }
-
-      return symbols;
+      return pipe(
+        program.body,
+        Arr.flatMap((node) => extractExportsFromNode(node, filePath, source)),
+      );
     },
     catch: (e) =>
       new ParseError({

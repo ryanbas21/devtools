@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from 'effect';
+import { Context, Effect, Layer, Array as Arr, HashSet, Option, pipe } from 'effect';
 import path from 'node:path';
 import type {
   PackageInfo,
@@ -10,51 +10,265 @@ import type {
 
 // ─── Extension stripping ───────────────────────────────────────────────────────
 
-const EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
+const EXTENSIONS: ReadonlyArray<string> = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
 
-function stripExtension(filePath: string): string {
-  for (const ext of EXTENSIONS) {
-    if (filePath.endsWith(ext)) {
-      return filePath.slice(0, -ext.length);
-    }
-  }
-  return filePath;
-}
+const stripExtension = (filePath: string): string =>
+  pipe(
+    EXTENSIONS,
+    Arr.findFirst((ext) => filePath.endsWith(ext)),
+    (opt) => (opt._tag === 'Some' ? filePath.slice(0, -opt.value.length) : filePath),
+  );
 
-/** Map a build-output entry point (e.g. ./dist/index.js) to its likely source path. */
-function resolveEntryPointToSource(
+const BUILD_DIR_MAPPINGS: ReadonlyArray<readonly [string, string]> = [
+  ['/dist/', '/src/'],
+  ['/build/', '/src/'],
+  ['/out/', '/src/'],
+];
+
+const resolveEntryPointToSource = (
   entryPoint: string,
-  scannedFiles: Set<string>,
-  scannedStripped: Set<string>,
-): string | null {
-  // If the raw path already matches a scanned file, use it directly.
-  if (scannedFiles.has(entryPoint)) return entryPoint;
+  scannedFiles: HashSet.HashSet<string>,
+  scannedStripped: HashSet.HashSet<string>,
+): string | null => {
+  if (HashSet.has(scannedFiles, entryPoint)) return entryPoint;
   const stripped = stripExtension(entryPoint);
-  if (scannedStripped.has(stripped)) return stripped;
+  if (HashSet.has(scannedStripped, stripped)) return stripped;
 
-  // Try mapping common build output dirs to source dirs.
-  const buildDirs = ['/dist/', '/build/', '/out/'];
-  const sourceDirs = ['/src/', '/src/', '/src/'];
-
-  for (let i = 0; i < buildDirs.length; i++) {
-    if (entryPoint.includes(buildDirs[i])) {
-      const sourcePath = entryPoint.replace(buildDirs[i], sourceDirs[i]);
-      if (scannedFiles.has(sourcePath)) return sourcePath;
+  return pipe(
+    BUILD_DIR_MAPPINGS,
+    Arr.findFirst(([buildDir]) => entryPoint.includes(buildDir)),
+    (opt) => {
+      if (opt._tag === 'None') return null;
+      const [buildDir, sourceDir] = opt.value;
+      const sourcePath = entryPoint.replace(buildDir, sourceDir);
+      if (HashSet.has(scannedFiles, sourcePath)) return sourcePath;
       const sourceStripped = stripExtension(sourcePath);
-      if (scannedStripped.has(sourceStripped)) return sourceStripped;
-    }
-  }
+      if (HashSet.has(scannedStripped, sourceStripped)) return sourceStripped;
+      return null;
+    },
+  );
+};
 
-  return null;
+// ─── Pure pipeline stages ────────────────────────────────────────────────────
+
+const resolveEntryPoints = (
+  packages: ReadonlyArray<PackageInfo>,
+  scannedFiles: HashSet.HashSet<string>,
+  scannedStripped: HashSet.HashSet<string>,
+): HashSet.HashSet<string> =>
+  pipe(
+    packages,
+    Arr.flatMap((pkg) =>
+      pipe(
+        pkg.entryPoints,
+        Arr.filterMap((ep) => {
+          const resolved = path.resolve(pkg.root, ep);
+          const sourcePath = resolveEntryPointToSource(resolved, scannedFiles, scannedStripped);
+          return sourcePath !== null ? Option.some(sourcePath) : Option.none();
+        }),
+      ),
+    ),
+    HashSet.fromIterable,
+  );
+
+const buildFileToPackageMap = (
+  packages: ReadonlyArray<PackageInfo>,
+  exportedFilePaths: ReadonlyArray<string>,
+): ReadonlyMap<string, PackageInfo> =>
+  new Map(
+    pipe(
+      exportedFilePaths,
+      Arr.filterMap((filePath) => {
+        const pkg = pipe(
+          packages,
+          Arr.findFirst((p) => filePath.startsWith(p.root + path.sep) || filePath === p.root),
+        );
+        return pkg._tag === 'Some' ? Option.some([filePath, pkg.value] as const) : Option.none();
+      }),
+    ),
+  );
+
+// ─── Consumed sets ──────────────────────────────────────────────────────────
+
+interface ConsumedSets {
+  readonly byRelative: HashSet.HashSet<string>;
+  readonly byPackage: HashSet.HashSet<string>;
+  readonly byNamespace: HashSet.HashSet<string>;
 }
+
+const isRelativePath = (src: string): boolean =>
+  src.startsWith('./') || src.startsWith('../') || src.startsWith('/');
+
+const collectImportEdges = (
+  allImports: ReadonlyMap<string, readonly ImportedSymbol[]>,
+): ConsumedSets => {
+  const entries = pipe(
+    [...allImports.entries()],
+    Arr.flatMap(([importerFile, imports]) =>
+      pipe(
+        imports,
+        Arr.map((imp) => ({ importerFile, imp })),
+      ),
+    ),
+  );
+
+  const relativeEntries = pipe(
+    entries,
+    Arr.filter(({ imp }) => isRelativePath(imp.source)),
+  );
+
+  const packageEntries = pipe(
+    entries,
+    Arr.filter(({ imp }) => !isRelativePath(imp.source)),
+  );
+
+  const byRelative = pipe(
+    relativeEntries,
+    Arr.filter(({ imp }) => !imp.isNamespace && imp.name !== '*'),
+    Arr.map(({ importerFile, imp }) => {
+      const importerDir = path.dirname(importerFile);
+      const resolved = stripExtension(path.resolve(importerDir, imp.source));
+      return `${resolved}:${imp.name}`;
+    }),
+    HashSet.fromIterable,
+  );
+
+  const byPackage = pipe(
+    packageEntries,
+    Arr.filter(({ imp }) => !imp.isNamespace && imp.name !== '*'),
+    Arr.map(({ imp }) => `${imp.source}:${imp.name}`),
+    HashSet.fromIterable,
+  );
+
+  const relativeNamespaces = pipe(
+    relativeEntries,
+    Arr.filter(({ imp }) => imp.isNamespace || imp.name === '*'),
+    Arr.map(({ importerFile, imp }) => {
+      const importerDir = path.dirname(importerFile);
+      return stripExtension(path.resolve(importerDir, imp.source));
+    }),
+  );
+
+  const packageNamespaces = pipe(
+    packageEntries,
+    Arr.filter(({ imp }) => imp.isNamespace || imp.name === '*'),
+    Arr.map(({ imp }) => imp.source),
+  );
+
+  const byNamespace = pipe([...relativeNamespaces, ...packageNamespaces], HashSet.fromIterable);
+
+  return { byRelative, byPackage, byNamespace };
+};
+
+const collectReExportEdges = (
+  allExports: ReadonlyMap<string, readonly ExportedSymbol[]>,
+): ConsumedSets => {
+  const reExports = pipe(
+    [...allExports.entries()],
+    Arr.flatMap(([filePath, exports]) =>
+      pipe(
+        exports,
+        Arr.filter((exp) => exp.isReExport && exp.reExportSource !== undefined),
+        Arr.filter((exp) => isRelativePath(exp.reExportSource!)),
+        Arr.map((exp) => ({ filePath, exp })),
+      ),
+    ),
+  );
+
+  const byNamespace = pipe(
+    reExports,
+    Arr.filter(({ exp }) => exp.name === '*'),
+    Arr.map(({ filePath, exp }) => {
+      const dir = path.dirname(filePath);
+      return stripExtension(path.resolve(dir, exp.reExportSource!));
+    }),
+    HashSet.fromIterable,
+  );
+
+  const byRelative = pipe(
+    reExports,
+    Arr.filter(({ exp }) => exp.name !== '*'),
+    Arr.map(({ filePath, exp }) => {
+      const dir = path.dirname(filePath);
+      const resolved = stripExtension(path.resolve(dir, exp.reExportSource!));
+      const consumedName = exp.reExportLocalName ?? exp.name;
+      return `${resolved}:${consumedName}`;
+    }),
+    HashSet.fromIterable,
+  );
+
+  return {
+    byRelative,
+    byPackage: HashSet.empty<string>(),
+    byNamespace,
+  };
+};
+
+const mergeConsumedSets = (a: ConsumedSets, b: ConsumedSets): ConsumedSets => ({
+  byRelative: HashSet.union(a.byRelative, b.byRelative),
+  byPackage: HashSet.union(a.byPackage, b.byPackage),
+  byNamespace: HashSet.union(a.byNamespace, b.byNamespace),
+});
+
+const buildConsumedSets = (
+  allImports: ReadonlyMap<string, readonly ImportedSymbol[]>,
+  allExports: ReadonlyMap<string, readonly ExportedSymbol[]>,
+): ConsumedSets =>
+  mergeConsumedSets(collectImportEdges(allImports), collectReExportEdges(allExports));
+
+// ─── Dead export detection ──────────────────────────────────────────────────
+
+const isConsumed = (
+  exp: ExportedSymbol,
+  strippedFilePath: string,
+  pkg: PackageInfo,
+  consumed: ConsumedSets,
+): boolean => {
+  if (exp.name === '*') return true;
+  if (HashSet.has(consumed.byRelative, `${strippedFilePath}:${exp.name}`)) return true;
+  if (HashSet.has(consumed.byPackage, `${pkg.name}:${exp.name}`)) return true;
+  if (HashSet.has(consumed.byNamespace, strippedFilePath)) return true;
+  if (HashSet.has(consumed.byNamespace, pkg.name)) return true;
+  return false;
+};
+
+const findDeadExports = (
+  allExports: ReadonlyMap<string, readonly ExportedSymbol[]>,
+  entryPoints: HashSet.HashSet<string>,
+  fileToPackage: ReadonlyMap<string, PackageInfo>,
+  consumed: ConsumedSets,
+): ReadonlyArray<DeadExport> =>
+  pipe(
+    [...allExports.entries()],
+    Arr.filter(([filePath]) => !HashSet.has(entryPoints, filePath)),
+    Arr.flatMap(([filePath, exports]) => {
+      const pkg = fileToPackage.get(filePath);
+      if (pkg === undefined) return [];
+
+      const strippedFilePath = stripExtension(filePath);
+
+      return pipe(
+        exports,
+        Arr.filter((exp) => !isConsumed(exp, strippedFilePath, pkg, consumed)),
+        Arr.map((exp): DeadExport => ({ symbol: exp, packageName: pkg.name })),
+      );
+    }),
+  );
+
+const countTotalExports = (allExports: ReadonlyMap<string, readonly ExportedSymbol[]>): number =>
+  pipe(
+    [...allExports.values()],
+    Arr.map((exports) => exports.length),
+    Arr.reduce(0, (acc, n) => acc + n),
+  );
 
 // ─── Service interface ────────────────────────────────────────────────────────
 
 export interface ExportGraphShape {
   readonly analyze: (
     packages: readonly PackageInfo[],
-    allExports: Map<string, readonly ExportedSymbol[]>,
-    allImports: Map<string, readonly ImportedSymbol[]>,
+    allExports: ReadonlyMap<string, readonly ExportedSymbol[]>,
+    allImports: ReadonlyMap<string, readonly ImportedSymbol[]>,
   ) => Effect.Effect<AnalysisResult>;
 }
 
@@ -64,158 +278,32 @@ export class ExportGraph extends Context.Tag('ExportGraph')<ExportGraph, ExportG
 
 // ─── Live implementation ──────────────────────────────────────────────────────
 
-function analyzeSync(
+const analyze = (
   packages: readonly PackageInfo[],
-  allExports: Map<string, readonly ExportedSymbol[]>,
-  allImports: Map<string, readonly ImportedSymbol[]>,
-): AnalysisResult {
-  // Step 1: Build set of entry point file paths (resolved to source paths)
-  const scannedFiles = new Set(allExports.keys());
-  const scannedStripped = new Set<string>();
-  for (const f of scannedFiles) scannedStripped.add(stripExtension(f));
+  allExports: ReadonlyMap<string, readonly ExportedSymbol[]>,
+  allImports: ReadonlyMap<string, readonly ImportedSymbol[]>,
+): AnalysisResult => {
+  const scannedFiles = HashSet.fromIterable(allExports.keys());
+  const scannedStripped = pipe(
+    [...allExports.keys()],
+    Arr.map(stripExtension),
+    HashSet.fromIterable,
+  );
 
-  const entryPointPaths = new Set<string>();
-  for (const pkg of packages) {
-    for (const ep of pkg.entryPoints) {
-      const resolved = path.resolve(pkg.root, ep);
-      const sourcePath = resolveEntryPointToSource(resolved, scannedFiles, scannedStripped);
-      if (sourcePath !== null) {
-        entryPointPaths.add(sourcePath);
-      }
-    }
-  }
-
-  // Step 2: Build map of filePath -> package
-  const fileToPackage = new Map<string, PackageInfo>();
-  for (const pkg of packages) {
-    for (const [filePath] of allExports) {
-      // A file belongs to a package if its path starts with the package root
-      if (filePath.startsWith(pkg.root + path.sep) || filePath === pkg.root) {
-        if (!fileToPackage.has(filePath)) {
-          fileToPackage.set(filePath, pkg);
-        }
-      }
-    }
-  }
-
-  // Step 3: Collect consumed symbols from all imports
-  // relative-resolved: Set of `strippedPath:name`
-  const consumedByRelative = new Set<string>();
-  // package: Set of `packageName:name`
-  const consumedByPackage = new Set<string>();
-  // namespace: Set of strippedPath (source file) — everything from this file is consumed
-  const consumedByNamespace = new Set<string>();
-
-  for (const [importerFile, imports] of allImports) {
-    for (const imp of imports) {
-      const src = imp.source;
-      const isRelative = src.startsWith('./') || src.startsWith('../') || src.startsWith('/');
-
-      if (isRelative) {
-        // Resolve relative import to absolute path
-        const importerDir = path.dirname(importerFile);
-        const resolved = path.resolve(importerDir, src);
-        const strippedResolved = stripExtension(resolved);
-
-        if (imp.isNamespace || imp.name === '*') {
-          consumedByNamespace.add(strippedResolved);
-        } else {
-          consumedByRelative.add(`${strippedResolved}:${imp.name}`);
-        }
-      } else {
-        // Package import — use source as-is (package name)
-        if (imp.isNamespace || imp.name === '*') {
-          // namespace import of a package: track as namespace
-          consumedByNamespace.add(src);
-        } else {
-          consumedByPackage.add(`${src}:${imp.name}`);
-        }
-      }
-    }
-  }
-
-  // Step 3b: Treat re-exports as import edges
-  // If file A re-exports { foo } from './bar', that means bar's `foo` is consumed.
-  // This applies to ALL files, not just entry points, so multi-hop chains work.
-  for (const [filePath, exports] of allExports) {
-    for (const exp of exports) {
-      if (!exp.isReExport || !exp.reExportSource) continue;
-
-      const reExportSource = exp.reExportSource;
-      // Skip package specifiers — path.resolve would produce nonsense
-      const isRelative =
-        reExportSource.startsWith('./') ||
-        reExportSource.startsWith('../') ||
-        reExportSource.startsWith('/');
-      if (!isRelative) continue;
-
-      const dir = path.dirname(filePath);
-      const resolved = stripExtension(path.resolve(dir, reExportSource));
-
-      if (exp.name === '*') {
-        consumedByNamespace.add(resolved);
-      } else {
-        // For renamed re-exports (export { foo as bar }), consume the local name
-        const consumedName = exp.reExportLocalName ?? exp.name;
-        consumedByRelative.add(`${resolved}:${consumedName}`);
-      }
-    }
-  }
-
-  // Step 4: Determine dead exports
-  const deadExports: DeadExport[] = [];
-  const warnings: string[] = [];
-  let totalExports = 0;
-  const totalFiles = allExports.size;
-
-  for (const [filePath, exports] of allExports) {
-    // Skip entry point files — their exports are always safe
-    if (entryPointPaths.has(filePath)) {
-      totalExports += exports.length;
-      continue;
-    }
-
-    const pkg = fileToPackage.get(filePath);
-    if (pkg === undefined) {
-      // File doesn't belong to any known package — skip silently
-      totalExports += exports.length;
-      continue;
-    }
-
-    const strippedFilePath = stripExtension(filePath);
-
-    for (const exp of exports) {
-      totalExports++;
-
-      // Skip star re-exports (export * from '...')
-      if (exp.name === '*') continue;
-
-      // Check if consumed by a relative import
-      const relKey = `${strippedFilePath}:${exp.name}`;
-      if (consumedByRelative.has(relKey)) continue;
-
-      // Check if consumed by a package import
-      const pkgKey = `${pkg.name}:${exp.name}`;
-      if (consumedByPackage.has(pkgKey)) continue;
-
-      // Check if source file is consumed by a namespace import
-      if (consumedByNamespace.has(strippedFilePath)) continue;
-      if (consumedByNamespace.has(pkg.name)) continue;
-
-      // Not consumed — dead export
-      deadExports.push({ symbol: exp, packageName: pkg.name });
-    }
-  }
+  const entryPoints = resolveEntryPoints(packages, scannedFiles, scannedStripped);
+  const fileToPackage = buildFileToPackageMap(packages, [...allExports.keys()]);
+  const consumed = buildConsumedSets(allImports, allExports);
+  const deadExports = findDeadExports(allExports, entryPoints, fileToPackage, consumed);
 
   return {
-    deadExports,
-    totalExports,
-    totalFiles,
-    warnings,
+    deadExports: [...deadExports],
+    totalExports: countTotalExports(allExports),
+    totalFiles: allExports.size,
+    warnings: [],
   };
-}
+};
 
 export const ExportGraphLive = Layer.succeed(ExportGraph, {
   analyze: (packages, allExports, allImports) =>
-    Effect.sync(() => analyzeSync(packages, allExports, allImports)),
+    Effect.sync(() => analyze(packages, allExports, allImports)),
 });
