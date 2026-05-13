@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from 'effect';
+import { Context, Effect, Layer, Array as Arr, pipe } from 'effect';
 import oxc from 'oxc-parser';
 import type { ImportedSymbol } from './schemas.js';
 import { ParseError } from './errors.js';
@@ -55,63 +55,137 @@ interface OxcProgram {
   body: OxcNode[];
 }
 
-// ─── AST walker ───────────────────────────────────────────────────────────────
+// ─── Pure extractors ─────────────────────────────────────────────────────────
 
-function walkNode(node: OxcNode, filePath: string, symbols: ImportedSymbol[]): void {
-  if (node === null || typeof node !== 'object') return;
+const extractSpecifier = (
+  spec: OxcImportSpecifierKind,
+  filePath: string,
+  importSource: string,
+): ReadonlyArray<ImportedSymbol> => {
+  switch (spec.type) {
+    case 'ImportSpecifier': {
+      const s = spec as OxcImportSpecifier;
+      return [
+        {
+          name: s.imported.name,
+          filePath,
+          source: importSource,
+          isNamespace: false,
+          isDynamic: false,
+        } as ImportedSymbol,
+      ];
+    }
+    case 'ImportDefaultSpecifier':
+      return [
+        {
+          name: 'default',
+          filePath,
+          source: importSource,
+          isNamespace: false,
+          isDynamic: false,
+        } as ImportedSymbol,
+      ];
+    case 'ImportNamespaceSpecifier':
+      return [
+        {
+          name: '*',
+          filePath,
+          source: importSource,
+          isNamespace: true,
+          isDynamic: false,
+        } as ImportedSymbol,
+      ];
+    default:
+      return [];
+  }
+};
+
+const extractStaticImports = (node: OxcNode, filePath: string): ReadonlyArray<ImportedSymbol> => {
+  if (node.type !== 'ImportDeclaration') return [];
+  const n = node as unknown as OxcImportDeclaration;
+  if (n.specifiers.length === 0) return [];
+
+  return pipe(
+    n.specifiers,
+    Arr.flatMap((spec) => extractSpecifier(spec, filePath, n.source.value)),
+  );
+};
+
+const collectSymbols = (node: OxcNode, filePath: string): ReadonlyArray<ImportedSymbol> => {
+  if (node === null || typeof node !== 'object') return [];
 
   if (node.type === 'ImportExpression') {
     const n = node as unknown as OxcImportExpression;
     if (n.source.type === 'Literal') {
       const lit = n.source as OxcStringLiteral;
-      symbols.push({
-        name: '*',
-        filePath,
-        source: lit.value,
-        isNamespace: false,
-        isDynamic: true,
-      } as ImportedSymbol);
+      return [
+        {
+          name: '*',
+          filePath,
+          source: lit.value,
+          isNamespace: false,
+          isDynamic: true,
+        } as ImportedSymbol,
+      ];
     }
-    // variable source — skip (can't statically resolve)
-    return;
+    return [];
   }
 
-  if (node.type === 'CallExpression') {
-    const n = node as unknown as OxcCallExpression;
-    const callee = n.callee;
-    if (callee.type === 'Identifier' && callee.name === 'require') {
-      const arg = n.arguments[0];
-      if (arg !== undefined && arg.type === 'Literal') {
-        const lit = arg as OxcStringLiteral;
-        symbols.push({
+  const currentSymbols: ReadonlyArray<ImportedSymbol> =
+    node.type === 'CallExpression'
+      ? extractRequireCall(node as unknown as OxcCallExpression, filePath)
+      : [];
+
+  const childSymbols = pipe(
+    Object.keys(node),
+    Arr.flatMap((key): ReadonlyArray<ImportedSymbol> => {
+      const child = node[key];
+      if (Array.isArray(child)) {
+        return pipe(
+          child,
+          Arr.filter(
+            (item): item is OxcNode =>
+              item !== null && typeof item === 'object' && typeof item.type === 'string',
+          ),
+          Arr.flatMap((item) => collectSymbols(item, filePath)),
+        );
+      }
+      if (
+        child !== null &&
+        typeof child === 'object' &&
+        typeof (child as OxcNode).type === 'string'
+      ) {
+        return collectSymbols(child as OxcNode, filePath);
+      }
+      return [];
+    }),
+  );
+
+  return pipe(currentSymbols, Arr.appendAll(childSymbols));
+};
+
+const extractRequireCall = (
+  node: OxcCallExpression,
+  filePath: string,
+): ReadonlyArray<ImportedSymbol> => {
+  const callee = node.callee;
+  if (callee.type === 'Identifier' && callee.name === 'require') {
+    const arg = node.arguments[0];
+    if (arg !== undefined && arg.type === 'Literal') {
+      const lit = arg as OxcStringLiteral;
+      return [
+        {
           name: '*',
           filePath,
           source: lit.value,
           isNamespace: true,
           isDynamic: false,
-        } as ImportedSymbol);
-      }
+        } as ImportedSymbol,
+      ];
     }
   }
-
-  // Recurse into all object-valued properties
-  for (const key of Object.keys(node)) {
-    const child = node[key];
-    if (Array.isArray(child)) {
-      for (const item of child) {
-        if (item !== null && typeof item === 'object' && typeof item.type === 'string') {
-          walkNode(item as OxcNode, filePath, symbols);
-        }
-      }
-    } else if (
-      child !== null &&
-      typeof child === 'object' &&
-      typeof (child as OxcNode).type === 'string'
-    ) {
-      walkNode(child as OxcNode, filePath, symbols);
-    }
-  }
-}
+  return [];
+};
 
 // ─── Service interface ────────────────────────────────────────────────────────
 
@@ -142,61 +216,18 @@ const parseSource = (
       }
 
       const program = result.program as unknown as OxcProgram;
-      const symbols: ImportedSymbol[] = [];
 
-      // Walk top-level body for static ImportDeclarations
-      for (const node of program.body) {
-        if (node.type === 'ImportDeclaration') {
-          const n = node as unknown as OxcImportDeclaration;
-          const importSource = n.source.value;
+      const staticImports = pipe(
+        program.body,
+        Arr.flatMap((node) => extractStaticImports(node as OxcNode, filePath)),
+      );
 
-          // Skip side-effect-only imports (no specifiers)
-          if (n.specifiers.length === 0) continue;
+      const dynamicImports = pipe(
+        program.body,
+        Arr.flatMap((node) => collectSymbols(node as OxcNode, filePath)),
+      );
 
-          for (const spec of n.specifiers) {
-            switch (spec.type) {
-              case 'ImportSpecifier': {
-                const s = spec as OxcImportSpecifier;
-                symbols.push({
-                  name: s.imported.name,
-                  filePath,
-                  source: importSource,
-                  isNamespace: false,
-                  isDynamic: false,
-                } as ImportedSymbol);
-                break;
-              }
-              case 'ImportDefaultSpecifier': {
-                symbols.push({
-                  name: 'default',
-                  filePath,
-                  source: importSource,
-                  isNamespace: false,
-                  isDynamic: false,
-                } as ImportedSymbol);
-                break;
-              }
-              case 'ImportNamespaceSpecifier': {
-                symbols.push({
-                  name: '*',
-                  filePath,
-                  source: importSource,
-                  isNamespace: true,
-                  isDynamic: false,
-                } as ImportedSymbol);
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      // Walk entire AST for dynamic imports and require() calls
-      for (const node of program.body) {
-        walkNode(node as OxcNode, filePath, symbols);
-      }
-
-      return symbols;
+      return pipe(staticImports, Arr.appendAll(dynamicImports));
     },
     catch: (e) =>
       new ParseError({
