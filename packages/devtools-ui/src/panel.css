@@ -1133,7 +1133,7 @@ details[open] > .jwt-summary::before {
   top: 0;
   left: var(--graph-w);
   width: 5px;
-  height: calc(100% - var(--insp-h));
+  height: calc(100% - var(--insp-h, 220px));
   cursor: col-resize;
   transform: translateX(-2px);
 }

@@ -39,7 +39,7 @@ test.describe('payload tab', () => {
     await panelPage.close();
   });
 
-  test('Payload tab does not appear for discovery events (GET, no request body)', async ({
+  test('Payload tab for discovery events shows only Response Body section', async ({
     extensionContext,
     extensionId,
     mockServer,
@@ -48,7 +48,6 @@ test.describe('payload tab', () => {
     await openPanelPage(panelPage, extensionId);
 
     // Discovery is a GET request with no postData — only has responseBody
-    // The Payload tab should still show if responseBody exists
     await injectDiscovery(panelPage, mockServer.baseUrl);
     await injectTokenRequest(panelPage, mockServer.baseUrl);
     await reloadAndWaitForEvents(panelPage, 2);
@@ -59,15 +58,10 @@ test.describe('payload tab', () => {
     // Discovery has responseBody (the OIDC config JSON), so Payload tab
     // should appear. But it has no requestBody, so only Response Body shows.
     const payloadTab = panelPage.locator('.tab-btn', { hasText: 'Payload' });
-    const isVisible = await payloadTab.isVisible();
-
-    if (isVisible) {
-      await payloadTab.click();
-      await expect(payloadTab).toHaveClass(/active/);
-      // Should show Response Body but not Request Body
-      await expect(panelPage.locator('.sect-hdr', { hasText: 'Response Body' })).toBeVisible();
-    }
-    // If not visible, the event has no body data — also valid
+    await expect(payloadTab).toBeVisible({ timeout: 3000 });
+    await payloadTab.click();
+    await expect(payloadTab).toHaveClass(/active/);
+    await expect(panelPage.locator('.sect-hdr', { hasText: 'Response Body' })).toBeVisible();
 
     await panelPage.close();
   });
