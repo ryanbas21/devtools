@@ -62,6 +62,7 @@ test.describe('payload tab', () => {
     await payloadTab.click();
     await expect(payloadTab).toHaveClass(/active/);
     await expect(panelPage.locator('.sect-hdr', { hasText: 'Response Body' })).toBeVisible();
+    await expect(panelPage.locator('.sect-hdr', { hasText: 'Request Body' })).not.toBeVisible();
 
     await panelPage.close();
   });
