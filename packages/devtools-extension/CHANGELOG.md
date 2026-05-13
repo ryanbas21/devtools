@@ -1,5 +1,20 @@
 # @wolfcola/devtools-extension
 
+## 1.1.0
+
+### Minor Changes
+
+- [#47](https://github.com/ryanbas21/devtools/pull/47) [`f3e7c29`](https://github.com/ryanbas21/devtools/commit/f3e7c29f83e4eca83b702dad34e4ca23cb6ed09b) Thanks [@ryanbas21](https://github.com/ryanbas21)! - Add Payload tab to inspector panel, separating request/response bodies from the Headers tab into a dedicated tab matching Chrome DevTools naming conventions
+
+### Patch Changes
+
+- [#39](https://github.com/ryanbas21/devtools/pull/39) [`f4fcc75`](https://github.com/ryanbas21/devtools/commit/f4fcc753d18750443e09550dc4f069b01f2362f3) Thanks [@ryanbas21](https://github.com/ryanbas21)! - Automate manifest.json version sync: after `changeset version` bumps
+  package.json, the new `sync-manifest` CLI copies the version into
+  manifest.json so Chrome Web Store publishes show real version numbers.
+- Updated dependencies []:
+  - @wolfcola/devtools-core@1.1.0
+  - @wolfcola/devtools-types@1.1.0
+
 ## 1.0.0
 
 ### Minor Changes
