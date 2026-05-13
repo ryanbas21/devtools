@@ -63,6 +63,7 @@ type OxcDeclaration =
 interface OxcExportSpecifier {
   type: 'ExportSpecifier';
   exported: OxcIdent;
+  local?: OxcIdent;
   start: number;
 }
 
@@ -193,6 +194,25 @@ function extractCjsExports(
     ];
   }
 
+  // module.exports.foo = ...  (nested MemberExpression)
+  if (member.object.type === 'MemberExpression') {
+    const inner = member.object as OxcMemberExpression;
+    const innerObj =
+      inner.object.type === 'Identifier' ? (inner.object as { name: string }).name : '';
+    const innerProp = inner.property.name;
+    if (innerObj === 'module' && innerProp === 'exports') {
+      return [
+        {
+          name: propName,
+          filePath,
+          line: lineFromOffset(source, assign.start),
+          isDefault: false,
+          isReExport: false,
+        } as ExportedSymbol,
+      ];
+    }
+  }
+
   // module.exports = { foo, bar }
   if (objName === 'module' && propName === 'exports') {
     const right = assign.right;
@@ -271,6 +291,8 @@ const parseSource = (
             } else {
               // export { foo, bar } or export { foo } from './other'
               for (const spec of n.specifiers) {
+                const localName = (spec as { local?: OxcIdent }).local?.name;
+                const isRenamed = localName !== undefined && localName !== spec.exported.name;
                 symbols.push({
                   name: spec.exported.name,
                   filePath,
@@ -278,6 +300,7 @@ const parseSource = (
                   isDefault: false,
                   isReExport,
                   ...(reExportSource !== undefined ? { reExportSource } : {}),
+                  ...(isRenamed ? { reExportLocalName: localName } : {}),
                 } as ExportedSymbol);
               }
             }

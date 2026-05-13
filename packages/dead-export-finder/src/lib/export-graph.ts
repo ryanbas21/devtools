@@ -21,6 +21,33 @@ function stripExtension(filePath: string): string {
   return filePath;
 }
 
+/** Map a build-output entry point (e.g. ./dist/index.js) to its likely source path. */
+function resolveEntryPointToSource(
+  entryPoint: string,
+  scannedFiles: Set<string>,
+  scannedStripped: Set<string>,
+): string | null {
+  // If the raw path already matches a scanned file, use it directly.
+  if (scannedFiles.has(entryPoint)) return entryPoint;
+  const stripped = stripExtension(entryPoint);
+  if (scannedStripped.has(stripped)) return stripped;
+
+  // Try mapping common build output dirs to source dirs.
+  const buildDirs = ['/dist/', '/build/', '/out/'];
+  const sourceDirs = ['/src/', '/src/', '/src/'];
+
+  for (let i = 0; i < buildDirs.length; i++) {
+    if (entryPoint.includes(buildDirs[i])) {
+      const sourcePath = entryPoint.replace(buildDirs[i], sourceDirs[i]);
+      if (scannedFiles.has(sourcePath)) return sourcePath;
+      const sourceStripped = stripExtension(sourcePath);
+      if (scannedStripped.has(sourceStripped)) return sourceStripped;
+    }
+  }
+
+  return null;
+}
+
 // ─── Service interface ────────────────────────────────────────────────────────
 
 export interface ExportGraphShape {
@@ -42,12 +69,19 @@ function analyzeSync(
   allExports: Map<string, readonly ExportedSymbol[]>,
   allImports: Map<string, readonly ImportedSymbol[]>,
 ): AnalysisResult {
-  // Step 1: Build set of entry point file paths (resolved absolute paths)
+  // Step 1: Build set of entry point file paths (resolved to source paths)
+  const scannedFiles = new Set(allExports.keys());
+  const scannedStripped = new Set<string>();
+  for (const f of scannedFiles) scannedStripped.add(stripExtension(f));
+
   const entryPointPaths = new Set<string>();
   for (const pkg of packages) {
     for (const ep of pkg.entryPoints) {
       const resolved = path.resolve(pkg.root, ep);
-      entryPointPaths.add(resolved);
+      const sourcePath = resolveEntryPointToSource(resolved, scannedFiles, scannedStripped);
+      if (sourcePath !== null) {
+        entryPointPaths.add(sourcePath);
+      }
     }
   }
 
@@ -121,7 +155,9 @@ function analyzeSync(
       if (exp.name === '*') {
         consumedByNamespace.add(resolved);
       } else {
-        consumedByRelative.add(`${resolved}:${exp.name}`);
+        // For renamed re-exports (export { foo as bar }), consume the local name
+        const consumedName = exp.reExportLocalName ?? exp.name;
+        consumedByRelative.add(`${resolved}:${consumedName}`);
       }
     }
   }
@@ -167,7 +203,7 @@ function analyzeSync(
       if (consumedByNamespace.has(pkg.name)) continue;
 
       // Not consumed — dead export
-      deadExports.push({ symbol: exp, packageName: pkg.name } as unknown as DeadExport);
+      deadExports.push({ symbol: exp, packageName: pkg.name });
     }
   }
 
@@ -176,7 +212,7 @@ function analyzeSync(
     totalExports,
     totalFiles,
     warnings,
-  } as unknown as AnalysisResult;
+  };
 }
 
 export const ExportGraphLive = Layer.succeed(ExportGraph, {

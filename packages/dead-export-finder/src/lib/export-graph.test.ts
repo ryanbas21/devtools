@@ -19,7 +19,7 @@ const analyze = (
 // ─── test data factories ───────────────────────────────────────────────────────
 
 const makePackage = (name: string, root: string, entryPoints: string[]): PackageInfo =>
-  ({ name, root, entryPoints }) as unknown as PackageInfo;
+  ({ name, root, entryPoints }) as PackageInfo;
 
 const makeExport = (
   name: string,
@@ -29,7 +29,7 @@ const makeExport = (
   isReExport = false,
   reExportSource?: string,
 ): ExportedSymbol =>
-  ({ name, filePath, line, isDefault, isReExport, reExportSource }) as unknown as ExportedSymbol;
+  ({ name, filePath, line, isDefault, isReExport, reExportSource }) as ExportedSymbol;
 
 const makeImport = (
   name: string,
@@ -37,8 +37,7 @@ const makeImport = (
   source: string,
   isNamespace = false,
   isDynamic = false,
-): ImportedSymbol =>
-  ({ name, filePath, source, isNamespace, isDynamic }) as unknown as ImportedSymbol;
+): ImportedSymbol => ({ name, filePath, source, isNamespace, isDynamic }) as ImportedSymbol;
 
 // ─── tests ────────────────────────────────────────────────────────────────────
 

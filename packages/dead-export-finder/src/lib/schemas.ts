@@ -4,37 +4,43 @@ export const WorkspaceType = Schema.Literal('pnpm', 'npm', 'yarn', 'nx', 'turbor
 
 export type WorkspaceType = typeof WorkspaceType.Type;
 
-export class PackageInfo extends Schema.Class<PackageInfo>('PackageInfo')({
+export const PackageInfo = Schema.Struct({
   name: Schema.String,
   root: Schema.String,
   entryPoints: Schema.Array(Schema.String),
-}) {}
+});
+export type PackageInfo = Schema.Schema.Type<typeof PackageInfo>;
 
-export class ExportedSymbol extends Schema.Class<ExportedSymbol>('ExportedSymbol')({
+export const ExportedSymbol = Schema.Struct({
   name: Schema.String,
   filePath: Schema.String,
   line: Schema.Number,
   isDefault: Schema.Boolean,
   isReExport: Schema.Boolean,
   reExportSource: Schema.optional(Schema.String),
-}) {}
+  reExportLocalName: Schema.optional(Schema.String),
+});
+export type ExportedSymbol = Schema.Schema.Type<typeof ExportedSymbol>;
 
-export class ImportedSymbol extends Schema.Class<ImportedSymbol>('ImportedSymbol')({
+export const ImportedSymbol = Schema.Struct({
   name: Schema.String,
   filePath: Schema.String,
   source: Schema.String,
   isNamespace: Schema.Boolean,
   isDynamic: Schema.Boolean,
-}) {}
+});
+export type ImportedSymbol = Schema.Schema.Type<typeof ImportedSymbol>;
 
-export class DeadExport extends Schema.Class<DeadExport>('DeadExport')({
+export const DeadExport = Schema.Struct({
   symbol: ExportedSymbol,
   packageName: Schema.String,
-}) {}
+});
+export type DeadExport = Schema.Schema.Type<typeof DeadExport>;
 
-export class AnalysisResult extends Schema.Class<AnalysisResult>('AnalysisResult')({
+export const AnalysisResult = Schema.Struct({
   deadExports: Schema.Array(DeadExport),
   totalExports: Schema.Number,
   totalFiles: Schema.Number,
   warnings: Schema.Array(Schema.String),
-}) {}
+});
+export type AnalysisResult = Schema.Schema.Type<typeof AnalysisResult>;

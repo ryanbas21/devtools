@@ -158,8 +158,17 @@ export const WorkspaceDetectorLive = Layer.effect(
 
           // npm / yarn workspaces
           const workspaces = rootPkg['workspaces'];
-          if (Array.isArray(workspaces) && workspaces.length > 0) {
-            const globs = workspaces.filter((g): g is string => typeof g === 'string');
+          let globs: string[] = [];
+          if (Array.isArray(workspaces)) {
+            globs = workspaces.filter((g): g is string => typeof g === 'string');
+          } else if (typeof workspaces === 'object' && workspaces !== null) {
+            // Yarn classic: workspaces: { packages: ["packages/*"] }
+            const obj = workspaces as { packages?: unknown };
+            if (Array.isArray(obj.packages)) {
+              globs = obj.packages.filter((g): g is string => typeof g === 'string');
+            }
+          }
+          if (globs.length > 0) {
             const packages = yield* readPkgDirs(cwd, globs);
             return { type: 'npm' as WorkspaceType, root: cwd, packages };
           }

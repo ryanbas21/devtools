@@ -224,7 +224,17 @@ const cli = Command.run(command, {
 });
 
 cli(process.argv).pipe(
-  Effect.catchTag('ExitWithCode', (e) => Effect.sync(() => (process.exitCode = e.code))),
+  Effect.catchTags({
+    ExitWithCode: (e) => Effect.sync(() => (process.exitCode = e.code)),
+    WorkspaceNotFoundError: (e) =>
+      Console.error(`error: workspace not found at ${e.cwd}`).pipe(
+        Effect.zipRight(
+          Effect.sync(() => {
+            process.exitCode = 1;
+          }),
+        ),
+      ),
+  }),
   Effect.provide(AppLayer),
   NodeRuntime.runMain,
 );

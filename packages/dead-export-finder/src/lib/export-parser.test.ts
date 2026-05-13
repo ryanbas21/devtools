@@ -116,7 +116,7 @@ it.effect('parses type exports', () =>
 
 it.effect('returns ParseError for syntactically invalid source', () =>
   Effect.gen(function* () {
-    const error = yield* parse('bad.ts', '<<<invalid>>>').pipe(Effect.flip);
+    const error = yield* parse('bad.ts', 'const = ;').pipe(Effect.flip);
     expect(error).toBeInstanceOf(ParseError);
     expect(error.filePath).toBe('bad.ts');
     expect(error.message).toBeTruthy();
