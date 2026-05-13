@@ -25,6 +25,7 @@ export default [
       '**/functions/**',
       '**/codegen/**',
       'apps/**',
+      'repos/**',
     ],
   },
   ...compat.extends('plugin:@typescript-eslint/recommended', 'plugin:prettier/recommended'),
