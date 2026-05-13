@@ -45,6 +45,7 @@
     "syncpack": "^15.1.2",
     "typescript": "5.8.3",
     "vite": "catalog:vite",
+    "@wolfcola/changeset-sync-manifest": "workspace:*",
     "vitest": "catalog:vitest"
   },
   "pnpm": {
