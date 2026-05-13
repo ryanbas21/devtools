@@ -87,7 +87,11 @@ viewTabs maybeEvent activeTab maybeDiagnosis =
           else
             []
          )
-            ++ [ tabButton "Headers"   HeadersTab  activeTab ]
+            ++ [ tabButton "Headers"   HeadersTab  activeTab
+               , tabButton "Cookies"   CookiesTab  activeTab
+               , tabButton "CORS"      CorsTab     activeTab
+               , tabButton "SDK State" SdkStateTab activeTab
+               ]
             ++ (case maybeEvent of
                     Just event ->
                         case event.data of
@@ -104,10 +108,6 @@ viewTabs maybeEvent activeTab maybeDiagnosis =
                     Nothing ->
                         []
                )
-            ++ [ tabButton "Cookies"   CookiesTab  activeTab
-               , tabButton "CORS"      CorsTab     activeTab
-               , tabButton "SDK State" SdkStateTab activeTab
-               ]
             ++ (if isSdkEvent then
                     [ tabButton "Collectors" CollectorsTab activeTab ]
 
@@ -450,7 +450,7 @@ viewPayloadSection label body =
                 ]
                 [ text "\u{2398}" ]
             ]
-        , JsonTree.view label body
+        , JsonTree.view "" body
         ]
 
 
