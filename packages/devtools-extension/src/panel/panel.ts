@@ -82,11 +82,63 @@ function initResizeHandles() {
   });
 }
 
+// ── Theme toggle ─────────────────────────────────────────────────────────────
+
+const THEME_KEY = 'wolfcola:theme';
+
+function getPreferredTheme(): 'dark' | 'light' {
+  const stored = localStorage.getItem(THEME_KEY);
+  if (stored === 'light' || stored === 'dark') return stored;
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
+function applyTheme(theme: 'dark' | 'light') {
+  if (theme === 'light') {
+    root.setAttribute('data-theme', 'light');
+  } else {
+    root.removeAttribute('data-theme');
+  }
+}
+
+function initThemeToggle() {
+  let theme = getPreferredTheme();
+  applyTheme(theme);
+
+  const btn = document.createElement('button');
+  btn.className = 'theme-toggle';
+  btn.title = 'Toggle light/dark mode';
+  btn.textContent = theme === 'light' ? '☀' : '☾';
+
+  btn.addEventListener('click', () => {
+    theme = theme === 'dark' ? 'light' : 'dark';
+    applyTheme(theme);
+    localStorage.setItem(THEME_KEY, theme);
+    btn.textContent = theme === 'light' ? '☀' : '☾';
+  });
+
+  // Insert into the toolbar once Elm renders it
+  const observer = new MutationObserver(() => {
+    const toolbar = document.querySelector('.toolbar');
+    if (toolbar) {
+      // Insert before the first separator to keep it at the far left
+      const spacer = toolbar.querySelector('.tb-spacer');
+      if (spacer) {
+        toolbar.insertBefore(btn, spacer);
+      } else {
+        toolbar.appendChild(btn);
+      }
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
 // ── App init ──────────────────────────────────────────────────────────────────
 
 const app = Elm.Main.init({ node: document.getElementById('app'), flags: null });
 
 initResizeHandles();
+initThemeToggle();
 
 function copyToClipboard(text: string): void {
   if (navigator.clipboard?.writeText) {

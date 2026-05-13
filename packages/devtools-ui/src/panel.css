@@ -24,6 +24,7 @@
   --orange: #ffa657;
   --yellow: #d29922;
   --purple: #bc8cff;
+  --shadow-alpha: 0.3;
   --font-ui: 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-mono: 'Cascadia Code', 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
 
@@ -31,6 +32,26 @@
   --graph-w: 220px;
   --insp-h: 220px;
   --toolbar-h: 32px;
+}
+
+[data-theme='light'] {
+  --base: #ffffff;
+  --surface: #f6f8fa;
+  --raised: #eaeef2;
+  --hover: #eef1f5;
+  --sel: #ddf4ff;
+  --border: #d0d7de;
+  --bdim: #e4e8ec;
+  --text: #1f2328;
+  --muted: #636c76;
+  --dim: #8c959f;
+  --blue: #0969da;
+  --green: #1a7f37;
+  --red: #cf222e;
+  --orange: #bc4c00;
+  --yellow: #9a6700;
+  --purple: #8250df;
+  --shadow-alpha: 0.12;
 }
 
 html,
@@ -203,6 +224,33 @@ body {
 .no-flow {
   font-size: 11px;
   color: var(--dim);
+}
+
+/* ── Theme Toggle ───────────────────────────────────────── */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  transition:
+    color 0.12s,
+    border-color 0.12s,
+    background 0.12s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--muted);
+  background: var(--raised);
 }
 
 /* ── Error Banner ────────────────────────────────────────── */
@@ -531,7 +579,7 @@ body {
   border-radius: 4px;
   padding: 8px 10px;
   margin-bottom: 8px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, calc(var(--shadow-alpha) * 0.7));
 }
 .coll-card-header {
   display: flex;
@@ -558,8 +606,8 @@ body {
   line-height: 1;
 }
 .fv-copy-btn:hover {
-  color: var(--fg);
-  border-color: var(--fg);
+  color: var(--text);
+  border-color: var(--text);
 }
 .coll-copy-all {
   font-size: 10px;
@@ -1127,10 +1175,10 @@ body.resizing {
   top: 100%;
   left: 0;
   z-index: 100;
-  background: var(--bg-2, #252526);
-  border: 1px solid var(--border, #3c3c3c);
+  background: var(--raised);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, var(--shadow-alpha));
   min-width: 140px;
   padding: 2px 0;
 }
@@ -1141,12 +1189,12 @@ body.resizing {
   text-align: left;
   background: none;
   border: none;
-  color: var(--fg, #ccc);
+  color: var(--text);
   cursor: pointer;
   font-size: 11px;
 }
 .tb-dropdown-item:hover {
-  background: var(--bg-hover, #2a2d2e);
+  background: var(--hover);
 }
 
 /* ── Snapshot dropdown ────────────────────────────────── */
@@ -1212,22 +1260,22 @@ body.resizing {
   align-items: center;
   justify-content: space-between;
   padding: 4px 12px;
-  background: var(--bg-info, #063b49);
-  border-bottom: 1px solid var(--border, #3c3c3c);
+  background: var(--sel);
+  border-bottom: 1px solid var(--border);
   font-size: 11px;
-  color: var(--fg, #ccc);
+  color: var(--text);
 }
 .import-banner-clear {
   background: none;
-  border: 1px solid var(--border, #3c3c3c);
-  color: var(--fg, #ccc);
+  border: 1px solid var(--border);
+  color: var(--text);
   padding: 1px 8px;
   border-radius: 3px;
   cursor: pointer;
   font-size: 10px;
 }
 .import-banner-clear:hover {
-  background: var(--bg-hover, #2a2d2e);
+  background: var(--hover);
 }
 
 /* ── Import paste panel ─────────────────────────────── */
