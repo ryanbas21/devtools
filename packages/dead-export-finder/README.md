@@ -74,6 +74,7 @@ import type {
   ImportedSymbol,
   DeadExport,
   AnalysisResult,
+  WorkspaceResult,
 } from '@wolfcola/dead-export-finder';
 ```
 

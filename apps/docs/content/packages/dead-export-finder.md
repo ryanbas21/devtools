@@ -25,11 +25,11 @@ Run from the monorepo root. The tool auto-detects workspace packages from `pnpm-
 
 ### Options
 
-| Option       | Alias | Description                                         |
-| ------------ | ----- | --------------------------------------------------- |
-| `--packages` | `-p`  | Scope analysis to specific packages (repeatable)    |
-| `--ignore`   | `-i`  | Glob patterns to exclude from scanning (repeatable) |
-| `--verbose`  | `-v`  | Print timing information and parse warnings         |
+| Option              | Alias | Description                                         |
+| ------------------- | ----- | --------------------------------------------------- |
+| `--packages <name>` | `-p`  | Scope analysis to specific packages (repeatable)    |
+| `--ignore`          | `-i`  | Glob patterns to exclude from scanning (repeatable) |
+| `--verbose`         | `-v`  | Print timing, file counts, and parse warnings       |
 
 ### Examples
 

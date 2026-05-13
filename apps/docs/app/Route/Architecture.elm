@@ -123,7 +123,7 @@ view app _ =
                 [ Html.text "CLI to find unused exports across monorepo package boundaries. Uses oxc-parser for fast AST analysis." ]
             , Html.dt [] [ Html.text "@wolfcola/changeset-sync-manifest" ]
             , Html.dd []
-                [ Html.text "Syncs package version from changesets to manifest files. Used in the CI release workflow." ]
+                [ Html.text "Internal CI tool that syncs package version from changesets to manifest files. Not documented on the docs site." ]
             ]
         ]
     }
