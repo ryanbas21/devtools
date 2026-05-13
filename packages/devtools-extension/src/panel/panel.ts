@@ -119,15 +119,13 @@ function initThemeToggle() {
 
   // Keep the observer alive — Elm's virtual DOM re-renders the toolbar
   // on any model change and removes nodes it doesn't know about.
+  // IMPORTANT: always appendChild (never insertBefore) so the toggle
+  // lives *after* all Elm-managed children. Elm patches by index, so
+  // inserting in the middle shifts indices and corrupts button state.
   const observer = new MutationObserver(() => {
     const toolbar = document.querySelector('.toolbar');
     if (toolbar && btn.parentElement !== toolbar) {
-      const spacer = toolbar.querySelector('.tb-spacer');
-      if (spacer) {
-        toolbar.insertBefore(btn, spacer);
-      } else {
-        toolbar.appendChild(btn);
-      }
+      toolbar.appendChild(btn);
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
