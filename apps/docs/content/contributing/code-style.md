@@ -7,7 +7,7 @@ order: 3
 
 # Code Style
 
-This repository uses two primary languages: Effect TypeScript for all runtime packages and Elm for the documentation site. Each has its own conventions.
+This repository uses two primary languages: Effect TypeScript for all runtime packages and Elm for both the DevTools panel UI (`devtools-ui`) and the documentation site. Each has its own conventions.
 
 ## Effect TypeScript Conventions
 

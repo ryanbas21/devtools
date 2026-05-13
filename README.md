@@ -28,6 +28,13 @@ Analyze and enforce tree-shakeability across your packages — catch bundle-bloa
 | [`treeshake-check`](packages/treeshake-check)                 | CLI & library — checks whether a package can be fully tree-shaken by Rollup | [![npm](https://img.shields.io/npm/v/@wolfcola/treeshake-check)](https://www.npmjs.com/package/@wolfcola/treeshake-check)                 |
 | [`eslint-plugin-treeshake`](packages/eslint-plugin-treeshake) | ESLint plugin that flags code patterns known to break tree-shaking          | [![npm](https://img.shields.io/npm/v/@wolfcola/eslint-plugin-treeshake)](https://www.npmjs.com/package/@wolfcola/eslint-plugin-treeshake) |
 
+### Utilities
+
+| Package                                                       | Description                                                   | npm                                                                                                                             |
+| ------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| [`dead-export-finder`](packages/dead-export-finder)           | CLI to find unused exports across monorepo package boundaries | [![npm](https://img.shields.io/npm/v/@wolfcola/dead-export-finder)](https://www.npmjs.com/package/@wolfcola/dead-export-finder) |
+| [`changeset-sync-manifest`](packages/changeset-sync-manifest) | Syncs package version from changesets to manifest files       | private                                                                                                                         |
+
 ---
 
 ## Quick start
@@ -104,10 +111,13 @@ pnpm add @wolfcola/devtools-bridge
 
 ```ts
 import { davinci } from '@forgerock/davinci-client';
-import { attachDevToolsBridge } from '@wolfcola/devtools-bridge';
+import { attachDaVinciBridge } from '@wolfcola/devtools-bridge';
 
 const client = await davinci({ config });
-attachDevToolsBridge(client, config);
+const handle = attachDaVinciBridge(client, config);
+
+// When done:
+handle.detach();
 ```
 
 The bridge is a no-op when the extension is not installed.

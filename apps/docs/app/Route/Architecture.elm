@@ -86,20 +86,44 @@ view app _ =
             ]
         , Html.div [ Attr.class "architecture-diagram" ]
             [ viewDiagram ]
-        , Html.h2 [] [ Html.text "Package Relationships" ]
+        , Html.h2 [] [ Html.text "OIDC DevTools" ]
         , Html.dl []
             [ Html.dt [] [ Html.text "@wolfcola/devtools-types" ]
             , Html.dd []
-                [ Html.text "Effect Schema definitions for AuthEvent and FlowState. Shared foundation used by devtools-bridge." ]
+                [ Html.text "Effect Schema definitions for AuthEvent and FlowState. The shared foundation that all other OIDC packages depend on." ]
+            , Html.dt [] [ Html.text "@wolfcola/devtools-core" ]
+            , Html.dd []
+                [ Html.text "Shared annotators (OIDC phase detection, CORS, DPoP, PAR), diagnosis engine, event store, and export/redaction logic. Used by both the browser extension and VS Code extension." ]
             , Html.dt [] [ Html.text "@wolfcola/devtools-bridge" ]
             , Html.dd []
                 [ Html.text "SDK adapter for emitting events from DaVinci, Journey, and OIDC clients. Depends on devtools-types." ]
-            , Html.dt [] [ Html.text "@wolfcola/treeshake-check" ]
+            , Html.dt [] [ Html.text "@wolfcola/devtools-ui" ]
+            , Html.dd []
+                [ Html.text "Elm UI components for Timeline, Flow, and Learn views. Provides the panel interface with inspector tabs, playback controls, and diagnosis display." ]
+            , Html.dt [] [ Html.text "@wolfcola/devtools-extension" ]
+            , Html.dd []
+                [ Html.text "Chrome and Firefox browser extension. Bundles devtools-core and devtools-ui into a DevTools panel with network-first OIDC detection." ]
+            , Html.dt [] [ Html.text "oidc-devtools (VS Code)" ]
+            , Html.dd []
+                [ Html.text "VS Code extension that connects via Chrome DevTools Protocol (CDP) for live auth traffic capture and flow visualization." ]
+            ]
+        , Html.h2 [] [ Html.text "Tree-Shake Tools" ]
+        , Html.dl []
+            [ Html.dt [] [ Html.text "@wolfcola/treeshake-check" ]
             , Html.dd []
                 [ Html.text "CLI & library to verify packages are tree-shakeable by Rollup. Standalone package." ]
             , Html.dt [] [ Html.text "@wolfcola/eslint-plugin-treeshake" ]
             , Html.dd []
-                [ Html.text "ESLint plugin that flags tree-breaking patterns. Can use treeshake-check for verification." ]
+                [ Html.text "ESLint plugin that flags tree-breaking patterns. Can use treeshake-check for bundle-level verification." ]
+            ]
+        , Html.h2 [] [ Html.text "Utilities" ]
+        , Html.dl []
+            [ Html.dt [] [ Html.text "@wolfcola/dead-export-finder" ]
+            , Html.dd []
+                [ Html.text "CLI to find unused exports across monorepo package boundaries. Uses oxc-parser for fast AST analysis." ]
+            , Html.dt [] [ Html.text "@wolfcola/changeset-sync-manifest" ]
+            , Html.dd []
+                [ Html.text "Syncs package version from changesets to manifest files. Used in the CI release workflow." ]
             ]
         ]
     }
@@ -108,28 +132,47 @@ view app _ =
 viewDiagram : Html.Html (PagesMsg Msg)
 viewDiagram =
     Svg.svg
-        [ SvgAttr.viewBox "0 0 700 360"
-        , SvgAttr.width "700"
-        , SvgAttr.height "360"
+        [ SvgAttr.viewBox "0 0 900 480"
+        , SvgAttr.width "900"
+        , SvgAttr.height "480"
         , SvgAttr.style "max-width: 100%; height: auto;"
         ]
         [ -- OIDC DevTools group
-          svgGroup 20 20 320 300 "OIDC DevTools"
-        , svgBox 60 80 240 60 "devtools-types"
-        , svgBox 60 200 240 60 "devtools-bridge"
+          svgGroup 20 20 520 440 "OIDC DevTools"
+        , svgBox 180 60 200 50 "devtools-types"
+        , svgBox 40 160 200 50 "devtools-core"
+        , svgBox 300 160 200 50 "devtools-bridge"
+        , svgBox 40 270 200 50 "devtools-ui"
+        , svgBox 40 370 200 50 "devtools-extension"
+        , svgBox 300 370 200 50 "vscode-extension"
 
         -- Tree-Shake Tools group
-        , svgGroup 370 20 310 300 "Tree-Shake Tools"
-        , svgBox 400 80 240 60 "treeshake-check"
-        , svgBox 400 200 240 60 "eslint-plugin-treeshake"
+        , svgGroup 570 20 310 200 "Tree-Shake Tools"
+        , svgBox 600 60 240 50 "treeshake-check"
+        , svgBox 600 160 240 50 "eslint-plugin-treeshake"
 
-        -- Arrows
-        , svgArrow 180 140 180 200
+        -- Utilities group
+        , svgGroup 570 250 310 210 "Utilities"
+        , svgBox 600 290 240 50 "dead-export-finder"
+        , svgBox 600 390 240 50 "changeset-sync-manifest"
 
-        -- devtools-types -> devtools-bridge
-        , svgArrow 520 160 520 200
+        -- Arrows: devtools-types -> devtools-core
+        , svgArrow 230 110 180 160
 
-        -- treeshake-check -> eslint-plugin-treeshake (optional dependency)
+        -- Arrows: devtools-types -> devtools-bridge
+        , svgArrow 330 110 370 160
+
+        -- Arrows: devtools-core -> devtools-extension
+        , svgArrow 140 210 140 270
+
+        -- Arrows: devtools-ui -> devtools-extension
+        , svgArrow 140 320 140 370
+
+        -- Arrows: devtools-core -> vscode-extension
+        , svgArrow 200 210 380 370
+
+        -- Arrows: treeshake-check -> eslint-plugin-treeshake
+        , svgArrow 720 110 720 160
         ]
 
 

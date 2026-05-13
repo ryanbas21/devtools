@@ -33,21 +33,19 @@ handle.detach();
 
 ## Bridge Functions
 
-All bridge functions share the same signature pattern:
+All bridge functions return a `BridgeHandle` with a single `detach()` method. When called outside a browser environment (SSR), they return a no-op handle. Events are only dispatched when `window.__PING_DEVTOOLS_EXTENSION__` is present (the extension sets this marker).
+
+### `attachDaVinciBridge(client, config?, devtoolsOptions?)`
 
 ```typescript
-function attachXxxBridge(
+function attachDaVinciBridge(
   client: Subscribable,
   config?: object,
   devtoolsOptions?: DevtoolsOptions,
 ): BridgeHandle;
 ```
 
-They return a `BridgeHandle` with a single `detach()` method. When called outside a browser environment (SSR), they return a no-op handle.
-
-### `attachDaVinciBridge(client, config?, devtoolsOptions?)`
-
-Attaches to a DaVinci `Subscribable` client. The client must expose `subscribe(listener)` and `getNode()` methods. On each subscription callback the bridge:
+Attaches to a DaVinci client. The client must implement the `Subscribable` interface with `subscribe(listener)` and `getNode()` methods. On each subscription callback the bridge:
 
 1. Decodes the node using an internal `DaVinciNodeSchema` (via `Schema.decodeUnknownOption`)
 2. Skips if the node status has not changed from the previous emission
@@ -59,7 +57,15 @@ The bridge only emits events when `window.__PING_DEVTOOLS_EXTENSION__` is presen
 
 ### `attachJourneyBridge(client, config?, devtoolsOptions?)`
 
-Attaches to a Journey `Subscribable` client that exposes `subscribe(listener)` and `getState()`. Monitors RTK Query state at `journeyReducer.mutations`. For each fulfilled or rejected mutation entry that has not been emitted yet:
+```typescript
+function attachJourneyBridge(
+  client: JourneySubscribable,
+  config?: object,
+  devtoolsOptions?: DevtoolsOptions,
+): BridgeHandle;
+```
+
+Attaches to a Journey client that implements `subscribe(listener)` and `getState()`. Monitors RTK Query state at `journeyReducer.mutations`. For each fulfilled or rejected mutation entry that has not been emitted yet:
 
 - **Fulfilled:** Decodes the step payload and maps it to `JourneyData` with `stepType` of `'Step'`, `'LoginSuccess'`, or `'LoginFailure'` based on the presence of `authId`, `successUrl`, or neither
 - **Rejected:** Emits a `LoginFailure` event with the extracted error message
@@ -68,7 +74,15 @@ Emits `sdk:journey-step` events. Automatically trims stale mutation IDs from the
 
 ### `attachOidcBridge(client, config?, devtoolsOptions?)`
 
-Attaches to an OIDC `Subscribable` client that exposes `subscribe(listener)` and `getState()`. Monitors RTK Query state at `oidc.mutations`. Maps mutation endpoint names to OIDC phases:
+```typescript
+function attachOidcBridge(
+  client: OidcSubscribable,
+  config?: { clientId?: string } & object,
+  devtoolsOptions?: DevtoolsOptions,
+): BridgeHandle;
+```
+
+Attaches to an OIDC client that implements `subscribe(listener)` and `getState()`. Monitors RTK Query state at `oidc.mutations`. Maps mutation endpoint names to OIDC phases:
 
 | Endpoint          | Phase       |
 | ----------------- | ----------- |
@@ -80,6 +94,44 @@ Attaches to an OIDC `Subscribable` client that exposes `subscribe(listener)` and
 | `endSession`      | `logout`    |
 
 Emits `sdk:oidc-state` events with `OidcData` containing `phase`, `status` (`'success'` or `'error'`), `clientId`, and error details when applicable.
+
+## Client Interfaces
+
+The bridge functions expect clients that implement specific structural interfaces. These are not exported — they are satisfied structurally by the Ping Identity SDKs.
+
+### `Subscribable` (DaVinci)
+
+```typescript
+interface Subscribable {
+  subscribe: (listener: () => void) => () => void;
+  getNode: () => unknown;
+  cache?: {
+    getCache: (requestId: string) => unknown;
+  };
+}
+```
+
+### `JourneySubscribable`
+
+```typescript
+interface JourneySubscribable {
+  subscribe: (listener: () => void) => () => void;
+  getState: () => unknown;
+}
+```
+
+The state must contain `journeyReducer.mutations` with RTK Query mutation entries.
+
+### `OidcSubscribable`
+
+```typescript
+interface OidcSubscribable {
+  subscribe: (listener: () => void) => () => void;
+  getState: () => unknown;
+}
+```
+
+The state must contain `oidc.mutations` with RTK Query mutation entries.
 
 ## Event Emission
 
