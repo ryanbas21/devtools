@@ -11,13 +11,11 @@ class GlobError extends Data.TaggedError('GlobError')<{
 
 // ─── Pure helpers ────────────────────────────────────────────────────────────
 
-const loadGitignorePatterns = (
+const loadGitignoreAt = (
   fs: FileSystem.FileSystem,
-  pathSvc: Path.Path,
-  root: string,
-): Effect.Effect<ReadonlyArray<string>> => {
-  const gitignorePath = pathSvc.join(root, '.gitignore');
-  return pipe(
+  gitignorePath: string,
+): Effect.Effect<ReadonlyArray<string>> =>
+  pipe(
     fs.exists(gitignorePath),
     Effect.orElseSucceed(() => false),
     Effect.flatMap((exists) =>
@@ -30,17 +28,45 @@ const loadGitignorePatterns = (
         : Effect.succeed([] as ReadonlyArray<string>),
     ),
   );
+
+const loadGitignorePatterns = (
+  fs: FileSystem.FileSystem,
+  pathSvc: Path.Path,
+  root: string,
+  workspaceRoot: string | undefined,
+): Effect.Effect<ReadonlyArray<string>> => {
+  const dirs = [root];
+  if (workspaceRoot !== undefined && workspaceRoot !== root) {
+    // Walk from package root up to workspace root, collecting .gitignore files
+    let current = pathSvc.dirname(root);
+    while (current.length >= workspaceRoot.length && current !== pathSvc.dirname(current)) {
+      dirs.push(current);
+      if (current === workspaceRoot) break;
+      current = pathSvc.dirname(current);
+    }
+  }
+
+  return pipe(
+    dirs,
+    Arr.map((dir) => loadGitignoreAt(fs, pathSvc.join(dir, '.gitignore'))),
+    (effects) => Effect.all(effects),
+    Effect.map(Arr.flatten),
+  );
 };
+
+const DEFAULT_IGNORE: ReadonlyArray<string> = [
+  'node_modules',
+  '*.config.ts',
+  '*.config.mjs',
+  '*.config.cjs',
+  '*.config.js',
+];
 
 const buildIgnorePatterns = (
   gitignorePatterns: ReadonlyArray<string>,
   customGlobs: readonly string[],
 ): ReadonlyArray<string> =>
-  pipe(
-    ['node_modules'] as ReadonlyArray<string>,
-    Arr.appendAll(gitignorePatterns),
-    Arr.appendAll(customGlobs),
-  );
+  pipe(DEFAULT_IGNORE, Arr.appendAll(gitignorePatterns), Arr.appendAll(customGlobs));
 
 const discoverFiles = (root: string): Effect.Effect<ReadonlyArray<string>, GlobError> =>
   Effect.tryPromise({
@@ -78,6 +104,7 @@ export interface FileScannerShape {
   readonly scan: (
     root: string,
     ignoreGlobs: readonly string[],
+    workspaceRoot?: string,
   ) => Effect.Effect<readonly string[], GlobError>;
 }
 
@@ -96,9 +123,10 @@ export const FileScannerLive = Layer.effect(
     const scan = (
       root: string,
       ignoreGlobs: readonly string[],
+      workspaceRoot?: string,
     ): Effect.Effect<readonly string[], GlobError> =>
       pipe(
-        loadGitignorePatterns(fs, pathSvc, root),
+        loadGitignorePatterns(fs, pathSvc, root, workspaceRoot),
         Effect.map((gitignorePatterns) => buildIgnorePatterns(gitignorePatterns, ignoreGlobs)),
         Effect.flatMap((patterns) =>
           pipe(

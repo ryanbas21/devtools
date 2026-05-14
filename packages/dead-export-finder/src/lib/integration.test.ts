@@ -152,4 +152,113 @@ layer(NodeContext.layer)('integration', (it) => {
       }).pipe(Effect.provide(ServicesLayer)),
     { timeout: 30_000 },
   );
+
+  it.scoped(
+    'end-to-end: flags export in file not covered by barrel re-export',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+
+        const tmpDir = yield* fs.makeTempDirectoryScoped();
+
+        // Root: pnpm-workspace.yaml
+        yield* fs.writeFileString(
+          path.join(tmpDir, 'pnpm-workspace.yaml'),
+          'packages:\n  - "packages/*"\n',
+        );
+
+        // Package: @test/types — barrel re-exports from schema.ts but NOT orphan.ts
+        const typesDir = path.join(tmpDir, 'packages', 'types');
+        const typesSrcDir = path.join(typesDir, 'src', 'lib');
+        yield* fs.makeDirectory(typesSrcDir, { recursive: true });
+
+        yield* fs.writeFileString(
+          path.join(typesDir, 'package.json'),
+          JSON.stringify({
+            name: '@test/types',
+            exports: { '.': './src/index.ts' },
+          }),
+        );
+
+        yield* fs.writeFileString(
+          path.join(typesDir, 'src', 'index.ts'),
+          "export * from './lib/schema.js';\n",
+        );
+
+        yield* fs.writeFileString(
+          path.join(typesSrcDir, 'schema.ts'),
+          'export const MySchema = {};\nexport type MyType = string;\n',
+        );
+
+        // orphan.ts exports something but is never imported or re-exported
+        yield* fs.writeFileString(
+          path.join(typesSrcDir, 'orphan.ts'),
+          'export const DeadExport = {};\n',
+        );
+
+        // Package: @test/app — consumes @test/types
+        const appDir = path.join(tmpDir, 'packages', 'app');
+        const appSrcDir = path.join(appDir, 'src');
+        yield* fs.makeDirectory(appSrcDir, { recursive: true });
+
+        yield* fs.writeFileString(
+          path.join(appDir, 'package.json'),
+          JSON.stringify({
+            name: '@test/app',
+            exports: { '.': './src/index.ts' },
+          }),
+        );
+
+        yield* fs.writeFileString(
+          path.join(appSrcDir, 'index.ts'),
+          "import { MySchema } from '@test/types';\nexport const app = MySchema;\n",
+        );
+
+        // ── Run analysis ──────────────────────────────────────────────────────
+
+        const detector = yield* WorkspaceDetector;
+        const scanner = yield* FileScanner;
+        const exportParser = yield* ExportParser;
+        const importParser = yield* ImportParser;
+        const graph = yield* ExportGraph;
+
+        const workspace = yield* detector.detect(tmpDir);
+
+        const allExports = new Map<string, readonly ExportedSymbol[]>();
+        const allImports = new Map<string, readonly ImportedSymbol[]>();
+
+        for (const pkg of workspace.packages) {
+          const files = yield* scanner.scan(pkg.root, []);
+          for (const filePath of files) {
+            const source = yield* fs.readFileString(filePath, 'utf-8');
+            const exports = yield* exportParser
+              .parse(filePath, source)
+              .pipe(Effect.catchTag('ParseError', () => Effect.succeed([])));
+            const imports = yield* importParser
+              .parse(filePath, source)
+              .pipe(Effect.catchTag('ParseError', () => Effect.succeed([])));
+            allExports.set(filePath, exports);
+            allImports.set(filePath, imports);
+          }
+        }
+
+        // Analyze with ALL packages (the full-workspace scenario)
+        const result = yield* graph.analyze(workspace.packages, allExports, allImports);
+
+        // ── Assertions ────────────────────────────────────────────────────────
+
+        const deadNames = result.deadExports.map((d) => d.symbol.name);
+
+        // DeadExport is in orphan.ts which nobody imports or re-exports
+        expect(deadNames).toContain('DeadExport');
+
+        // MySchema is consumed by @test/app via package specifier
+        expect(deadNames).not.toContain('MySchema');
+
+        // MyType is protected by the star re-export from index.ts
+        expect(deadNames).not.toContain('MyType');
+      }).pipe(Effect.provide(ServicesLayer)),
+    { timeout: 30_000 },
+  );
 });
