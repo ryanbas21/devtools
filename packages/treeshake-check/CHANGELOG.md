@@ -1,5 +1,7 @@
 # @wolfcola/treeshake-check
 
+## 1.1.0
+
 ## 1.0.0
 
 ### Minor Changes

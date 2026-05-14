@@ -1,6 +1,6 @@
 {
   "name": "@wolfcola/eslint-plugin-treeshake",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "ESLint plugin that flags code patterns known to break tree-shaking",
   "license": "MIT",
   "type": "module",

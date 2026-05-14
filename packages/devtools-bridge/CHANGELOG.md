@@ -1,5 +1,12 @@
 # @wolfcola/devtools-bridge
 
+## 1.1.0
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @wolfcola/devtools-types@1.1.0
+
 ## 1.0.0
 
 ### Major Changes
