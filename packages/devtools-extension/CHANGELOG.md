@@ -1,5 +1,13 @@
 # @wolfcola/devtools-extension
 
+## 1.1.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @wolfcola/devtools-core@1.1.1
+  - @wolfcola/devtools-types@1.1.1
+
 ## 1.1.0
 
 ### Minor Changes

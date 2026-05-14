@@ -1,6 +1,6 @@
 {
   "name": "@wolfcola/devtools-types",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Shared AuthEvent schema and types for WolfCola DevTools",
   "license": "MIT",
   "repository": {
