@@ -72,7 +72,7 @@ const scanWorkspace = (
         workspace.packages,
         Arr.map((pkg) =>
           pipe(
-            scanner.scan(pkg.root, ignoreGlobs),
+            scanner.scan(pkg.root, ignoreGlobs, workspace.root),
             Effect.catchTag('GlobError', (e) =>
               Effect.gen(function* () {
                 const msg = `failed to scan files in ${pkg.root}: ${String(e.cause)}`;
@@ -279,7 +279,10 @@ const command = Command.make(
         yield* Console.log(`Found ${workspace.packages.length} packages`);
       }
 
-      const packageFilter = packagesOpt._tag === 'Some' ? new Set(packagesOpt.value) : null;
+      const packageFilter =
+        packagesOpt._tag === 'Some' && packagesOpt.value.length > 0
+          ? new Set(packagesOpt.value)
+          : null;
 
       const targetPackages =
         packageFilter !== null

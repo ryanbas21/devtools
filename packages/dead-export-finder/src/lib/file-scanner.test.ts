@@ -112,6 +112,64 @@ layer(NodeContext.layer)('FileScanner', (it) => {
     ),
   );
 
+  it.scoped('inherits .gitignore from workspace root', () =>
+    withScanner(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const tmpDir = yield* fs.makeTempDirectoryScoped();
+
+        // Workspace root has .gitignore excluding dist/
+        yield* fs.writeFileString(path.join(tmpDir, '.gitignore'), 'dist/\n');
+
+        // Package is nested under packages/my-lib
+        const pkgDir = path.join(tmpDir, 'packages', 'my-lib');
+        const srcDir = path.join(pkgDir, 'src');
+        const distDir = path.join(pkgDir, 'dist');
+        yield* fs.makeDirectory(srcDir, { recursive: true });
+        yield* fs.makeDirectory(distDir, { recursive: true });
+
+        yield* fs.writeFileString(path.join(srcDir, 'index.ts'), '');
+        yield* fs.writeFileString(path.join(distDir, 'index.js'), '');
+        yield* fs.writeFileString(path.join(distDir, 'index.d.ts'), '');
+
+        const scanner = yield* FileScanner;
+        // Pass workspaceRoot so parent .gitignore is found
+        const files = yield* scanner.scan(pkgDir, [], tmpDir);
+
+        const names = files.map((f) => path.basename(f));
+        expect(names).toContain('index.ts');
+        expect(names).not.toContain('index.js');
+        expect(names).not.toContain('index.d.ts');
+      }),
+    ),
+  );
+
+  it.scoped('excludes config files by default', () =>
+    withScanner(
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const tmpDir = yield* fs.makeTempDirectoryScoped();
+
+        yield* fs.writeFileString(path.join(tmpDir, 'index.ts'), '');
+        yield* fs.writeFileString(path.join(tmpDir, 'vite.config.ts'), '');
+        yield* fs.writeFileString(path.join(tmpDir, 'eslint.config.mjs'), '');
+        yield* fs.writeFileString(path.join(tmpDir, 'vitest.config.ts'), '');
+        yield* fs.writeFileString(path.join(tmpDir, 'tsconfig.json'), '');
+
+        const scanner = yield* FileScanner;
+        const files = yield* scanner.scan(tmpDir, []);
+
+        const names = files.map((f) => path.basename(f));
+        expect(names).toContain('index.ts');
+        expect(names).not.toContain('vite.config.ts');
+        expect(names).not.toContain('eslint.config.mjs');
+        expect(names).not.toContain('vitest.config.ts');
+      }),
+    ),
+  );
+
   it.scoped('respects custom ignore globs', () =>
     withScanner(
       Effect.gen(function* () {
