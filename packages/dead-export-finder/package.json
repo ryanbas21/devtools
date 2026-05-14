@@ -13,7 +13,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "dead-export-finder": "./dist/index.js"
+    "dead-export-finder": "./dist/cli.js"
   },
   "exports": {
     ".": {
