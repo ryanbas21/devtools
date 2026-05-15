@@ -700,8 +700,7 @@ function collectParIssues(events: readonly AuthEvent[]): IssueCandidate[] {
     // Authorize with both request_uri AND inline params
     if (sem.oidcPhase === 'authorize' && sem.par?.requestUri && event.data._tag === 'network') {
       const url = event.data.url;
-      const hasInlineParams =
-        url.includes('client_id=') || url.includes('redirect_uri=') || url.includes('scope=');
+      const hasInlineParams = url.includes('redirect_uri=') || url.includes('scope=');
       if (hasInlineParams) {
         candidates.push({
           dedupKey: `par:inline-params-with-request-uri:${event.id}`,
