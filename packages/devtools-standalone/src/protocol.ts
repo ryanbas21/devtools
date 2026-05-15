@@ -60,3 +60,6 @@ export type IncomingMessage = typeof IncomingMessage.Type;
 
 export const OutgoingMessage = Schema.Union(ConnectedMessage, ConfigMessage);
 export type OutgoingMessage = typeof OutgoingMessage.Type;
+
+export const IncomingMessageFromJson = Schema.parseJson(IncomingMessage);
+export const HandshakeMessageFromJson = Schema.parseJson(HandshakeMessage);

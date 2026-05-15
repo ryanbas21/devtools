@@ -7,6 +7,8 @@ import {
   ClearMessage,
   ConnectedMessage,
   IncomingMessage,
+  IncomingMessageFromJson,
+  HandshakeMessageFromJson,
 } from './protocol.js';
 
 describe('Protocol Schemas', () => {
@@ -107,6 +109,44 @@ describe('Protocol Schemas', () => {
 
     it('rejects unknown message types', () => {
       expect(() => Schema.decodeUnknownSync(IncomingMessage)({ type: 'UNKNOWN' })).toThrow();
+    });
+  });
+
+  describe('parseJson variants', () => {
+    it('HandshakeMessageFromJson decodes a JSON string into a handshake', () => {
+      const json = JSON.stringify({ type: 'HANDSHAKE', name: 'app' });
+      const result = Schema.decodeUnknownSync(HandshakeMessageFromJson)(json);
+      expect(result.type).toBe('HANDSHAKE');
+      expect(result.name).toBe('app');
+    });
+
+    it('HandshakeMessageFromJson rejects invalid JSON', () => {
+      expect(() => Schema.decodeUnknownSync(HandshakeMessageFromJson)('not json')).toThrow();
+    });
+
+    it('HandshakeMessageFromJson rejects valid JSON with wrong shape', () => {
+      const json = JSON.stringify({ type: 'HANDSHAKE' });
+      expect(() => Schema.decodeUnknownSync(HandshakeMessageFromJson)(json)).toThrow();
+    });
+
+    it('IncomingMessageFromJson decodes SDK_EVENT from JSON string', () => {
+      const json = JSON.stringify({ type: 'SDK_EVENT', payload: { id: 'e1' } });
+      const result = Schema.decodeUnknownSync(IncomingMessageFromJson)(json);
+      expect(result.type).toBe('SDK_EVENT');
+    });
+
+    it('IncomingMessageFromJson decodes CLEAR from JSON string', () => {
+      const json = JSON.stringify({ type: 'CLEAR' });
+      const result = Schema.decodeUnknownSync(IncomingMessageFromJson)(json);
+      expect(result.type).toBe('CLEAR');
+    });
+
+    it('IncomingMessageFromJson rejects invalid JSON', () => {
+      expect(() => Schema.decodeUnknownSync(IncomingMessageFromJson)('{bad')).toThrow();
+    });
+
+    it('IncomingMessageFromJson rejects non-string input', () => {
+      expect(() => Schema.decodeUnknownSync(IncomingMessageFromJson)(42)).toThrow();
     });
   });
 });

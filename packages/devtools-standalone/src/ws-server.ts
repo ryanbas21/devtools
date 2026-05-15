@@ -3,7 +3,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { runDiagnosis, serializeDiagnosis } from '@wolfcola/devtools-core';
 import type { ExtendedFlowState } from '@wolfcola/devtools-core';
 import { SessionManager } from './session-manager.js';
-import { HandshakeMessage, IncomingMessage } from './protocol.js';
+import { HandshakeMessageFromJson, IncomingMessageFromJson } from './protocol.js';
 
 export type EventCallback = (event: unknown, diagnosis: unknown) => void;
 
@@ -27,17 +27,11 @@ export const WsServerLive = Layer.effect(
             let sessionId: string | null = null;
 
             ws.on('message', async (data: Buffer) => {
-              let raw: unknown;
-              try {
-                raw = JSON.parse(data.toString());
-              } catch {
-                ws.send(JSON.stringify({ type: 'ERROR', message: 'Invalid JSON' }));
-                return;
-              }
+              const text = data.toString();
 
               try {
                 if (!sessionId) {
-                  const handshake = Schema.decodeUnknownSync(HandshakeMessage)(raw);
+                  const handshake = Schema.decodeUnknownSync(HandshakeMessageFromJson)(text);
                   const session = await Effect.runPromise(
                     mgr.reconnect({
                       name: handshake.name,
@@ -50,7 +44,7 @@ export const WsServerLive = Layer.effect(
                   return;
                 }
 
-                const message = Schema.decodeUnknownSync(IncomingMessage)(raw);
+                const message = Schema.decodeUnknownSync(IncomingMessageFromJson)(text);
                 if (message.type !== 'HANDSHAKE') {
                   const result = await Effect.runPromise(mgr.handleMessage(sessionId, message));
                   if (
