@@ -26,7 +26,7 @@ export default [
       '**/codegen/**',
       'apps/**',
       'repos/**',
-      '**/assets/elm.js',
+      '**/assets',
     ],
   },
   ...compat.extends('plugin:@typescript-eslint/recommended', 'plugin:prettier/recommended'),
