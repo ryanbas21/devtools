@@ -1,7 +1,14 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist-spec"
+    "outDir": "../../dist/out-tsc/vitest",
+    "types": ["vitest/globals", "vitest/importMeta", "vite/client", "node", "vitest"],
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "noImplicitOverride": true,
+    "lib": ["es2022", "dom", "dom.iterable"]
   },
-  "include": ["src/**/*.test.ts"]
+  "include": ["vite.config.ts", "src/**/*.test.ts"],
+  "references": [{ "path": "./tsconfig.lib.json" }]
 }

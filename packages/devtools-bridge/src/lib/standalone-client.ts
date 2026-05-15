@@ -42,11 +42,13 @@ export class StandaloneClient {
           resolve();
         };
         ws.onerror = () => {
+          console.warn(`[wolfcola] WebSocket connection to ${this.url} failed`);
           this.ws = null;
           resolve();
         };
       });
-    } catch {
+    } catch (err) {
+      console.warn(`[wolfcola] WebSocket error for ${this.url}:`, err);
       this.ws = null;
     }
   }

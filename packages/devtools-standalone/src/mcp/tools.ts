@@ -169,10 +169,14 @@ export const WolfcolaToolkitLive = WolfcolaToolkit.toLayer({
       return state.events.filter((e: AuthEvent) => {
         if (errorOnly && !e.flags.isError) return false;
         if (urlPattern && e.data._tag === 'network') {
-          try {
-            if (!new RegExp(urlPattern).test(e.data.url)) return false;
-          } catch {
+          if (urlPattern.length > 200) {
             if (!e.data.url.includes(urlPattern)) return false;
+          } else {
+            try {
+              if (!new RegExp(urlPattern).test(e.data.url)) return false;
+            } catch {
+              if (!e.data.url.includes(urlPattern)) return false;
+            }
           }
         }
         if (oidcPhase && e.oidcSemantics?.oidcPhase !== oidcPhase) return false;
