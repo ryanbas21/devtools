@@ -27,13 +27,16 @@ function patchModule(
     if (!isAuthRelated(url)) return req;
 
     const chunks: Buffer[] = [];
-    const originalWrite = req.write.bind(req);
     const start = performance.now();
 
-    req.write = function (chunk: unknown, ...rest: unknown[]) {
+    const origWrite = req.write;
+    // Monkey-patching write to capture request body chunks. The overloaded
+    // signature makes typed forwarding impractical, so we use Function.call.
+    req.write = function (this: typeof req, chunk: unknown) {
       if (Buffer.isBuffer(chunk)) chunks.push(chunk);
       else if (typeof chunk === 'string') chunks.push(Buffer.from(chunk));
-      return originalWrite(chunk, ...(rest as [BufferEncoding?, (() => void)?]));
+      // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-explicit-any
+      return (origWrite as any).apply(this, arguments);
     };
 
     req.on('response', (res: http.IncomingMessage) => {

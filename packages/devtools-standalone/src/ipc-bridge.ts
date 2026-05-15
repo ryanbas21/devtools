@@ -26,7 +26,7 @@ export function createIpcHandlers(mgr: SessionManagerShape) {
     [IPC_CHANNELS.EXPORT_JSON]: async (sessionId: string) => {
       const state = await Effect.runPromise(mgr.handleMessage(sessionId, { type: 'GET_STATE' }));
       if (!state) return null;
-      const redacted = redactFlowState(state as never);
+      const redacted = redactFlowState(state as unknown as Parameters<typeof redactFlowState>[0]);
       return JSON.stringify(
         { version: 1, exportedAt: new Date().toISOString(), redacted: true, flow: redacted },
         null,
@@ -37,9 +37,12 @@ export function createIpcHandlers(mgr: SessionManagerShape) {
     [IPC_CHANNELS.EXPORT_MARKDOWN]: async (sessionId: string) => {
       const state = await Effect.runPromise(mgr.handleMessage(sessionId, { type: 'GET_STATE' }));
       if (!state) return null;
-      const redacted = redactFlowState(state as never);
-      const diagnosis = runDiagnosis((redacted as { events: never[] }).events);
-      return renderFlowMarkdown(redacted as never, diagnosis);
+      const redacted = redactFlowState(state as unknown as Parameters<typeof redactFlowState>[0]);
+      const diagnosis = runDiagnosis(redacted.events);
+      return renderFlowMarkdown(
+        redacted as unknown as Parameters<typeof renderFlowMarkdown>[0],
+        diagnosis,
+      );
     },
 
     [IPC_CHANNELS.SET_CLEAR_ON_RECONNECT]: (sessionId: string, value: boolean) =>

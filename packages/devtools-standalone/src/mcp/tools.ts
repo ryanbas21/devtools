@@ -107,115 +107,124 @@ export const WolfcolaToolkit = Toolkit.make(
 
 // ── Handlers ────────────────────────────────────────────────────────────────
 
-function getState(sessionId: string) {
-  return Effect.gen(function* () {
-    const mgr = yield* SessionManager;
-    const result = yield* mgr.handleMessage(sessionId, { type: 'GET_STATE' });
-    return result as ExtendedFlowState | null;
-  });
+function matchesUrlPattern(url: string, pattern: string): boolean {
+  if (pattern.length > 200) return url.includes(pattern);
+  try {
+    return new RegExp(pattern).test(url);
+  } catch {
+    return url.includes(pattern);
+  }
 }
 
-export const WolfcolaToolkitLive = WolfcolaToolkit.toLayer({
-  'list-sessions': () =>
-    Effect.gen(function* () {
-      const mgr = yield* SessionManager;
-      const sessions = yield* mgr.list();
-      return sessions.map((s) => ({
-        id: s.id,
-        name: s.name,
-        status: s.status,
-        connectedAt: s.connectedAt,
-        clearOnReconnect: s.clearOnReconnect,
-      }));
-    }),
+// toLayer accepts an Effect that produces handlers. By yielding SessionManager
+// here, we close over `mgr` — the individual handlers have R = never.
+export const WolfcolaToolkitLive = WolfcolaToolkit.toLayer(
+  Effect.gen(function* () {
+    const mgr = yield* SessionManager;
 
-  'get-events': ({ sessionId, type, from, to }) =>
-    Effect.gen(function* () {
-      const state = yield* getState(sessionId);
-      if (!state) return [];
-      let events = state.events;
-      if (type) events = events.filter((e) => e.type === type);
-      if (from !== undefined) events = events.filter((e) => e.timestamp >= from);
-      if (to !== undefined) events = events.filter((e) => e.timestamp <= to);
-      return events;
-    }),
+    function getState(sessionId: string) {
+      return mgr
+        .handleMessage(sessionId, { type: 'GET_STATE' })
+        .pipe(Effect.map((result) => result as ExtendedFlowState | null));
+    }
 
-  'get-flow-summary': ({ sessionId }) =>
-    Effect.gen(function* () {
-      const state = yield* getState(sessionId);
-      if (!state) return null;
-      return state.summary;
-    }),
+    return {
+      'list-sessions': () =>
+        mgr.list().pipe(
+          Effect.map((sessions) =>
+            sessions.map((s) => ({
+              id: s.id,
+              name: s.name,
+              status: s.status,
+              connectedAt: s.connectedAt,
+              clearOnReconnect: s.clearOnReconnect,
+            })),
+          ),
+        ),
 
-  'get-diagnosis': ({ sessionId }) =>
-    Effect.gen(function* () {
-      const state = yield* getState(sessionId);
-      if (!state) return null;
-      const diagnosis = runDiagnosis(state.events);
-      return serializeDiagnosis(diagnosis);
-    }),
+      'get-events': ({ sessionId, type, from, to }) =>
+        getState(sessionId).pipe(
+          Effect.map((state) => {
+            if (!state) return [];
+            let events = state.events;
+            if (type) events = events.filter((e) => e.type === type);
+            if (from !== undefined) events = events.filter((e) => e.timestamp >= from);
+            if (to !== undefined) events = events.filter((e) => e.timestamp <= to);
+            return events;
+          }),
+        ),
 
-  'get-event-detail': ({ sessionId, eventId }) =>
-    Effect.gen(function* () {
-      const state = yield* getState(sessionId);
-      if (!state) return null;
-      return state.events.find((e) => e.id === eventId) ?? null;
-    }),
+      'get-flow-summary': ({ sessionId }) =>
+        getState(sessionId).pipe(Effect.map((state) => (state ? state.summary : null))),
 
-  'search-events': ({ sessionId, urlPattern, errorOnly, oidcPhase }) =>
-    Effect.gen(function* () {
-      const state = yield* getState(sessionId);
-      if (!state) return [];
-      return state.events.filter((e: AuthEvent) => {
-        if (errorOnly && !e.flags.isError) return false;
-        if (urlPattern && e.data._tag === 'network') {
-          if (urlPattern.length > 200) {
-            if (!e.data.url.includes(urlPattern)) return false;
-          } else {
-            try {
-              if (!new RegExp(urlPattern).test(e.data.url)) return false;
-            } catch {
-              if (!e.data.url.includes(urlPattern)) return false;
-            }
-          }
-        }
-        if (oidcPhase && e.oidcSemantics?.oidcPhase !== oidcPhase) return false;
-        return true;
-      });
-    }),
+      'get-diagnosis': ({ sessionId }) =>
+        getState(sessionId).pipe(
+          Effect.map((state) => {
+            if (!state) return null;
+            return serializeDiagnosis(runDiagnosis(state.events));
+          }),
+        ),
 
-  'clear-flow': ({ sessionId }) =>
-    Effect.gen(function* () {
-      const mgr = yield* SessionManager;
-      yield* mgr.handleMessage(sessionId, { type: 'CLEAR' });
-      return { cleared: true };
-    }),
+      'get-event-detail': ({ sessionId, eventId }) =>
+        getState(sessionId).pipe(
+          Effect.map((state) =>
+            state ? (state.events.find((e) => e.id === eventId) ?? null) : null,
+          ),
+        ),
 
-  'export-json': ({ sessionId }) =>
-    Effect.gen(function* () {
-      const state = yield* getState(sessionId);
-      if (!state) return null;
-      const redacted = redactFlowState(state as never);
-      return JSON.stringify(
-        { version: 1, exportedAt: new Date().toISOString(), redacted: true, flow: redacted },
-        null,
-        2,
-      );
-    }),
+      'search-events': ({ sessionId, urlPattern, errorOnly, oidcPhase }) =>
+        getState(sessionId).pipe(
+          Effect.map((state) => {
+            if (!state) return [];
+            return state.events.filter((e: AuthEvent) => {
+              if (errorOnly && !e.flags.isError) return false;
+              if (
+                urlPattern &&
+                e.data._tag === 'network' &&
+                !matchesUrlPattern(e.data.url, urlPattern)
+              )
+                return false;
+              if (oidcPhase && e.oidcSemantics?.oidcPhase !== oidcPhase) return false;
+              return true;
+            });
+          }),
+        ),
 
-  'export-markdown': ({ sessionId }) =>
-    Effect.gen(function* () {
-      const state = yield* getState(sessionId);
-      if (!state) return null;
-      const redacted = redactFlowState(state as never);
-      const diagnosis = runDiagnosis((redacted as { events: never[] }).events);
-      return renderFlowMarkdown(redacted as never, diagnosis);
-    }),
+      'clear-flow': ({ sessionId }) =>
+        mgr.handleMessage(sessionId, { type: 'CLEAR' }).pipe(Effect.map(() => ({ cleared: true }))),
 
-  'set-clear-on-reconnect': ({ sessionId, value }) =>
-    Effect.gen(function* () {
-      const mgr = yield* SessionManager;
-      yield* mgr.setClearOnReconnect(sessionId, value);
-      return { updated: true };
-    }),
-});
+      'export-json': ({ sessionId }) =>
+        getState(sessionId).pipe(
+          Effect.map((state) => {
+            if (!state) return null;
+            const redacted = redactFlowState(
+              state as unknown as Parameters<typeof redactFlowState>[0],
+            );
+            return JSON.stringify(
+              { version: 1, exportedAt: new Date().toISOString(), redacted: true, flow: redacted },
+              null,
+              2,
+            );
+          }),
+        ),
+
+      'export-markdown': ({ sessionId }) =>
+        getState(sessionId).pipe(
+          Effect.map((state) => {
+            if (!state) return null;
+            const redacted = redactFlowState(
+              state as unknown as Parameters<typeof redactFlowState>[0],
+            );
+            const diagnosis = runDiagnosis(redacted.events);
+            return renderFlowMarkdown(
+              redacted as unknown as Parameters<typeof renderFlowMarkdown>[0],
+              diagnosis,
+            );
+          }),
+        ),
+
+      'set-clear-on-reconnect': ({ sessionId, value }) =>
+        mgr.setClearOnReconnect(sessionId, value).pipe(Effect.map(() => ({ updated: true }))),
+    };
+  }),
+);

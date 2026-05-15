@@ -17,11 +17,18 @@ export function installXhrInterceptor(onEntry: (entry: HarEntry) => void): void 
   globalThis.__wolfcola_original_xhr_send = originalSend;
   globalThis.__wolfcola_xhr_patched = true;
 
-  XMLHttpRequest.prototype.open = function (method: string, url: string | URL, ...rest: unknown[]) {
+  // Monkey-patching open to capture method/url. The overloaded signature
+  // makes typed forwarding impractical, so we forward with arguments.
+  XMLHttpRequest.prototype.open = function (
+    this: XMLHttpRequest,
+    method: string,
+    url: string | URL,
+  ) {
     (this as unknown as { _wolfcola_method: string })._wolfcola_method = method;
     (this as unknown as { _wolfcola_url: string })._wolfcola_url =
       typeof url === 'string' ? url : url.href;
-    return originalOpen.call(this, method, url, ...(rest as [boolean?, string?, string?]));
+    // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-explicit-any
+    return (originalOpen as any).apply(this, arguments);
   };
 
   XMLHttpRequest.prototype.send = function (body?: Document | XMLHttpRequestBodyInit | null) {
