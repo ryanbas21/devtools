@@ -1,13 +1,13 @@
 ---
 title: '@wolfcola/devtools-bridge'
-description: 'SDK adapter for emitting auth events to the Ping DevTools extension'
+description: 'SDK adapter for emitting auth events to the DevTools extension or standalone debugger'
 section: packages
 order: 3
 ---
 
 # @wolfcola/devtools-bridge
 
-The devtools bridge connects your OIDC client to the Ping DevTools browser extension. It monitors SDK state changes and emits `AuthEvent` objects via `CustomEvent` on the window, where the extension picks them up.
+The devtools bridge connects your OIDC client to Ping DevTools — either the browser extension, the VS Code extension, or the [standalone debugger](/docs/standalone-debugger). It monitors SDK state changes and emits `AuthEvent` objects via `CustomEvent` on the window (for extensions) or WebSocket (for the standalone debugger).
 
 ## Installation
 
@@ -178,5 +178,41 @@ Call `detach()` to unsubscribe the bridge from the SDK client.
 ## Event Storage
 
 Events are stored on `window.__PING_DEVTOOLS_STATE__` as an array of `AuthEvent` objects. The array is capped at 500 entries; when the limit is exceeded, the oldest entries are removed via `splice`.
+
+## Standalone Debugger — `attachDebugger`
+
+Connects your app to the [standalone Electron debugger](/docs/standalone-debugger) via WebSocket. Works in both browser and Node.js environments.
+
+```typescript
+import { attachDebugger } from '@wolfcola/devtools-bridge';
+
+const handle = await attachDebugger({
+  name: 'my-spa',
+  port: 19417,
+  autoLaunch: true,
+  network: true,
+  framework: 'react',
+});
+
+handle.detach();
+```
+
+Returns a `DebuggerHandle`:
+
+```typescript
+interface DebuggerHandle {
+  connected: boolean;
+  detach(): void;
+}
+```
+
+**What happens on `attachDebugger()`:**
+
+1. Opens a WebSocket to `ws://localhost:{port}` and sends a handshake
+2. If not connected and `autoLaunch` is enabled, finds `wolfcola-devtools` in PATH, spawns it, and retries with exponential backoff
+3. If connected and `network` is enabled, installs a fetch interceptor that forwards auth-related requests
+4. Returns `{ connected, detach() }`
+
+See the [Standalone Debugger guide](/docs/standalone-debugger) for full configuration options and Node.js HTTP interceptor usage.
 
 <callout type="warning">Always call `handle.detach()` when you are done. Failing to do so may cause memory leaks from lingering subscription listeners.</callout>
