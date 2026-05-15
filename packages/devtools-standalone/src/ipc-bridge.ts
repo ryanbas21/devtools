@@ -17,6 +17,9 @@ export function createIpcHandlers(mgr: SessionManagerShape) {
   return {
     [IPC_CHANNELS.SESSIONS]: () => Effect.runPromise(mgr.list()),
 
+    [IPC_CHANNELS.SWITCH_SESSION]: (sessionId: string) =>
+      Effect.runPromise(mgr.getSession(sessionId)),
+
     [IPC_CHANNELS.CLEAR_FLOW]: (sessionId: string) =>
       Effect.runPromise(mgr.handleMessage(sessionId, { type: 'CLEAR' })),
 

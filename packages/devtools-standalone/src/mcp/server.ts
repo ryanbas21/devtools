@@ -68,7 +68,11 @@ export function createMcpTools(mgr: SessionManagerShape) {
       return state.events.filter((e: AuthEvent) => {
         if (query.errorOnly && !e.flags.isError) return false;
         if (query.urlPattern && e.data._tag === 'network') {
-          if (!new RegExp(query.urlPattern).test(e.data.url)) return false;
+          try {
+            if (!new RegExp(query.urlPattern).test(e.data.url)) return false;
+          } catch {
+            if (!e.data.url.includes(query.urlPattern)) return false;
+          }
         }
         if (query.oidcPhase && e.oidcSemantics?.oidcPhase !== query.oidcPhase) return false;
         return true;

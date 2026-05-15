@@ -3,9 +3,10 @@ import { execFileSync, spawn } from 'node:child_process';
 const BINARY_NAME = 'wolfcola-devtools';
 
 export function findBinary(): string | null {
+  const cmd = process.platform === 'win32' ? 'where' : 'which';
   try {
-    const result = execFileSync('which', [BINARY_NAME]);
-    return result.toString().trim() || null;
+    const result = execFileSync(cmd, [BINARY_NAME]);
+    return result.toString().trim().split('\n')[0] || null;
   } catch {
     return null;
   }
@@ -16,6 +17,9 @@ export function launchDebugger(binaryPath: string, port?: number): void {
   const child = spawn(binaryPath, args, {
     detached: true,
     stdio: 'ignore',
+  });
+  child.on('error', (err) => {
+    console.warn(`[wolfcola] Failed to launch debugger at ${binaryPath}:`, err.message);
   });
   child.unref();
 }
@@ -36,7 +40,10 @@ export async function ensureRunning(port: number): Promise<boolean> {
           ws.close();
           resolve(true);
         };
-        ws.onerror = () => resolve(false);
+        ws.onerror = () => {
+          ws.close();
+          resolve(false);
+        };
       });
       if (connected) return true;
     } catch {

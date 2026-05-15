@@ -3,17 +3,18 @@ import { Effect, Layer } from 'effect';
 import path from 'node:path';
 import { SessionManager, SessionManagerLive } from './session-manager.js';
 import { WsServer, WsServerLive } from './ws-server.js';
-import { createIpcHandlers } from './ipc-bridge.js';
+import { IPC_CHANNELS, createIpcHandlers } from './ipc-bridge.js';
 
 const DEFAULT_PORT = 19417;
 
 function getPort(): number {
-  const portArg = process.argv.find((a) => a.startsWith('--port'));
+  const portArg = process.argv.find((a) => a === '--port' || a.startsWith('--port='));
   if (portArg) {
     const idx = process.argv.indexOf(portArg);
     const val = portArg.includes('=') ? portArg.split('=')[1] : process.argv[idx + 1];
     const parsed = parseInt(val, 10);
     if (!isNaN(parsed)) return parsed;
+    console.warn(`[WolfCola DevTools] Invalid port value "${val}", using default ${DEFAULT_PORT}`);
   }
   return DEFAULT_PORT;
 }
@@ -55,7 +56,14 @@ async function main() {
       );
     }
 
-    yield* Effect.fork(server.start(port));
+    yield* Effect.fork(
+      server.start(port, (event, diagnosis) => {
+        for (const win of BrowserWindow.getAllWindows()) {
+          win.webContents.send(IPC_CHANNELS.EVENT, event);
+          win.webContents.send(IPC_CHANNELS.DIAGNOSIS, diagnosis);
+        }
+      }),
+    );
 
     console.log(`[WolfCola DevTools] WebSocket server listening on port ${port}`);
   });

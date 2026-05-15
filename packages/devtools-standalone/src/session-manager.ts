@@ -5,24 +5,46 @@ import {
   handleMessage as coreHandleMessage,
 } from '@wolfcola/devtools-core';
 
-export interface Session {
-  id: string;
+export interface SessionOptions {
   name: string;
   pid?: number;
   framework?: string;
-  connectedAt: string;
-  status: 'connected' | 'disconnected';
-  clearOnReconnect: boolean;
-  runtime: ManagedRuntime.ManagedRuntime<EventStoreService, never>;
+}
+
+export interface Session {
+  readonly id: string;
+  readonly name: string;
+  readonly pid?: number;
+  readonly framework?: string;
+  readonly connectedAt: string;
+  readonly status: 'connected' | 'disconnected';
+  readonly clearOnReconnect: boolean;
+}
+
+interface SessionInternal extends Session {
+  readonly runtime: ManagedRuntime.ManagedRuntime<EventStoreService, never>;
+}
+
+function makeSession(opts: SessionOptions): SessionInternal {
+  return {
+    id: crypto.randomUUID(),
+    name: opts.name,
+    pid: opts.pid,
+    framework: opts.framework,
+    connectedAt: new Date().toISOString(),
+    status: 'connected',
+    clearOnReconnect: true,
+    runtime: ManagedRuntime.make(EventStoreInMemory),
+  };
 }
 
 export interface SessionManagerShape {
-  create: (opts: { name: string; pid?: number; framework?: string }) => Effect.Effect<Session>;
+  create: (opts: SessionOptions) => Effect.Effect<Session>;
   list: () => Effect.Effect<Session[]>;
   findByName: (name: string) => Effect.Effect<Session | null>;
   remove: (id: string) => Effect.Effect<void>;
   disconnect: (id: string) => Effect.Effect<void>;
-  reconnect: (opts: { name: string; pid?: number; framework?: string }) => Effect.Effect<Session>;
+  reconnect: (opts: SessionOptions) => Effect.Effect<Session>;
   handleMessage: (sessionId: string, message: unknown) => Effect.Effect<unknown>;
   setClearOnReconnect: (id: string, value: boolean) => Effect.Effect<void>;
   getSession: (id: string) => Effect.Effect<Session | null>;
@@ -33,35 +55,36 @@ export class SessionManager extends Context.Tag('SessionManager')<
   SessionManagerShape
 >() {}
 
+function toPublic(s: SessionInternal): Session {
+  const { runtime: _, ...pub } = s;
+  return pub;
+}
+
 export const SessionManagerLive = Layer.effect(
   SessionManager,
   pipe(
-    Ref.make<Session[]>([]),
+    Ref.make<SessionInternal[]>([]),
     Effect.map((sessionsRef) => ({
       create: (opts) =>
         Effect.gen(function* () {
-          const runtime = ManagedRuntime.make(EventStoreInMemory);
-          const session: Session = {
-            id: crypto.randomUUID(),
-            name: opts.name,
-            pid: opts.pid,
-            framework: opts.framework,
-            connectedAt: new Date().toISOString(),
-            status: 'connected',
-            clearOnReconnect: true,
-            runtime,
-          };
+          const session = makeSession(opts);
           yield* Ref.update(sessionsRef, (ss) => [...ss, session]);
-          return session;
+          return toPublic(session);
         }),
 
-      list: () => Ref.get(sessionsRef),
+      list: () => Effect.map(Ref.get(sessionsRef), (ss) => ss.map(toPublic)),
 
       findByName: (name) =>
-        Effect.map(Ref.get(sessionsRef), (ss) => ss.find((s) => s.name === name) ?? null),
+        Effect.map(Ref.get(sessionsRef), (ss) => {
+          const found = ss.find((s) => s.name === name);
+          return found ? toPublic(found) : null;
+        }),
 
       getSession: (id) =>
-        Effect.map(Ref.get(sessionsRef), (ss) => ss.find((s) => s.id === id) ?? null),
+        Effect.map(Ref.get(sessionsRef), (ss) => {
+          const found = ss.find((s) => s.id === id);
+          return found ? toPublic(found) : null;
+        }),
 
       remove: (id) =>
         Effect.gen(function* () {
@@ -93,26 +116,15 @@ export const SessionManagerLive = Layer.effect(
                 ),
               );
             }
-            const updated = { ...existing, status: 'connected' as const };
+            const updated: SessionInternal = { ...existing, status: 'connected' as const };
             yield* Ref.update(sessionsRef, (ss) =>
               ss.map((s) => (s.id === existing.id ? updated : s)),
             );
-            return updated;
+            return toPublic(updated);
           }
-          // No existing session: create new one
-          const runtime = ManagedRuntime.make(EventStoreInMemory);
-          const session: Session = {
-            id: crypto.randomUUID(),
-            name: opts.name,
-            pid: opts.pid,
-            framework: opts.framework,
-            connectedAt: new Date().toISOString(),
-            status: 'connected',
-            clearOnReconnect: true,
-            runtime,
-          };
+          const session = makeSession(opts);
           yield* Ref.update(sessionsRef, (ss) => [...ss, session]);
-          return session;
+          return toPublic(session);
         }),
 
       handleMessage: (sessionId, message) =>

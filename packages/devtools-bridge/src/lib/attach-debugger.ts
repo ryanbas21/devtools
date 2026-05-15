@@ -12,7 +12,11 @@ export interface AttachDebuggerOptions {
   autoLaunch?: boolean;
 }
 
-export async function attachDebugger(opts: AttachDebuggerOptions): Promise<BridgeHandle> {
+export interface DebuggerHandle extends BridgeHandle {
+  connected: boolean;
+}
+
+export async function attachDebugger(opts: AttachDebuggerOptions): Promise<DebuggerHandle> {
   const port = opts.port ?? 19417;
   const client = new StandaloneClient({
     name: opts.name,
@@ -27,7 +31,13 @@ export async function attachDebugger(opts: AttachDebuggerOptions): Promise<Bridg
     const launched = await ensureRunning(port);
     if (launched) {
       await client.connect();
+    } else {
+      console.warn(`[wolfcola] Could not auto-launch debugger on port ${port}`);
     }
+  }
+
+  if (!client.isConnected()) {
+    console.warn(`[wolfcola] Debugger not connected — events will not be captured`);
   }
 
   if (opts.network !== false && client.isConnected()) {
@@ -37,6 +47,7 @@ export async function attachDebugger(opts: AttachDebuggerOptions): Promise<Bridg
   }
 
   return {
+    connected: client.isConnected(),
     detach: () => {
       uninstallFetchInterceptor();
       client.close();

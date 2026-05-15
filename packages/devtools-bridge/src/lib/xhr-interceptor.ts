@@ -29,33 +29,43 @@ export function installXhrInterceptor(onEntry: (entry: HarEntry) => void): void 
     const method = (this as unknown as { _wolfcola_method: string })._wolfcola_method;
     const start = performance.now();
     this.addEventListener('loadend', () => {
-      if (!isAuthRelated(url)) return;
-      const responseHeaders: HarHeader[] = [];
-      const rawHeaders = this.getAllResponseHeaders();
-      rawHeaders.split('\r\n').forEach((line) => {
-        const idx = line.indexOf(':');
-        if (idx > 0) {
-          responseHeaders.push({
-            name: line.slice(0, idx).trim(),
-            value: line.slice(idx + 1).trim(),
-          });
+      try {
+        if (!isAuthRelated(url)) return;
+        const responseHeaders: HarHeader[] = [];
+        const rawHeaders = this.getAllResponseHeaders();
+        rawHeaders.split('\r\n').forEach((line) => {
+          const idx = line.indexOf(':');
+          if (idx > 0) {
+            responseHeaders.push({
+              name: line.slice(0, idx).trim(),
+              value: line.slice(idx + 1).trim(),
+            });
+          }
+        });
+        let responseText: string | undefined;
+        try {
+          responseText = this.responseText;
+        } catch {
+          // responseType is not '' or 'text', cannot read responseText
         }
-      });
-      const entry: HarEntry = {
-        request: {
-          url,
-          method: method.toUpperCase(),
-          headers: [],
-          ...(typeof body === 'string' ? { postData: { text: body } } : {}),
-        },
-        response: {
-          status: this.status,
-          headers: responseHeaders,
-          ...(this.responseText ? { content: { text: this.responseText } } : {}),
-        },
-        time: performance.now() - start,
-      };
-      onEntry(entry);
+        const entry: HarEntry = {
+          request: {
+            url,
+            method: method.toUpperCase(),
+            headers: [],
+            ...(typeof body === 'string' ? { postData: { text: body } } : {}),
+          },
+          response: {
+            status: this.status,
+            headers: responseHeaders,
+            ...(responseText ? { content: { text: responseText } } : {}),
+          },
+          time: performance.now() - start,
+        };
+        onEntry(entry);
+      } catch (e) {
+        console.warn('[wolfcola] Error in XHR interceptor:', e);
+      }
     });
     return originalSend.call(this, body);
   };

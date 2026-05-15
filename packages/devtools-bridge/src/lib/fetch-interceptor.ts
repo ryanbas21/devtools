@@ -31,25 +31,29 @@ export function installFetchInterceptor(onEntry: (entry: HarEntry) => void): voi
     const duration = performance.now() - start;
 
     if (isAuthRelated(url)) {
-      const bodyText = typeof init?.body === 'string' ? init.body : undefined;
-      const cloned = response.clone();
-      const responseText = await cloned.text().catch(() => undefined);
+      try {
+        const bodyText = typeof init?.body === 'string' ? init.body : undefined;
+        const cloned = response.clone();
+        const responseText = await cloned.text().catch(() => undefined);
 
-      const entry: HarEntry = {
-        request: {
-          url,
-          method: method.toUpperCase(),
-          headers: headersToHar(init?.headers),
-          ...(bodyText ? { postData: { text: bodyText } } : {}),
-        },
-        response: {
-          status: response.status,
-          headers: headersToHar(response.headers),
-          ...(responseText ? { content: { text: responseText } } : {}),
-        },
-        time: duration,
-      };
-      onEntry(entry);
+        const entry: HarEntry = {
+          request: {
+            url,
+            method: method.toUpperCase(),
+            headers: headersToHar(init?.headers),
+            ...(bodyText ? { postData: { text: bodyText } } : {}),
+          },
+          response: {
+            status: response.status,
+            headers: headersToHar(response.headers),
+            ...(responseText ? { content: { text: responseText } } : {}),
+          },
+          time: duration,
+        };
+        onEntry(entry);
+      } catch (e) {
+        console.warn('[wolfcola] Error in fetch interceptor (not affecting your request):', e);
+      }
     }
 
     return response;

@@ -40,28 +40,32 @@ function patchModule(
       const responseChunks: Buffer[] = [];
       res.on('data', (chunk: Buffer) => responseChunks.push(chunk));
       res.on('end', () => {
-        const responseHeaders: HarHeader[] = [];
-        const rawHeaders = res.rawHeaders;
-        for (let i = 0; i < rawHeaders.length; i += 2) {
-          responseHeaders.push({ name: rawHeaders[i], value: rawHeaders[i + 1] });
+        try {
+          const responseHeaders: HarHeader[] = [];
+          const rawHeaders = res.rawHeaders;
+          for (let i = 0; i < rawHeaders.length; i += 2) {
+            responseHeaders.push({ name: rawHeaders[i], value: rawHeaders[i + 1] });
+          }
+          const requestBody = Buffer.concat(chunks).toString('utf-8');
+          const responseBody = Buffer.concat(responseChunks).toString('utf-8');
+          const entry: HarEntry = {
+            request: {
+              url,
+              method,
+              headers: [],
+              ...(requestBody ? { postData: { text: requestBody } } : {}),
+            },
+            response: {
+              status: res.statusCode ?? 0,
+              headers: responseHeaders,
+              ...(responseBody ? { content: { text: responseBody } } : {}),
+            },
+            time: performance.now() - start,
+          };
+          onEntry(entry);
+        } catch (e) {
+          console.warn('[wolfcola] Error in HTTP interceptor:', e);
         }
-        const requestBody = Buffer.concat(chunks).toString('utf-8');
-        const responseBody = Buffer.concat(responseChunks).toString('utf-8');
-        const entry: HarEntry = {
-          request: {
-            url,
-            method,
-            headers: [],
-            ...(requestBody ? { postData: { text: requestBody } } : {}),
-          },
-          response: {
-            status: res.statusCode ?? 0,
-            headers: responseHeaders,
-            ...(responseBody ? { content: { text: responseBody } } : {}),
-          },
-          time: performance.now() - start,
-        };
-        onEntry(entry);
       });
     });
     return req;

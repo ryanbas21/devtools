@@ -32,7 +32,7 @@ describe('launchDebugger', () => {
   });
 
   it('uses execFile-style spawn (not shell) with detached + ignore', () => {
-    const mockProcess = { unref: vi.fn() };
+    const mockProcess = { unref: vi.fn(), on: vi.fn() };
     vi.mocked(child_process.spawn).mockReturnValue(mockProcess as never);
 
     launchDebugger('/usr/local/bin/wolfcola-devtools');
@@ -46,7 +46,7 @@ describe('launchDebugger', () => {
   });
 
   it('passes --port flag when port specified', () => {
-    const mockProcess = { unref: vi.fn() };
+    const mockProcess = { unref: vi.fn(), on: vi.fn() };
     vi.mocked(child_process.spawn).mockReturnValue(mockProcess as never);
 
     launchDebugger('/usr/local/bin/wolfcola-devtools', 8888);
