@@ -1,0 +1,29 @@
+{
+  "name": "@wolfcola/devtools-standalone",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Standalone Electron OIDC/OAuth2 debugger",
+  "type": "module",
+  "main": "dist/src/main.cjs",
+  "scripts": {
+    "build": "node --experimental-strip-types build.mjs",
+    "test": "vitest run",
+    "start": "electron dist/src/main.cjs"
+  },
+  "dependencies": {
+    "@effect/ai": "catalog:effect",
+    "@effect/platform": "catalog:effect",
+    "@effect/platform-node": "catalog:effect",
+    "@wolfcola/devtools-core": "workspace:*",
+    "@wolfcola/devtools-types": "workspace:*",
+    "@wolfcola/devtools-ui": "workspace:*",
+    "effect": "catalog:effect",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "electron": "^35.0.0",
+    "esbuild": "^0.28.0",
+    "vitest": "catalog:vitest"
+  }
+}

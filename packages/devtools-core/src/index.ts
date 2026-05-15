@@ -42,3 +42,4 @@ export type {
   EventStoreServiceShape,
 } from './event-store/event-store.service.js';
 export { handleMessage } from './message-handler/message-handler.js';
+export type { IncomingMessage } from './message-handler/message-handler.js';

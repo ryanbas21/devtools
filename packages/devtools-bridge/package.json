@@ -33,6 +33,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@wolfcola/devtools-core": "workspace:*",
     "@wolfcola/devtools-types": "workspace:*",
     "effect": "catalog:effect"
   },
@@ -43,5 +44,9 @@
     "@forgerock/davinci-client": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "ws": "^8.20.0"
   }
 }

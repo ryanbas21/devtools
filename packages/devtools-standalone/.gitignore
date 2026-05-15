@@ -1,0 +1,4 @@
+# Build artifacts copied by build.mjs
+assets/elm.js
+assets/panel.css
+assets/renderer.js
