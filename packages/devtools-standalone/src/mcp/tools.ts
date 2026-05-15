@@ -1,6 +1,6 @@
 import { Tool, Toolkit } from '@effect/ai';
 import { Effect, Schema } from 'effect';
-import { runDiagnosis, serializeDiagnosis } from '@wolfcola/devtools-core';
+import { redactFlowState, runDiagnosis, serializeDiagnosis } from '@wolfcola/devtools-core';
 import type { AuthEvent } from '@wolfcola/devtools-types';
 import { SessionManager } from '../session-manager.js';
 import { exportAsJson, exportAsMarkdown } from '../export-helpers.js';
@@ -137,7 +137,8 @@ export const WolfcolaToolkitLive = WolfcolaToolkit.toLayer(
         mgr.getState(sessionId).pipe(
           Effect.map((state) => {
             if (!state) return [];
-            let events = state.events;
+            const redacted = redactFlowState(state);
+            let events = redacted.events;
             if (type) events = events.filter((e) => e.type === type);
             if (from !== undefined) events = events.filter((e) => e.timestamp >= from);
             if (to !== undefined) events = events.filter((e) => e.timestamp <= to);
@@ -157,19 +158,20 @@ export const WolfcolaToolkitLive = WolfcolaToolkit.toLayer(
         ),
 
       'get-event-detail': ({ sessionId, eventId }) =>
-        mgr
-          .getState(sessionId)
-          .pipe(
-            Effect.map((state) =>
-              state ? (state.events.find((e) => e.id === eventId) ?? null) : null,
-            ),
-          ),
+        mgr.getState(sessionId).pipe(
+          Effect.map((state) => {
+            if (!state) return null;
+            const redacted = redactFlowState(state);
+            return redacted.events.find((e) => e.id === eventId) ?? null;
+          }),
+        ),
 
       'search-events': ({ sessionId, urlPattern, errorOnly, oidcPhase }) =>
         mgr.getState(sessionId).pipe(
           Effect.map((state) => {
             if (!state) return [];
-            return state.events.filter((e: AuthEvent) => {
+            const redacted = redactFlowState(state);
+            return redacted.events.filter((e: AuthEvent) => {
               if (errorOnly && !e.flags.isError) return false;
               if (
                 urlPattern &&

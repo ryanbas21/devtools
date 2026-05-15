@@ -79,7 +79,10 @@ function runOnSession<A>(
   return Effect.gen(function* () {
     const session = yield* findSession(sessionsRef, sessionId);
     if (!session) return null;
-    return yield* Effect.promise(() => session.runtime.runPromise(coreHandleMessage(message)));
+    const result = yield* Effect.promise(() =>
+      session.runtime.runPromise(coreHandleMessage(message)),
+    ).pipe(Effect.catchAll(() => Effect.succeed(null as A)));
+    return result;
   }) as Effect.Effect<A | null>;
 }
 
@@ -112,43 +115,49 @@ export const SessionManagerLive = Layer.effect(
 
         remove: (id) =>
           Effect.gen(function* () {
-            const sessions = yield* Ref.get(sessionsRef);
-            const session = sessions.find((s) => s.id === id);
+            const session = yield* Ref.modify(sessionsRef, (ss) => {
+              const idx = ss.findIndex((s) => s.id === id);
+              if (idx === -1) return [null as SessionInternal | null, ss];
+              return [ss[idx], ss.filter((_, i) => i !== idx)];
+            });
             if (session) {
               yield* Effect.promise(() => session.runtime.dispose());
             }
-            yield* Ref.update(sessionsRef, (ss) => ss.filter((s) => s.id !== id));
           }),
 
         disconnect: (id) =>
-          Ref.update(sessionsRef, (ss) =>
-            ss.map((s) => (s.id === id ? { ...s, status: 'disconnected' as const } : s)),
-          ),
+          Effect.gen(function* () {
+            const session = yield* Ref.modify(sessionsRef, (ss) => {
+              const idx = ss.findIndex((s) => s.id === id);
+              if (idx === -1) return [null as SessionInternal | null, ss];
+              return [
+                ss[idx],
+                ss.map((x) => (x.id === id ? { ...x, status: 'disconnected' as const } : x)),
+              ];
+            });
+            if (session) {
+              yield* Effect.promise(() => session.runtime.dispose());
+            }
+          }),
 
         reconnect: (opts) =>
           Effect.gen(function* () {
-            const sessions = yield* Ref.get(sessionsRef);
-            const existing = sessions.find((s) => s.name === opts.name);
-            if (existing) {
-              if (existing.clearOnReconnect) {
-                yield* Effect.promise(() =>
-                  existing.runtime.runPromise(
-                    Effect.gen(function* () {
-                      const store = yield* EventStoreService;
-                      yield* store.clear();
-                    }),
-                  ),
-                );
+            const existingSession = yield* Ref.modify(sessionsRef, (ss) => {
+              const existing = ss.find((s) => s.name === opts.name);
+              if (existing) {
+                const newRuntime: ManagedRuntime.ManagedRuntime<EventStoreService, never> =
+                  ManagedRuntime.make(EventStoreInMemory);
+                const updated: SessionInternal = {
+                  ...existing,
+                  runtime: newRuntime,
+                  status: 'connected' as const,
+                };
+                return [toPublic(updated), ss.map((s) => (s.id === existing.id ? updated : s))];
               }
-              const updated: SessionInternal = { ...existing, status: 'connected' as const };
-              yield* Ref.update(sessionsRef, (ss) =>
-                ss.map((s) => (s.id === existing.id ? updated : s)),
-              );
-              return toPublic(updated);
-            }
-            const session = makeSession(opts);
-            yield* Ref.update(sessionsRef, (ss) => [...ss, session]);
-            return toPublic(session);
+              const session = makeSession(opts);
+              return [toPublic(session), [...ss, session]];
+            });
+            return existingSession;
           }),
 
         setClearOnReconnect: (id, value) =>

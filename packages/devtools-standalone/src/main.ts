@@ -1,8 +1,10 @@
-import { Effect, Layer } from 'effect';
+import { Effect, Fiber, Layer } from 'effect';
 import path from 'node:path';
 import { SessionManager, SessionManagerLive } from './session-manager.js';
 import { WsServer, WsServerLive } from './ws-server.js';
 import { IPC_CHANNELS, createIpcHandlers } from './ipc-bridge.js';
+
+let cleanupServer: (() => Promise<void>) | null = null;
 
 const DEFAULT_PORT = 19417;
 
@@ -62,7 +64,7 @@ async function runGui() {
 
     console.log(`[WolfCola DevTools] Starting WebSocket server on port ${port}...`);
 
-    yield* server
+    const fiber = yield* server
       .start(port, (event, diagnosis) => {
         for (const w of BrowserWindow.getAllWindows()) {
           w.webContents.send(IPC_CHANNELS.EVENT, event);
@@ -70,6 +72,16 @@ async function runGui() {
         }
       })
       .pipe(Effect.scoped, Effect.forkDaemon);
+    cleanupServer = () => Effect.runPromise(Fiber.interrupt(fiber).pipe(Effect.asVoid));
+  });
+
+  app.on('will-quit', (event) => {
+    if (cleanupServer) {
+      event.preventDefault();
+      const fn = cleanupServer;
+      cleanupServer = null;
+      fn().finally(() => app.quit());
+    }
   });
 
   await Effect.runPromise(Effect.provide(program, AppLayer));

@@ -67,7 +67,9 @@ export const WsServerLive = Layer.effect(
                   } catch (err) {
                     const msg = err instanceof Error ? err.message : String(err);
                     console.error(`[WsServer] Error processing message:`, msg);
-                    yield* write(JSON.stringify({ type: 'ERROR', message: msg }));
+                    yield* write(
+                      JSON.stringify({ type: 'ERROR', message: 'Failed to process message' }),
+                    );
                   }
                 }),
               );
