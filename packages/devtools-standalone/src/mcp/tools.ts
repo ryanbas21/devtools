@@ -1,14 +1,20 @@
 import { Tool, Toolkit } from '@effect/ai';
 import { Effect, Schema } from 'effect';
-import {
-  redactFlowState,
-  renderFlowMarkdown,
-  runDiagnosis,
-  serializeDiagnosis,
-} from '@wolfcola/devtools-core';
-import type { ExtendedFlowState } from '@wolfcola/devtools-core';
+import { runDiagnosis, serializeDiagnosis } from '@wolfcola/devtools-core';
 import type { AuthEvent } from '@wolfcola/devtools-types';
 import { SessionManager } from '../session-manager.js';
+import { exportAsJson, exportAsMarkdown } from '../export-helpers.js';
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function matchesUrlPattern(url: string, pattern: string): boolean {
+  if (pattern.length > 200) return url.includes(pattern);
+  try {
+    return new RegExp(pattern).test(url);
+  } catch {
+    return url.includes(pattern);
+  }
+}
 
 // ── Tool Definitions ────────────────────────────────────────────────────────
 
@@ -107,26 +113,11 @@ export const WolfcolaToolkit = Toolkit.make(
 
 // ── Handlers ────────────────────────────────────────────────────────────────
 
-function matchesUrlPattern(url: string, pattern: string): boolean {
-  if (pattern.length > 200) return url.includes(pattern);
-  try {
-    return new RegExp(pattern).test(url);
-  } catch {
-    return url.includes(pattern);
-  }
-}
-
 // toLayer accepts an Effect that produces handlers. By yielding SessionManager
 // here, we close over `mgr` — the individual handlers have R = never.
 export const WolfcolaToolkitLive = WolfcolaToolkit.toLayer(
   Effect.gen(function* () {
     const mgr = yield* SessionManager;
-
-    function getState(sessionId: string) {
-      return mgr
-        .handleMessage(sessionId, { type: 'GET_STATE' })
-        .pipe(Effect.map((result) => result as ExtendedFlowState | null));
-    }
 
     return {
       'list-sessions': () =>
@@ -143,7 +134,7 @@ export const WolfcolaToolkitLive = WolfcolaToolkit.toLayer(
         ),
 
       'get-events': ({ sessionId, type, from, to }) =>
-        getState(sessionId).pipe(
+        mgr.getState(sessionId).pipe(
           Effect.map((state) => {
             if (!state) return [];
             let events = state.events;
@@ -155,10 +146,10 @@ export const WolfcolaToolkitLive = WolfcolaToolkit.toLayer(
         ),
 
       'get-flow-summary': ({ sessionId }) =>
-        getState(sessionId).pipe(Effect.map((state) => (state ? state.summary : null))),
+        mgr.getState(sessionId).pipe(Effect.map((state) => (state ? state.summary : null))),
 
       'get-diagnosis': ({ sessionId }) =>
-        getState(sessionId).pipe(
+        mgr.getState(sessionId).pipe(
           Effect.map((state) => {
             if (!state) return null;
             return serializeDiagnosis(runDiagnosis(state.events));
@@ -166,14 +157,16 @@ export const WolfcolaToolkitLive = WolfcolaToolkit.toLayer(
         ),
 
       'get-event-detail': ({ sessionId, eventId }) =>
-        getState(sessionId).pipe(
-          Effect.map((state) =>
-            state ? (state.events.find((e) => e.id === eventId) ?? null) : null,
+        mgr
+          .getState(sessionId)
+          .pipe(
+            Effect.map((state) =>
+              state ? (state.events.find((e) => e.id === eventId) ?? null) : null,
+            ),
           ),
-        ),
 
       'search-events': ({ sessionId, urlPattern, errorOnly, oidcPhase }) =>
-        getState(sessionId).pipe(
+        mgr.getState(sessionId).pipe(
           Effect.map((state) => {
             if (!state) return [];
             return state.events.filter((e: AuthEvent) => {
@@ -191,37 +184,15 @@ export const WolfcolaToolkitLive = WolfcolaToolkit.toLayer(
         ),
 
       'clear-flow': ({ sessionId }) =>
-        mgr.handleMessage(sessionId, { type: 'CLEAR' }).pipe(Effect.map(() => ({ cleared: true }))),
+        mgr.clearSession(sessionId).pipe(Effect.map(() => ({ cleared: true }))),
 
       'export-json': ({ sessionId }) =>
-        getState(sessionId).pipe(
-          Effect.map((state) => {
-            if (!state) return null;
-            const redacted = redactFlowState(
-              state as unknown as Parameters<typeof redactFlowState>[0],
-            );
-            return JSON.stringify(
-              { version: 1, exportedAt: new Date().toISOString(), redacted: true, flow: redacted },
-              null,
-              2,
-            );
-          }),
-        ),
+        mgr.getState(sessionId).pipe(Effect.map((state) => (state ? exportAsJson(state) : null))),
 
       'export-markdown': ({ sessionId }) =>
-        getState(sessionId).pipe(
-          Effect.map((state) => {
-            if (!state) return null;
-            const redacted = redactFlowState(
-              state as unknown as Parameters<typeof redactFlowState>[0],
-            );
-            const diagnosis = runDiagnosis(redacted.events);
-            return renderFlowMarkdown(
-              redacted as unknown as Parameters<typeof renderFlowMarkdown>[0],
-              diagnosis,
-            );
-          }),
-        ),
+        mgr
+          .getState(sessionId)
+          .pipe(Effect.map((state) => (state ? exportAsMarkdown(state) : null))),
 
       'set-clear-on-reconnect': ({ sessionId, value }) =>
         mgr.setClearOnReconnect(sessionId, value).pipe(Effect.map(() => ({ updated: true }))),

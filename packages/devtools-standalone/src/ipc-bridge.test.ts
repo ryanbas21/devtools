@@ -16,9 +16,11 @@ describe('IPC_CHANNELS', () => {
 
 describe('createIpcHandlers', () => {
   it('returns handler functions for all channels', () => {
-    const mockSessionManager = {
+    const mockSessionManager: Record<string, ReturnType<typeof vi.fn>> = {
       list: vi.fn(),
-      handleMessage: vi.fn(),
+      getState: vi.fn(),
+      clearSession: vi.fn(),
+      ingestEvent: vi.fn(),
       setClearOnReconnect: vi.fn(),
       getSession: vi.fn(),
     };

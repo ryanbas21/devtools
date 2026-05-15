@@ -4,6 +4,8 @@ import {
   EventStoreInMemory,
   handleMessage as coreHandleMessage,
 } from '@wolfcola/devtools-core';
+import type { ExtendedFlowState, IncomingMessage } from '@wolfcola/devtools-core';
+import type { AuthEvent } from '@wolfcola/devtools-types';
 
 export interface SessionOptions {
   name: string;
@@ -42,12 +44,17 @@ export interface SessionManagerShape {
   create: (opts: SessionOptions) => Effect.Effect<Session>;
   list: () => Effect.Effect<Session[]>;
   findByName: (name: string) => Effect.Effect<Session | null>;
+  getSession: (id: string) => Effect.Effect<Session | null>;
   remove: (id: string) => Effect.Effect<void>;
   disconnect: (id: string) => Effect.Effect<void>;
   reconnect: (opts: SessionOptions) => Effect.Effect<Session>;
-  handleMessage: (sessionId: string, message: unknown) => Effect.Effect<unknown>;
   setClearOnReconnect: (id: string, value: boolean) => Effect.Effect<void>;
-  getSession: (id: string) => Effect.Effect<Session | null>;
+  getState: (sessionId: string) => Effect.Effect<ExtendedFlowState | null>;
+  clearSession: (sessionId: string) => Effect.Effect<void>;
+  ingestEvent: (
+    sessionId: string,
+    message: { readonly type: 'SDK_EVENT' | 'NETWORK_EVENT'; readonly payload: unknown },
+  ) => Effect.Effect<AuthEvent | null>;
 }
 
 export class SessionManager extends Context.Tag('SessionManager')<
@@ -58,6 +65,22 @@ export class SessionManager extends Context.Tag('SessionManager')<
 function toPublic(s: SessionInternal): Session {
   const { runtime: _, ...pub } = s;
   return pub;
+}
+
+function findSession(sessionsRef: Ref.Ref<SessionInternal[]>, sessionId: string) {
+  return Effect.map(Ref.get(sessionsRef), (ss) => ss.find((s) => s.id === sessionId) ?? null);
+}
+
+function runOnSession<A>(
+  sessionsRef: Ref.Ref<SessionInternal[]>,
+  sessionId: string,
+  message: IncomingMessage,
+): Effect.Effect<A | null> {
+  return Effect.gen(function* () {
+    const session = yield* findSession(sessionsRef, sessionId);
+    if (!session) return null;
+    return yield* Effect.promise(() => session.runtime.runPromise(coreHandleMessage(message)));
+  }) as Effect.Effect<A | null>;
 }
 
 export const SessionManagerLive = Layer.effect(
@@ -128,20 +151,22 @@ export const SessionManagerLive = Layer.effect(
             return toPublic(session);
           }),
 
-        handleMessage: (sessionId, message) =>
-          Effect.gen(function* () {
-            const sessions = yield* Ref.get(sessionsRef);
-            const session = sessions.find((s) => s.id === sessionId);
-            if (!session) return null;
-            return yield* Effect.promise(() =>
-              session.runtime.runPromise(coreHandleMessage(message as never)),
-            );
-          }),
-
         setClearOnReconnect: (id, value) =>
           Ref.update(sessionsRef, (ss) =>
             ss.map((s) => (s.id === id ? { ...s, clearOnReconnect: value } : s)),
           ),
+
+        getState: (sessionId) =>
+          runOnSession<ExtendedFlowState>(sessionsRef, sessionId, { type: 'GET_STATE' }),
+
+        clearSession: (sessionId) =>
+          runOnSession(sessionsRef, sessionId, { type: 'CLEAR' }).pipe(Effect.asVoid),
+
+        // The readonly Schema-decoded message is structurally compatible with
+        // core's mutable IncomingMessage at runtime. This is the single cast
+        // bridging the Schema world (readonly) to the core world (mutable).
+        ingestEvent: (sessionId, message) =>
+          runOnSession<AuthEvent>(sessionsRef, sessionId, message as IncomingMessage),
       }),
     ),
   ),

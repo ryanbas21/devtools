@@ -2,11 +2,14 @@ import { Context, Effect, Layer, Schema, Scope } from 'effect';
 import { NodeSocketServer } from '@effect/platform-node';
 import { SocketServer, Socket } from '@effect/platform';
 import { runDiagnosis, serializeDiagnosis } from '@wolfcola/devtools-core';
-import type { ExtendedFlowState } from '@wolfcola/devtools-core';
+import type { AuthEvent } from '@wolfcola/devtools-types';
 import { SessionManager } from './session-manager.js';
 import { HandshakeMessageFromJson, IncomingMessageFromJson } from './protocol.js';
 
-export type EventCallback = (event: unknown, diagnosis: unknown) => void;
+export type EventCallback = (
+  event: AuthEvent,
+  diagnosis: ReturnType<typeof serializeDiagnosis>,
+) => void;
 
 export interface WsServerShape {
   start: (
@@ -50,15 +53,13 @@ export const WsServerLive = Layer.effect(
                     }
 
                     const message = Schema.decodeUnknownSync(IncomingMessageFromJson)(text);
-                    if (message.type !== 'HANDSHAKE') {
-                      const result = yield* mgr.handleMessage(sessionId, message);
-                      if (
-                        result &&
-                        onEvent &&
-                        (message.type === 'SDK_EVENT' || message.type === 'NETWORK_EVENT')
-                      ) {
-                        const state = yield* mgr.handleMessage(sessionId, { type: 'GET_STATE' });
-                        const events = (state as ExtendedFlowState | null)?.events ?? [];
+                    if (message.type === 'CLEAR') {
+                      yield* mgr.clearSession(sessionId);
+                    } else if (message.type === 'SDK_EVENT' || message.type === 'NETWORK_EVENT') {
+                      const result = yield* mgr.ingestEvent(sessionId, message);
+                      if (result && onEvent) {
+                        const state = yield* mgr.getState(sessionId);
+                        const events = state?.events ?? [];
                         const diagnosis = runDiagnosis(events);
                         onEvent(result, serializeDiagnosis(diagnosis));
                       }
@@ -71,7 +72,6 @@ export const WsServerLive = Layer.effect(
                 }),
               );
 
-              // Socket closed — disconnect session
               if (sessionId) {
                 yield* mgr.disconnect(sessionId);
               }

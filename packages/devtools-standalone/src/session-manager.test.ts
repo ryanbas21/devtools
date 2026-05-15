@@ -92,30 +92,28 @@ describe('SessionManager', () => {
     expect(result.status).toBe('connected');
   });
 
-  it('handles events through session runtime', async () => {
+  it('getState returns empty state for new session', async () => {
     const state = await run(
       Effect.gen(function* () {
         const mgr = yield* SessionManager;
         const session = yield* mgr.create({ name: 'app-1' });
-        return yield* mgr.handleMessage(session.id, {
-          type: 'GET_STATE',
-        });
+        return yield* mgr.getState(session.id);
       }),
     );
     expect(state).toBeDefined();
-    expect((state as { events: unknown[] }).events).toEqual([]);
+    expect(state!.events).toEqual([]);
   });
 
-  it('clears session state', async () => {
+  it('clearSession clears session state', async () => {
     const state = await run(
       Effect.gen(function* () {
         const mgr = yield* SessionManager;
         const session = yield* mgr.create({ name: 'app-1' });
-        yield* mgr.handleMessage(session.id, { type: 'CLEAR' });
-        return yield* mgr.handleMessage(session.id, { type: 'GET_STATE' });
+        yield* mgr.clearSession(session.id);
+        return yield* mgr.getState(session.id);
       }),
     );
-    expect((state as { events: unknown[] }).events).toEqual([]);
+    expect(state!.events).toEqual([]);
   });
 
   describe('clearOnReconnect', () => {

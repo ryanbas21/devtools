@@ -1,6 +1,6 @@
 import { Effect } from 'effect';
-import { redactFlowState, renderFlowMarkdown, runDiagnosis } from '@wolfcola/devtools-core';
 import type { SessionManagerShape } from './session-manager.js';
+import { exportAsJson, exportAsMarkdown } from './export-helpers.js';
 
 export const IPC_CHANNELS = {
   EVENT: 'wolfcola:event',
@@ -21,28 +21,18 @@ export function createIpcHandlers(mgr: SessionManagerShape) {
       Effect.runPromise(mgr.getSession(sessionId)),
 
     [IPC_CHANNELS.CLEAR_FLOW]: (sessionId: string) =>
-      Effect.runPromise(mgr.handleMessage(sessionId, { type: 'CLEAR' })),
+      Effect.runPromise(mgr.clearSession(sessionId)),
 
     [IPC_CHANNELS.EXPORT_JSON]: async (sessionId: string) => {
-      const state = await Effect.runPromise(mgr.handleMessage(sessionId, { type: 'GET_STATE' }));
+      const state = await Effect.runPromise(mgr.getState(sessionId));
       if (!state) return null;
-      const redacted = redactFlowState(state as unknown as Parameters<typeof redactFlowState>[0]);
-      return JSON.stringify(
-        { version: 1, exportedAt: new Date().toISOString(), redacted: true, flow: redacted },
-        null,
-        2,
-      );
+      return exportAsJson(state);
     },
 
     [IPC_CHANNELS.EXPORT_MARKDOWN]: async (sessionId: string) => {
-      const state = await Effect.runPromise(mgr.handleMessage(sessionId, { type: 'GET_STATE' }));
+      const state = await Effect.runPromise(mgr.getState(sessionId));
       if (!state) return null;
-      const redacted = redactFlowState(state as unknown as Parameters<typeof redactFlowState>[0]);
-      const diagnosis = runDiagnosis(redacted.events);
-      return renderFlowMarkdown(
-        redacted as unknown as Parameters<typeof renderFlowMarkdown>[0],
-        diagnosis,
-      );
+      return exportAsMarkdown(state);
     },
 
     [IPC_CHANNELS.SET_CLEAR_ON_RECONNECT]: (sessionId: string, value: boolean) =>

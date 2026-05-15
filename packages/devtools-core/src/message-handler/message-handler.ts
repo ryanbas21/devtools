@@ -9,7 +9,7 @@ import { detectDpop } from '../annotators/dpop-detector.js';
 import { detectPar } from '../annotators/par-detector.js';
 import { parseWellKnownResponse, isWellKnownUrl } from '../annotators/oidc-discovery.js';
 
-type IncomingMessage =
+export type IncomingMessage =
   | { type: 'NETWORK_EVENT'; payload: HarEntry }
   | { type: 'SDK_EVENT'; payload: unknown }
   | { type: 'CLEAR' }

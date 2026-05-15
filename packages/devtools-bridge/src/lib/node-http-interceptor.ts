@@ -29,14 +29,14 @@ function patchModule(
     const chunks: Buffer[] = [];
     const start = performance.now();
 
-    const origWrite = req.write;
-    // Monkey-patching write to capture request body chunks. The overloaded
-    // signature makes typed forwarding impractical, so we use Function.call.
+    // Writable.write has overloaded signatures. We intercept to capture body
+    // chunks, then delegate to the original via Function.prototype.apply.
+    const origWrite = Function.prototype.apply.bind(req.write, req);
     req.write = function (this: typeof req, chunk: unknown) {
       if (Buffer.isBuffer(chunk)) chunks.push(chunk);
       else if (typeof chunk === 'string') chunks.push(Buffer.from(chunk));
-      // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-explicit-any
-      return (origWrite as any).apply(this, arguments);
+      // eslint-disable-next-line prefer-rest-params
+      return origWrite(arguments);
     };
 
     req.on('response', (res: http.IncomingMessage) => {

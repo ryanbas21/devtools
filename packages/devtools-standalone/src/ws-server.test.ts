@@ -107,8 +107,8 @@ describe('WsServer', () => {
 
       yield* Effect.sleep('300 millis');
 
-      const state = yield* mgr.handleMessage(connMsg.sessionId, { type: 'GET_STATE' });
-      expect((state as { events: unknown[] }).events).toHaveLength(1);
+      const state = yield* mgr.getState(connMsg.sessionId);
+      expect(state!.events).toHaveLength(1);
 
       ws.close();
       yield* Fiber.interrupt(fiber);

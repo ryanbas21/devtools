@@ -58,9 +58,8 @@ describe('Integration: Bridge -> Server -> Session', () => {
 
       yield* Effect.sleep('300 millis');
 
-      const state = yield* mgr.handleMessage(connMsg.sessionId, { type: 'GET_STATE' });
-      const events = (state as { events: unknown[] }).events;
-      expect(events.length).toBeGreaterThanOrEqual(1);
+      const state = yield* mgr.getState(connMsg.sessionId);
+      expect(state!.events.length).toBeGreaterThanOrEqual(1);
 
       ws.close();
       yield* Fiber.interrupt(fiber);

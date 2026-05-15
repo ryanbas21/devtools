@@ -7,6 +7,8 @@ declare global {
   var __wolfcola_original_xhr_send: typeof XMLHttpRequest.prototype.send | undefined;
 }
 
+const xhrMeta = new WeakMap<XMLHttpRequest, { method: string; url: string }>();
+
 export function installXhrInterceptor(onEntry: (entry: HarEntry) => void): void {
   if (globalThis.__wolfcola_xhr_patched) return;
   if (typeof XMLHttpRequest === 'undefined') return;
@@ -17,23 +19,23 @@ export function installXhrInterceptor(onEntry: (entry: HarEntry) => void): void 
   globalThis.__wolfcola_original_xhr_send = originalSend;
   globalThis.__wolfcola_xhr_patched = true;
 
-  // Monkey-patching open to capture method/url. The overloaded signature
-  // makes typed forwarding impractical, so we forward with arguments.
+  // XMLHttpRequest.open has multiple overloaded signatures that make typed
+  // forwarding impractical. We capture method/url in a WeakMap and forward
+  // the original arguments unchanged.
   XMLHttpRequest.prototype.open = function (
     this: XMLHttpRequest,
     method: string,
     url: string | URL,
   ) {
-    (this as unknown as { _wolfcola_method: string })._wolfcola_method = method;
-    (this as unknown as { _wolfcola_url: string })._wolfcola_url =
-      typeof url === 'string' ? url : url.href;
-    // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-explicit-any
-    return (originalOpen as any).apply(this, arguments);
+    xhrMeta.set(this, { method, url: typeof url === 'string' ? url : url.href });
+    // eslint-disable-next-line prefer-rest-params
+    return originalOpen.apply(this, arguments as unknown as Parameters<typeof originalOpen>);
   };
 
   XMLHttpRequest.prototype.send = function (body?: Document | XMLHttpRequestBodyInit | null) {
-    const url = (this as unknown as { _wolfcola_url: string })._wolfcola_url;
-    const method = (this as unknown as { _wolfcola_method: string })._wolfcola_method;
+    const meta = xhrMeta.get(this);
+    const url = meta?.url ?? '';
+    const method = meta?.method ?? 'GET';
     const start = performance.now();
     this.addEventListener('loadend', () => {
       try {
