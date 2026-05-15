@@ -1,6 +1,6 @@
 # @wolfcola/devtools-bridge
 
-Opt-in SDK adapter that connects your Ping Identity / ForgeRock application to WolfCola DevTools — either the [browser extension](../devtools-extension) or the [VS Code extension](../vscode-extension). Add it to your app in one line — it is a no-op when the extension is not installed, so it is safe to ship in production builds.
+Opt-in SDK adapter that connects your Ping Identity / ForgeRock application to WolfCola DevTools — the [browser extension](../devtools-extension), the [VS Code extension](../vscode-extension), or the [standalone debugger](../devtools-standalone). Add it to your app in one line — it is a no-op when no debugger is available, so it is safe to ship in production builds.
 
 ## Contents
 
@@ -9,6 +9,7 @@ Opt-in SDK adapter that connects your Ping Identity / ForgeRock application to W
   - [DaVinci — `attachDevToolsBridge`](#davinci--attachdevtoolsbridge)
   - [AM Journey — `attachJourneyBridge`](#am-journey--attachjourneybridge)
   - [OIDC / OAuth — `attachOidcBridge`](#oidc--oauth--attachoidcbridge)
+- [Standalone debugger — `attachDebugger`](#standalone-debugger--attachdebugger)
 - [Low-level API](#low-level-api)
 - [How it works](#how-it-works)
 - [Safety](#safety)
@@ -134,6 +135,61 @@ attachOidcBridge(client, { clientId: 'my-spa-client', ...rest });
 
 ---
 
+## Standalone debugger — `attachDebugger`
+
+Connects your app to the [standalone Electron debugger](../devtools-standalone) via WebSocket instead of the browser extension. Works in both browser and Node.js environments.
+
+```ts
+import { attachDebugger } from '@wolfcola/devtools-bridge';
+
+const handle = await attachDebugger({
+  name: 'my-spa',
+  port: 19417, // default
+  autoLaunch: true, // launch debugger if not running (default true)
+  network: true, // install fetch interceptor (default true)
+  framework: 'react', // optional metadata
+});
+
+// Later:
+handle.detach(); // cleanup interceptors and close WebSocket
+```
+
+**Options:**
+
+| Option       | Type      | Default | Purpose                                                    |
+| ------------ | --------- | ------- | ---------------------------------------------------------- |
+| `name`       | `string`  | —       | App name shown in session list (required)                  |
+| `port`       | `number`  | `19417` | WebSocket server port                                      |
+| `autoLaunch` | `boolean` | `true`  | Launch debugger binary if not already running              |
+| `network`    | `boolean` | `true`  | Install fetch interceptor to capture auth-related requests |
+| `pid`        | `number`  | —       | Process ID (optional metadata)                             |
+| `framework`  | `string`  | —       | Framework name (optional metadata)                         |
+
+**What happens on `attachDebugger()`:**
+
+1. Opens a WebSocket to `ws://localhost:{port}` and sends a handshake
+2. If not connected and `autoLaunch` is enabled, finds `wolfcola-devtools` in PATH, spawns it, and retries with exponential backoff (~2.5s max)
+3. If connected and `network` is enabled, installs a fetch interceptor that forwards auth-related requests to the debugger
+4. Returns `{ connected, detach() }`
+
+**Node.js HTTP interceptor** — for server-side apps that use `http`/`https` instead of `fetch`:
+
+```ts
+import {
+  installNodeHttpInterceptor,
+  uninstallNodeHttpInterceptor,
+} from '@wolfcola/devtools-bridge';
+
+installNodeHttpInterceptor((entry) => {
+  client.sendNetworkEvent(entry);
+});
+
+// Later:
+uninstallNodeHttpInterceptor();
+```
+
+---
+
 ## Low-level API
 
 If you need to emit events from outside a supported client, use the primitives directly.
@@ -191,9 +247,25 @@ Your app
             │  Runtime.bindingCalled('__wolfcolaBridge', payload)
             ▼
       VS Code extension host  ──▶  TreeView + WebView (Elm)
+
+── OR (Standalone debugger) ──
+
+Your app
+  └── attachDebugger({ name: 'my-app' })
+            │
+            │  WebSocket to ws://localhost:19417
+            │  HANDSHAKE → SDK_EVENT / NETWORK_EVENT
+            ▼
+      Electron main process  ──▶  SessionManager ──▶  EventStore
+            │
+            │  IPC (wolfcola:event, wolfcola:diagnosis)
+            ▼
+      Electron renderer  ──▶  Elm UI (same panel as extension)
 ```
 
 The VS Code extension captures SDK events via a CDP-injected script that listens for the same `__pingDevtools` postMessage — no browser extension needed.
+
+The standalone debugger receives events over WebSocket. `attachDebugger()` handles connection, auto-launch, and network interception automatically.
 
 Each bridge function:
 
