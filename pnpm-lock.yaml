@@ -259,7 +259,13 @@ importers:
       effect:
         specifier: catalog:effect
         version: 3.21.2
+      ws:
+        specifier: ^8.20.0
+        version: 8.20.0
     devDependencies:
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
       electron:
         specifier: ^35.0.0
         version: 35.7.5

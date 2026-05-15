@@ -11,16 +11,18 @@
     "start": "electron dist/src/main.js"
   },
   "dependencies": {
+    "@effect/platform": "catalog:effect",
+    "@effect/platform-node": "catalog:effect",
     "@wolfcola/devtools-core": "workspace:*",
     "@wolfcola/devtools-types": "workspace:*",
     "@wolfcola/devtools-ui": "workspace:*",
     "effect": "catalog:effect",
-    "@effect/platform": "catalog:effect",
-    "@effect/platform-node": "catalog:effect"
+    "ws": "^8.20.0"
   },
   "devDependencies": {
-    "esbuild": "^0.28.0",
+    "@types/ws": "^8.18.1",
     "electron": "^35.0.0",
+    "esbuild": "^0.28.0",
     "vitest": "catalog:vitest"
   }
 }
