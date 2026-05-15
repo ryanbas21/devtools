@@ -4,11 +4,11 @@
   "private": true,
   "description": "Standalone Electron OIDC/OAuth2 debugger",
   "type": "module",
-  "main": "dist/src/main.js",
+  "main": "dist/src/main.cjs",
   "scripts": {
     "build": "node --experimental-strip-types build.mjs",
     "test": "vitest run",
-    "start": "electron dist/src/main.js"
+    "start": "electron dist/src/main.cjs"
   },
   "dependencies": {
     "@effect/platform": "catalog:effect",

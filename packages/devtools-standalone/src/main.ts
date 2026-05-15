@@ -25,13 +25,13 @@ function createWindow(): BrowserWindow {
     height: 800,
     title: 'WolfCola DevTools',
     webPreferences: {
-      preload: path.join(import.meta.dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
 
-  win.loadFile(path.join(import.meta.dirname, '..', 'assets', 'panel.html'));
+  win.loadFile(path.join(__dirname, '..', '..', 'assets', 'panel.html'));
   return win;
 }
 
@@ -56,19 +56,23 @@ async function main() {
       );
     }
 
-    yield* Effect.fork(
-      server.start(port, (event, diagnosis) => {
+    console.log(`[WolfCola DevTools] Starting WebSocket server on port ${port}...`);
+
+    // server.start returns Effect<never, ..., Scope> — fork it scoped so
+    // the server runs for the lifetime of the program
+    yield* server
+      .start(port, (event, diagnosis) => {
         for (const win of BrowserWindow.getAllWindows()) {
           win.webContents.send(IPC_CHANNELS.EVENT, event);
           win.webContents.send(IPC_CHANNELS.DIAGNOSIS, diagnosis);
         }
-      }),
-    );
-
-    console.log(`[WolfCola DevTools] WebSocket server listening on port ${port}`);
+      })
+      .pipe(Effect.scoped, Effect.forkDaemon);
   });
 
   await Effect.runPromise(Effect.provide(program, AppLayer));
+
+  console.log(`[WolfCola DevTools] WebSocket server listening on port ${port}`);
 
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();

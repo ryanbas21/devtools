@@ -14,10 +14,9 @@ npx([
   'src/main.ts',
   '--bundle',
   '--platform=node',
-  '--format=esm',
-  '--outfile=dist/src/main.js',
+  '--format=cjs',
+  '--outfile=dist/src/main.cjs',
   '--external:electron',
-  '--packages=external',
 ]);
 
 npx([
@@ -26,9 +25,8 @@ npx([
   '--bundle',
   '--platform=node',
   '--format=cjs',
-  '--outfile=dist/src/preload.js',
+  '--outfile=dist/src/preload.cjs',
   '--external:electron',
-  '--packages=external',
 ]);
 
 npx([

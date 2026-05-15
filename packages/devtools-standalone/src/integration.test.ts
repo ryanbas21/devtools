@@ -15,8 +15,8 @@ describe('Integration: Bridge -> Server -> Session', () => {
     const program = Effect.gen(function* () {
       const server = yield* WsServer;
       const mgr = yield* SessionManager;
-      const fiber = yield* Effect.fork(server.start(port));
-      yield* Effect.sleep('100 millis');
+      const fiber = yield* server.start(port).pipe(Effect.scoped, Effect.fork);
+      yield* Effect.sleep('200 millis');
 
       const ws = yield* Effect.promise<WebSocket>(
         () =>
@@ -75,8 +75,8 @@ describe('Integration: Bridge -> Server -> Session', () => {
     const program = Effect.gen(function* () {
       const server = yield* WsServer;
       const mgr = yield* SessionManager;
-      const fiber = yield* Effect.fork(server.start(port));
-      yield* Effect.sleep('100 millis');
+      const fiber = yield* server.start(port).pipe(Effect.scoped, Effect.fork);
+      yield* Effect.sleep('200 millis');
 
       const connect = (name: string) =>
         new Promise<{ ws: WebSocket; sessionId: string }>((resolve, reject) => {

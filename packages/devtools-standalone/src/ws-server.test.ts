@@ -31,8 +31,8 @@ describe('WsServer', () => {
 
     const program = Effect.gen(function* () {
       const server = yield* WsServer;
-      const fiber = yield* Effect.fork(server.start(port));
-      yield* Effect.sleep('100 millis');
+      const fiber = yield* server.start(port).pipe(Effect.scoped, Effect.fork);
+      yield* Effect.sleep('200 millis');
 
       const ws = yield* Effect.promise(() =>
         connectClient(port, { type: 'HANDSHAKE', name: 'test-app' }),
@@ -56,8 +56,8 @@ describe('WsServer', () => {
     const program = Effect.gen(function* () {
       const server = yield* WsServer;
       const mgr = yield* SessionManager;
-      const fiber = yield* Effect.fork(server.start(port));
-      yield* Effect.sleep('100 millis');
+      const fiber = yield* server.start(port).pipe(Effect.scoped, Effect.fork);
+      yield* Effect.sleep('200 millis');
 
       const ws = yield* Effect.promise(() =>
         connectClient(port, { type: 'HANDSHAKE', name: 'app-1' }),
@@ -81,8 +81,8 @@ describe('WsServer', () => {
     const program = Effect.gen(function* () {
       const server = yield* WsServer;
       const mgr = yield* SessionManager;
-      const fiber = yield* Effect.fork(server.start(port));
-      yield* Effect.sleep('100 millis');
+      const fiber = yield* server.start(port).pipe(Effect.scoped, Effect.fork);
+      yield* Effect.sleep('200 millis');
 
       const ws = yield* Effect.promise(() =>
         connectClient(port, { type: 'HANDSHAKE', name: 'app-1' }),
@@ -105,7 +105,7 @@ describe('WsServer', () => {
         }),
       );
 
-      yield* Effect.sleep('200 millis');
+      yield* Effect.sleep('300 millis');
 
       const state = yield* mgr.handleMessage(connMsg.sessionId, { type: 'GET_STATE' });
       expect((state as { events: unknown[] }).events).toHaveLength(1);
