@@ -33,6 +33,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@wolfcola/devtools-core": "workspace:*",
     "@wolfcola/devtools-types": "workspace:*",
     "effect": "catalog:effect"
   },
