@@ -1,7 +1,6 @@
 import { Schema } from 'effect';
 import { FlowExportSchema } from '@wolfcola/devtools-types';
-import type { FlowExport } from '@wolfcola/devtools-types';
-import { redactFlowState, renderFlowMarkdown, runDiagnosis } from '@wolfcola/devtools-core';
+import { runDiagnosis, exportAsJson, exportAsMarkdown } from '@wolfcola/devtools-core';
 import type { ElmModule } from '@wolfcola/devtools-ui/ports';
 // jwt.ts is no longer used for DOM rendering — JWT decoding now happens
 // in Elm (JsonTree.elm). The jwt.ts module is kept for the test suite.
@@ -182,24 +181,14 @@ chrome.runtime.sendMessage({ type: 'GET_STATE' }, (state) => {
 app.ports.exportJson?.subscribe(() => {
   chrome.runtime.sendMessage({ type: 'GET_STATE' }, (state) => {
     if (!state) return;
-    const redacted = redactFlowState(state);
-    const envelope: FlowExport = {
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      redacted: true,
-      flow: redacted,
-    };
-    copyToClipboard(JSON.stringify(envelope, null, 2));
+    copyToClipboard(exportAsJson(state));
   });
 });
 
 app.ports.exportMarkdown?.subscribe(() => {
   chrome.runtime.sendMessage({ type: 'GET_STATE' }, (state) => {
     if (!state) return;
-    const redacted = redactFlowState(state);
-    const diagnosis = runDiagnosis(redacted.events);
-    const md = renderFlowMarkdown(redacted, diagnosis);
-    copyToClipboard(md);
+    copyToClipboard(exportAsMarkdown(state));
   });
 });
 

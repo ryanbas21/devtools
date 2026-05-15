@@ -1,6 +1,6 @@
 import { Effect } from 'effect';
 import type { SessionManagerShape } from './session-manager.js';
-import { exportAsJson, exportAsMarkdown } from './export-helpers.js';
+import { exportAsJson, exportAsMarkdown } from '@wolfcola/devtools-core';
 
 export const IPC_CHANNELS = {
   EVENT: 'wolfcola:event',

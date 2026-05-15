@@ -44,11 +44,6 @@ export function handleMessage(message: IncomingMessage) {
         const causedBy = state.lastSdkEventId ?? state.lastOidcEventId ?? null;
         const eventWithCause = { ...enriched, causedBy };
 
-        // Track last OIDC event for phase-based causal linking
-        if (eventWithCause.oidcSemantics) {
-          yield* store.setLastOidcEventId(eventWithCause.id);
-        }
-
         yield* store.append(eventWithCause);
         yield* store.persist();
         return eventWithCause;
@@ -74,27 +69,37 @@ export function handleMessage(message: IncomingMessage) {
   });
 }
 
+type OidcEnricher = (
+  semantics: OidcSemantics,
+  data: AuthEvent['data'] & { _tag: 'network' },
+  config: import('../annotators/oidc-discovery.js').OidcConfig | null,
+) => OidcSemantics;
+
+const enrichWithDpop: OidcEnricher = (semantics, data) => {
+  const dpop = detectDpop(data);
+  return dpop ? ({ ...semantics, dpop } as OidcSemantics) : semantics;
+};
+
+const enrichWithPar: OidcEnricher = (semantics, data, config) => {
+  const par = detectPar(data, config);
+  return par ? ({ ...semantics, par: { ...semantics.par, ...par } } as OidcSemantics) : semantics;
+};
+
+const enrichers: OidcEnricher[] = [enrichWithDpop, enrichWithPar];
+
 function enrichWithOidcSemantics(
   event: AuthEvent,
   oidcConfig: import('../annotators/oidc-discovery.js').OidcConfig | null,
 ): AuthEvent {
   if (event.data._tag !== 'network') return event;
 
-  const semantics = annotateOidc(event.data, oidcConfig);
-  if (!semantics) return event;
+  const base = annotateOidc(event.data, oidcConfig);
+  if (!base) return event;
 
-  // Enrich with DPoP detection
-  const dpop = detectDpop(event.data);
+  const semantics = enrichers.reduce<OidcSemantics>(
+    (sem, enrich) => enrich(sem, event.data as AuthEvent['data'] & { _tag: 'network' }, oidcConfig),
+    base,
+  );
 
-  // Enrich with PAR detection
-  const par = detectPar(event.data, oidcConfig);
-
-  // Build final semantics immutably
-  const enriched = {
-    ...semantics,
-    ...(dpop ? { dpop } : {}),
-    ...(par ? { par: { ...semantics.par, ...par } } : {}),
-  } as OidcSemantics;
-
-  return { ...event, oidcSemantics: enriched } as AuthEvent;
+  return { ...event, oidcSemantics: semantics } as AuthEvent;
 }

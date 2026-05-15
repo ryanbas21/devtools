@@ -1,24 +1,9 @@
-// Barrel exports — populated as modules are moved in
-export { annotateOidc } from './annotators/oidc-annotator.js';
-export { detectCorsFlags } from './annotators/cors-detector.js';
-export { detectDpop } from './annotators/dpop-detector.js';
-export { detectPar } from './annotators/par-detector.js';
-export {
-  parseWellKnownResponse,
-  isWellKnownUrl,
-  matchesDiscoveredEndpoint,
-} from './annotators/oidc-discovery.js';
-export type { OidcConfig } from './annotators/oidc-discovery.js';
-export { trackOidcEvent, makeEmptyOidcFlowState } from './annotators/oidc-flow-tracker.js';
-export type { OidcFlowState, OidcFlow } from './annotators/oidc-flow-tracker.js';
-export { isAuthRelated, buildNetworkEvent } from './annotators/network-observer.js';
+// ─── Annotators (consumer-facing) ────────────────────────────────────────────
+export { isAuthRelated } from './annotators/network-observer.js';
 export type { HarEntry, HarHeader } from './annotators/network-observer.js';
-export {
-  JWT_PATTERN,
-  decodeJwtPayload,
-  extractJwt,
-  findExpiredJwtsInHeaders,
-} from './annotators/jwt-utils.js';
+export type { OidcConfig } from './annotators/oidc-discovery.js';
+
+// ─── Diagnosis ───────────────────────────────────────────────────────────────
 export { runDiagnosis, runFlowRules, runEventRules } from './diagnosis/diagnosis-engine.js';
 export type {
   Severity,
@@ -29,8 +14,13 @@ export type {
 } from './diagnosis/diagnosis-engine.js';
 export { serializeDiagnosis } from './diagnosis/serialize-diagnosis.js';
 export type { SerializableDiagnosisResult } from './diagnosis/serialize-diagnosis.js';
+
+// ─── Export ──────────────────────────────────────────────────────────────────
 export { renderFlowMarkdown } from './export/markdown.js';
 export { redactFlowState } from './export/redact.js';
+export { exportAsJson, exportAsMarkdown } from './export/export-transforms.js';
+
+// ─── Storage & Message Handling ──────────────────────────────────────────────
 export {
   EventStoreService,
   EventStoreInMemory,
