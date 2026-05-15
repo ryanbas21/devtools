@@ -935,6 +935,30 @@ describe('PAR rules', () => {
     const result = runFlowRules(events);
     expect(result.some((i) => i.id === 'par:inline-params-with-request-uri')).toBe(true);
   });
+
+  it('does not flag request_uri with only client_id', () => {
+    const events = [
+      makeNetworkEvent({
+        id: 'par-valid',
+        data: {
+          _tag: 'network',
+          url: 'https://auth.example.com/authorize?request_uri=urn:x&client_id=app1',
+          method: 'GET',
+          status: 302,
+          requestHeaders: {},
+          responseHeaders: {},
+          duration: 50,
+        },
+        oidcSemantics: {
+          _tag: 'oidc-semantics',
+          oidcPhase: 'authorize',
+          par: { requestUri: 'urn:x' },
+        },
+      }),
+    ];
+    const result = runFlowRules(events);
+    expect(result.some((i) => i.id === 'par:inline-params-with-request-uri')).toBe(false);
+  });
 });
 
 // ─── Expired JWT via runEventRules ────────────────────────────────────────────
