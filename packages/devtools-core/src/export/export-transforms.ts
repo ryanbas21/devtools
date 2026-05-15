@@ -1,5 +1,7 @@
-import { redactFlowState, renderFlowMarkdown, runDiagnosis } from '@wolfcola/devtools-core';
 import type { FlowState } from '@wolfcola/devtools-types';
+import { redactFlowState } from './redact.js';
+import { renderFlowMarkdown } from './markdown.js';
+import { runDiagnosis } from '../diagnosis/diagnosis-engine.js';
 
 export function exportAsJson(flow: FlowState): string {
   const redacted = redactFlowState(flow);

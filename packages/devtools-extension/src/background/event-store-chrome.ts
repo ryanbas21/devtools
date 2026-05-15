@@ -44,8 +44,6 @@ export const EventStoreChromeLive = Layer.effect(
         ),
       setOidcConfig: (config: OidcConfig) =>
         Ref.update(stateRef, (s) => ({ ...s, oidcConfig: config })),
-      setLastOidcEventId: (id: string) =>
-        Ref.update(stateRef, (s) => ({ ...s, lastOidcEventId: id })),
     })),
   ),
 );

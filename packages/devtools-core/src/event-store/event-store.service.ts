@@ -40,6 +40,7 @@ export function updateSummary(state: ExtendedFlowState, event: AuthEvent): Exten
     events: [...state.events, event],
     summary,
     lastSdkEventId: event.type === 'sdk:node-change' ? event.id : state.lastSdkEventId,
+    lastOidcEventId: event.oidcSemantics ? event.id : state.lastOidcEventId,
   };
 }
 
@@ -50,7 +51,6 @@ export interface EventStoreServiceShape {
   persist: () => Effect.Effect<void>;
   rehydrate: () => Effect.Effect<void>;
   setOidcConfig: (config: OidcConfig) => Effect.Effect<void>;
-  setLastOidcEventId: (id: string) => Effect.Effect<void>;
 }
 
 export class EventStoreService extends Context.Tag('EventStoreService')<
@@ -70,8 +70,6 @@ export const EventStoreInMemory = Layer.effect(
       rehydrate: () => Effect.void,
       setOidcConfig: (config: OidcConfig) =>
         Ref.update(stateRef, (s) => ({ ...s, oidcConfig: config })),
-      setLastOidcEventId: (id: string) =>
-        Ref.update(stateRef, (s) => ({ ...s, lastOidcEventId: id })),
     })),
   ),
 );

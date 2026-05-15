@@ -19,6 +19,7 @@ const TestStoreLive = Layer.effect(
           events: [...s.events, event],
           flowId: s.flowId ?? event.flowId,
           lastSdkEventId: event.type === 'sdk:node-change' ? event.id : s.lastSdkEventId,
+          lastOidcEventId: event.oidcSemantics ? event.id : s.lastOidcEventId,
         })),
       getState: () => Ref.get(stateRef),
       clear: () => Ref.set(stateRef, makeEmptyFlowState()),
@@ -26,8 +27,6 @@ const TestStoreLive = Layer.effect(
       rehydrate: () => Effect.void,
       setOidcConfig: (config: OidcConfig) =>
         Ref.update(stateRef, (s) => ({ ...s, oidcConfig: config })),
-      setLastOidcEventId: (id: string) =>
-        Ref.update(stateRef, (s) => ({ ...s, lastOidcEventId: id })),
     })),
   ),
 );
