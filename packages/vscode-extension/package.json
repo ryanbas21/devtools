@@ -139,11 +139,11 @@
     "@wolfcola/devtools-types": "workspace:*",
     "@wolfcola/devtools-ui": "workspace:*",
     "effect": "catalog:effect",
-    "ws": "^8.18.0"
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",
-    "@types/ws": "^8.18.0",
+    "@types/ws": "^8.18.1",
     "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.28.0"
   }
