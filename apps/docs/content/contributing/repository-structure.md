@@ -20,6 +20,7 @@ The wolfcola-devtools repository is a pnpm workspace monorepo. All publishable p
 | `@wolfcola/devtools-core`           | `packages/devtools-core`           | Shared annotators, diagnosis engine, event store          |
 | `@wolfcola/devtools-ui`             | `packages/devtools-ui`             | Elm UI components for Timeline, Flow, and Learn views     |
 | `@wolfcola/devtools-extension`      | `packages/devtools-extension`      | Browser extension for Chrome and Firefox                  |
+| `@wolfcola/devtools-standalone`     | `packages/devtools-standalone`     | Standalone Electron debugger with WebSocket and MCP       |
 | `oidc-devtools`                     | `packages/vscode-extension`        | VS Code extension with CDP connection                     |
 | `@wolfcola/dead-export-finder`      | `packages/dead-export-finder`      | CLI to find unused exports across monorepo boundaries     |
 | `@wolfcola/changeset-sync-manifest` | `packages/changeset-sync-manifest` | Syncs package version from changesets to manifest files   |
@@ -56,6 +57,11 @@ The packages have the following dependency relationships:
 
 ```
 devtools-extension
+  ├── devtools-core
+  ├── devtools-ui (Elm)
+  └── devtools-types
+
+devtools-standalone
   ├── devtools-core
   ├── devtools-ui (Elm)
   └── devtools-types

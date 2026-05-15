@@ -61,9 +61,22 @@ Scan your monorepo for unused exports:
 npx dead-export-finder
 ```
 
+## Standalone Debugger
+
+For environments where a browser extension is not available (Node.js servers, React Native, Electron apps), use the standalone debugger:
+
+```typescript
+import { attachDebugger } from '@wolfcola/devtools-bridge';
+
+const handle = await attachDebugger({ name: 'my-app' });
+```
+
+<callout type="info">The standalone debugger connects via WebSocket and can auto-launch if installed on your PATH. See the [Standalone Debugger](/docs/standalone-debugger) guide for details.</callout>
+
 ## Next Steps
 
 - Read the [Tree-Shaking Guide](/docs/tree-shaking)
 - Explore the [Architecture](/architecture)
 - Learn about the [DevTools Extension](/docs/devtools-extension)
 - Check out the [VS Code Extension](/docs/vscode-extension)
+- Try the [Standalone Debugger](/docs/standalone-debugger) for non-browser environments

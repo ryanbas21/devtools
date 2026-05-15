@@ -96,7 +96,10 @@ view app _ =
                 [ Html.text "Shared annotators (OIDC phase detection, CORS, DPoP, PAR), diagnosis engine, event store, and export/redaction logic. Used by both the browser extension and VS Code extension." ]
             , Html.dt [] [ Html.text "@wolfcola/devtools-bridge" ]
             , Html.dd []
-                [ Html.text "SDK adapter for emitting events from DaVinci, Journey, and OIDC clients. Depends on devtools-types." ]
+                [ Html.text "SDK adapter for emitting events from DaVinci, Journey, and OIDC clients. Connects to the browser extension or standalone debugger. Depends on devtools-types." ]
+            , Html.dt [] [ Html.text "@wolfcola/devtools-standalone" ]
+            , Html.dd []
+                [ Html.text "Standalone Electron debugger with WebSocket server and MCP integration. Uses devtools-core for event processing and devtools-ui for the Elm panel." ]
             , Html.dt [] [ Html.text "@wolfcola/devtools-ui" ]
             , Html.dd []
                 [ Html.text "Elm UI components for Timeline, Flow, and Learn views. Provides the panel interface with inspector tabs, playback controls, and diagnosis display." ]
@@ -132,19 +135,20 @@ view app _ =
 viewDiagram : Html.Html (PagesMsg Msg)
 viewDiagram =
     Svg.svg
-        [ SvgAttr.viewBox "0 0 900 480"
+        [ SvgAttr.viewBox "0 0 900 580"
         , SvgAttr.width "900"
-        , SvgAttr.height "480"
+        , SvgAttr.height "580"
         , SvgAttr.style "max-width: 100%; height: auto;"
         ]
         [ -- OIDC DevTools group
-          svgGroup 20 20 520 440 "OIDC DevTools"
+          svgGroup 20 20 520 540 "OIDC DevTools"
         , svgBox 180 60 200 50 "devtools-types"
         , svgBox 40 160 200 50 "devtools-core"
         , svgBox 300 160 200 50 "devtools-bridge"
         , svgBox 40 270 200 50 "devtools-ui"
         , svgBox 40 370 200 50 "devtools-extension"
         , svgBox 300 370 200 50 "vscode-extension"
+        , svgBox 300 470 200 50 "devtools-standalone"
 
         -- Tree-Shake Tools group
         , svgGroup 570 20 310 200 "Tree-Shake Tools"
@@ -170,6 +174,9 @@ viewDiagram =
 
         -- Arrows: devtools-core -> vscode-extension
         , svgArrow 200 210 380 370
+
+        -- Arrows: devtools-core -> devtools-standalone
+        , svgArrow 200 210 380 470
 
         -- Arrows: treeshake-check -> eslint-plugin-treeshake
         , svgArrow 720 110 720 160

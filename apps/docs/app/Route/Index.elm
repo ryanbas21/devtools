@@ -125,6 +125,12 @@ viewPackageGrid =
             , route = Route.Packages__Slug_ { slug = "dead-export-finder" }
             , tag = "Published"
             }
+        , viewPackageCard
+            { name = "@wolfcola/devtools-standalone"
+            , description = "Standalone Electron debugger with WebSocket server and MCP integration"
+            , route = Route.Packages__Slug_ { slug = "devtools-standalone" }
+            , tag = "New"
+            }
         ]
 
 
