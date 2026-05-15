@@ -6,6 +6,7 @@ packages:
 catalogs:
   effect:
     effect: '^3.21.1'
+    '@effect/ai': '^0.35.0'
     '@effect/cli': '^0.75.1'
     '@effect/platform': '^0.96.0'
     '@effect/platform-node': '^0.106.0'

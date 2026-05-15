@@ -1,4 +1,3 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
 import { Effect, Layer } from 'effect';
 import path from 'node:path';
 import { SessionManager, SessionManagerLive } from './session-manager.js';
@@ -19,7 +18,21 @@ function getPort(): number {
   return DEFAULT_PORT;
 }
 
-function createWindow(): BrowserWindow {
+// ── MCP Mode (headless, stdio) ──────────────────────────────────────────────
+
+async function runMcp() {
+  const { McpServerLive } = await import('./mcp/server.js');
+  await Layer.launch(McpServerLive).pipe(Effect.runPromise);
+}
+
+// ── GUI Mode (Electron + WebSocket server) ──────────────────────────────────
+
+async function runGui() {
+  const { app, BrowserWindow, ipcMain } = await import('electron');
+  await app.whenReady();
+
+  const port = getPort();
+
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -30,16 +43,7 @@ function createWindow(): BrowserWindow {
       nodeIntegration: false,
     },
   });
-
   win.loadFile(path.join(__dirname, '..', '..', 'assets', 'panel.html'));
-  return win;
-}
-
-async function main() {
-  await app.whenReady();
-
-  const port = getPort();
-  createWindow();
 
   const AppLayer = Layer.provide(WsServerLive, SessionManagerLive).pipe(
     Layer.merge(SessionManagerLive),
@@ -58,13 +62,11 @@ async function main() {
 
     console.log(`[WolfCola DevTools] Starting WebSocket server on port ${port}...`);
 
-    // server.start returns Effect<never, ..., Scope> — fork it scoped so
-    // the server runs for the lifetime of the program
     yield* server
       .start(port, (event, diagnosis) => {
-        for (const win of BrowserWindow.getAllWindows()) {
-          win.webContents.send(IPC_CHANNELS.EVENT, event);
-          win.webContents.send(IPC_CHANNELS.DIAGNOSIS, diagnosis);
+        for (const w of BrowserWindow.getAllWindows()) {
+          w.webContents.send(IPC_CHANNELS.EVENT, event);
+          w.webContents.send(IPC_CHANNELS.DIAGNOSIS, diagnosis);
         }
       })
       .pipe(Effect.scoped, Effect.forkDaemon);
@@ -80,9 +82,27 @@ async function main() {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      const newWin = new BrowserWindow({
+        width: 1200,
+        height: 800,
+        title: 'WolfCola DevTools',
+        webPreferences: {
+          preload: path.join(__dirname, 'preload.cjs'),
+          contextIsolation: true,
+          nodeIntegration: false,
+        },
+      });
+      newWin.loadFile(path.join(__dirname, '..', '..', 'assets', 'panel.html'));
     }
   });
 }
 
-main().catch(console.error);
+// ── Entry Point ─────────────────────────────────────────────────────────────
+
+const isMcpMode = process.argv.includes('--mcp');
+
+if (isMcpMode) {
+  runMcp().catch(console.error);
+} else {
+  runGui().catch(console.error);
+}
