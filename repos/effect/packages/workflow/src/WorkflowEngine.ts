@@ -21,7 +21,9 @@ import * as Workflow from "./Workflow.js"
  * @since 4.0.0
  * @category Services
  */
-export class WorkflowEngine extends Context.Tag("@effect/workflow/WorkflowEngine")<
+export class WorkflowEngine extends Context.Tag(
+  "@effect/workflow/WorkflowEngine"
+)<
   WorkflowEngine,
   {
     /**
@@ -44,12 +46,12 @@ export class WorkflowEngine extends Context.Tag("@effect/workflow/WorkflowEngine
       never,
       | Scope.Scope
       | Exclude<
-        R,
-        | WorkflowEngine
-        | WorkflowInstance
-        | Workflow.Execution<Name>
-        | Scope.Scope
-      >
+          R,
+          | WorkflowEngine
+          | WorkflowInstance
+          | Workflow.Execution<Name>
+          | Scope.Scope
+        >
       | Payload["Context"]
       | Success["Context"]
       | Error["Context"]
@@ -77,9 +79,7 @@ export class WorkflowEngine extends Context.Tag("@effect/workflow/WorkflowEngine
     ) => Effect.Effect<
       Discard extends true ? string : Success["Type"],
       Error["Type"],
-      | Payload["Context"]
-      | Success["Context"]
-      | Error["Context"]
+      Payload["Context"] | Success["Context"] | Error["Context"]
     >
 
     /**
@@ -128,10 +128,7 @@ export class WorkflowEngine extends Context.Tag("@effect/workflow/WorkflowEngine
     ) => Effect.Effect<
       Workflow.Result<Success["Type"], Error["Type"]>,
       never,
-      | Success["Context"]
-      | Error["Context"]
-      | R
-      | WorkflowInstance
+      Success["Context"] | Error["Context"] | R | WorkflowInstance
     >
 
     /**
@@ -163,11 +160,7 @@ export class WorkflowEngine extends Context.Tag("@effect/workflow/WorkflowEngine
         readonly deferredName: string
         readonly exit: Exit.Exit<Success["Type"], Error["Type"]>
       }
-    ) => Effect.Effect<
-      void,
-      never,
-      Success["Context"] | Error["Context"]
-    >
+    ) => Effect.Effect<void, never, Success["Context"] | Error["Context"]>
 
     /**
      * Schedule a wake up for a DurableClock
@@ -186,7 +179,9 @@ export class WorkflowEngine extends Context.Tag("@effect/workflow/WorkflowEngine
  * @since 4.0.0
  * @category Services
  */
-export class WorkflowInstance extends Context.Tag("@effect/workflow/WorkflowEngine/WorkflowInstance")<
+export class WorkflowInstance extends Context.Tag(
+  "@effect/workflow/WorkflowEngine/WorkflowInstance"
+)<
   WorkflowInstance,
   {
     /**
@@ -283,11 +278,7 @@ export interface Encoded {
   readonly activityExecute: (
     activity: Activity.Any,
     attempt: number
-  ) => Effect.Effect<
-    Workflow.Result<unknown, unknown>,
-    never,
-    WorkflowInstance
-  >
+  ) => Effect.Effect<Workflow.Result<unknown, unknown>, never, WorkflowInstance>
   readonly deferredResult: (
     deferred: DurableDeferred.Any
   ) => Effect.Effect<
@@ -316,18 +307,17 @@ export interface Encoded {
  */
 export const makeUnsafe = (options: Encoded): WorkflowEngine["Type"] =>
   WorkflowEngine.of({
-    register: Effect.fnUntraced(function*(workflow, execute) {
+    register: Effect.fnUntraced(function* (workflow, execute) {
       const context = yield* Effect.context<WorkflowEngine>()
       yield* options.register(workflow, (payload, executionId) =>
-        Effect.suspend(() =>
-          execute(payload, executionId)
-        ).pipe(
+        Effect.suspend(() => execute(payload, executionId)).pipe(
           Effect.mapInputContext(
             (input) => Context.merge(context, input) as Context.Context<any>
           )
-        ))
+        )
+      )
     }),
-    execute: Effect.fnUntraced(function*<
+    execute: Effect.fnUntraced(function* <
       Name extends string,
       Payload extends Workflow.AnyStructSchema,
       Success extends Schema.Schema.Any,
@@ -346,7 +336,8 @@ export const makeUnsafe = (options: Encoded): WorkflowEngine["Type"] =>
     ) {
       const payload = opts.payload
       const executionId = opts.executionId
-      const suspendedRetrySchedule = opts.suspendedRetrySchedule ?? defaultRetrySchedule
+      const suspendedRetrySchedule =
+        opts.suspendedRetrySchedule ?? defaultRetrySchedule
       yield* Effect.annotateCurrentSpan({ executionId })
       let result: Workflow.Result<Success["Type"], Error["Type"]> | undefined
 
@@ -366,7 +357,8 @@ export const makeUnsafe = (options: Encoded): WorkflowEngine["Type"] =>
         yield* options.execute(self, {
           executionId,
           payload: payload as object,
-          discard: true
+          discard: true,
+          parent: Option.getOrUndefined(parentInstance)
         })
         return executionId
       }
@@ -394,16 +386,22 @@ export const makeUnsafe = (options: Encoded): WorkflowEngine["Type"] =>
         if (result._tag === "Complete") {
           return yield* result.exit as Exit.Exit<any>
         }
-        sleep ??= (yield* Schedule.driver(suspendedRetrySchedule)).next(void 0).pipe(
-          Effect.catchAll(() => Effect.dieMessage(`${self.name}.execute: suspendedRetrySchedule exhausted`))
-        )
+        sleep ??= (yield* Schedule.driver(suspendedRetrySchedule))
+          .next(void 0)
+          .pipe(
+            Effect.catchAll(() =>
+              Effect.dieMessage(
+                `${self.name}.execute: suspendedRetrySchedule exhausted`
+              )
+            )
+          )
         yield* sleep
       }
     }),
     poll: options.poll,
     interrupt: options.interrupt,
     resume: options.resume,
-    activityExecute: Effect.fnUntraced(function*<
+    activityExecute: Effect.fnUntraced(function* <
       Success extends Schema.Schema.Any,
       Error extends Schema.Schema.All,
       R
@@ -417,43 +415,43 @@ export const makeUnsafe = (options: Encoded): WorkflowEngine["Type"] =>
       )
       return new Workflow.Complete({ exit })
     }),
-    deferredResult: Effect.fnUntraced(
-      function*<Success extends Schema.Schema.Any, Error extends Schema.Schema.All>(
-        deferred: DurableDeferred.DurableDeferred<Success, Error>
-      ) {
-        const instance = yield* WorkflowInstance
-        yield* Effect.annotateCurrentSpan({
-          executionId: instance.executionId
-        })
-        const exit = yield* options.deferredResult(deferred)
-        if (exit === undefined) {
-          return exit
-        }
-        return yield* Effect.orDie(
-          Schema.decodeUnknown(deferred.exitSchema)(exit)
-        ) as Effect.Effect<Exit.Exit<Success["Type"], Error["Type"]>>
+    deferredResult: Effect.fnUntraced(function* <
+      Success extends Schema.Schema.Any,
+      Error extends Schema.Schema.All
+    >(deferred: DurableDeferred.DurableDeferred<Success, Error>) {
+      const instance = yield* WorkflowInstance
+      yield* Effect.annotateCurrentSpan({
+        executionId: instance.executionId
+      })
+      const exit = yield* options.deferredResult(deferred)
+      if (exit === undefined) {
+        return exit
       }
-    ),
-    deferredDone: Effect.fnUntraced(
-      function*<Success extends Schema.Schema.Any, Error extends Schema.Schema.All>(
-        deferred: DurableDeferred.DurableDeferred<Success, Error>,
-        opts: {
-          readonly workflowName: string
-          readonly executionId: string
-          readonly deferredName: string
-          readonly exit: Exit.Exit<Success["Type"], Error["Type"]>
-        }
-      ) {
-        return yield* options.deferredDone({
-          workflowName: opts.workflowName,
-          executionId: opts.executionId,
-          deferredName: opts.deferredName,
-          exit: yield* Schema.encode(deferred.exitSchema)(
-            opts.exit
-          ) as Effect.Effect<Exit.Exit<unknown, unknown>>
-        })
+      return yield* Effect.orDie(
+        Schema.decodeUnknown(deferred.exitSchema)(exit)
+      ) as Effect.Effect<Exit.Exit<Success["Type"], Error["Type"]>>
+    }),
+    deferredDone: Effect.fnUntraced(function* <
+      Success extends Schema.Schema.Any,
+      Error extends Schema.Schema.All
+    >(
+      deferred: DurableDeferred.DurableDeferred<Success, Error>,
+      opts: {
+        readonly workflowName: string
+        readonly executionId: string
+        readonly deferredName: string
+        readonly exit: Exit.Exit<Success["Type"], Error["Type"]>
       }
-    ),
+    ) {
+      return yield* options.deferredDone({
+        workflowName: opts.workflowName,
+        executionId: opts.executionId,
+        deferredName: opts.deferredName,
+        exit: yield* Schema.encode(deferred.exitSchema)(
+          opts.exit
+        ) as Effect.Effect<Exit.Exit<unknown, unknown>>
+      })
+    }),
     scheduleClock: options.scheduleClock
   })
 
@@ -467,17 +465,20 @@ const defaultRetrySchedule = Schedule.exponential(200, 1.5).pipe(
  */
 export const layerMemory: Layer.Layer<WorkflowEngine> = Layer.scoped(
   WorkflowEngine,
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const scope = yield* Effect.scope
 
-    const workflows = new Map<string, {
-      readonly workflow: Workflow.Any
-      readonly execute: (
-        payload: object,
-        executionId: string
-      ) => Effect.Effect<unknown, unknown, WorkflowInstance | WorkflowEngine>
-      readonly scope: Scope.Scope
-    }>()
+    const workflows = new Map<
+      string,
+      {
+        readonly workflow: Workflow.Any
+        readonly execute: (
+          payload: object,
+          executionId: string
+        ) => Effect.Effect<unknown, unknown, WorkflowInstance | WorkflowEngine>
+        readonly scope: Scope.Scope
+      }
+    >()
 
     type ExecutionState = {
       readonly payload: object
@@ -497,7 +498,9 @@ export const layerMemory: Layer.Layer<WorkflowEngine> = Layer.scoped(
     }
     const activities = new Map<string, ActivityState>()
 
-    const resume = Effect.fnUntraced(function*(executionId: string): Effect.fn.Return<void> {
+    const resume = Effect.fnUntraced(function* (
+      executionId: string
+    ): Effect.fn.Return<void> {
       const state = executions.get(executionId)
       if (!state) return
       const exit = state.fiber?.unsafePoll()
@@ -508,28 +511,35 @@ export const layerMemory: Layer.Layer<WorkflowEngine> = Layer.scoped(
       }
 
       const entry = workflows.get(state.instance.workflow.name)!
-      const instance = WorkflowInstance.initial(state.instance.workflow, state.instance.executionId)
+      const instance = WorkflowInstance.initial(
+        state.instance.workflow,
+        state.instance.executionId
+      )
       instance.interrupted = state.instance.interrupted
       state.instance = instance
-      state.fiber = yield* state.execute(state.payload, state.instance.executionId).pipe(
-        Effect.onExit(() => {
-          if (!instance.interrupted) {
-            return Effect.void
-          }
-          instance.suspended = false
-          return Effect.withFiberRuntime<void>((fiber) => Effect.interruptible(Fiber.interrupt(fiber)))
-        }),
-        Workflow.intoResult,
-        Effect.provideService(WorkflowInstance, instance),
-        Effect.provideService(WorkflowEngine, engine),
-        Effect.tap((result) => {
-          if (!state.parent || result._tag !== "Complete") {
-            return Effect.void
-          }
-          return Effect.forkIn(resume(state.parent), scope)
-        }),
-        Effect.forkIn(entry.scope)
-      )
+      state.fiber = yield* state
+        .execute(state.payload, state.instance.executionId)
+        .pipe(
+          Effect.onExit(() => {
+            if (!instance.interrupted) {
+              return Effect.void
+            }
+            instance.suspended = false
+            return Effect.withFiberRuntime<void>((fiber) =>
+              Effect.interruptible(Fiber.interrupt(fiber))
+            )
+          }),
+          Workflow.intoResult,
+          Effect.provideService(WorkflowInstance, instance),
+          Effect.provideService(WorkflowEngine, engine),
+          Effect.tap((result) => {
+            if (!state.parent || result._tag !== "Complete") {
+              return Effect.void
+            }
+            return Effect.forkIn(resume(state.parent), scope)
+          }),
+          Effect.forkIn(entry.scope)
+        )
     })
 
     const deferredResults = new Map<string, Exit.Exit<any, any>>()
@@ -537,17 +547,19 @@ export const layerMemory: Layer.Layer<WorkflowEngine> = Layer.scoped(
     const clocks = yield* FiberMap.make()
 
     const engine = makeUnsafe({
-      register: Effect.fnUntraced(function*(workflow, execute) {
+      register: Effect.fnUntraced(function* (workflow, execute) {
         workflows.set(workflow.name, {
           workflow,
           execute,
           scope: yield* Effect.scope
         })
       }),
-      execute: Effect.fnUntraced(function*(workflow, options) {
+      execute: Effect.fnUntraced(function* (workflow, options) {
         const entry = workflows.get(workflow.name)
         if (!entry) {
-          return yield* Effect.die(`Workflow ${workflow.name} is not registered`)
+          return yield* Effect.die(
+            `Workflow ${workflow.name} is not registered`
+          )
         }
 
         let state = executions.get(options.executionId)
@@ -565,7 +577,7 @@ export const layerMemory: Layer.Layer<WorkflowEngine> = Layer.scoped(
         if (options.discard) return
         return (yield* Fiber.join(state.fiber!)) as any
       }),
-      interrupt: Effect.fnUntraced(function*(_workflow, executionId) {
+      interrupt: Effect.fnUntraced(function* (_workflow, executionId) {
         const state = executions.get(executionId)
         if (!state) return
         state.instance.interrupted = true
@@ -574,13 +586,17 @@ export const layerMemory: Layer.Layer<WorkflowEngine> = Layer.scoped(
       resume(_workflow, executionId) {
         return resume(executionId)
       },
-      activityExecute: Effect.fnUntraced(function*(activity, attempt) {
+      activityExecute: Effect.fnUntraced(function* (activity, attempt) {
         const instance = yield* WorkflowInstance
         const activityId = `${instance.executionId}/${activity.name}/${attempt}`
         let state = activities.get(activityId)
         if (state) {
           const exit = state.exit
-          if (exit && exit._tag === "Success" && exit.value._tag === "Suspended") {
+          if (
+            exit &&
+            exit._tag === "Success" &&
+            exit.value._tag === "Suspended"
+          ) {
             state.exit = undefined
           } else if (exit) {
             return yield* exit
@@ -589,7 +605,10 @@ export const layerMemory: Layer.Layer<WorkflowEngine> = Layer.scoped(
           state = { exit: undefined }
           activities.set(activityId, state)
         }
-        const activityInstance = WorkflowInstance.initial(instance.workflow, instance.executionId)
+        const activityInstance = WorkflowInstance.initial(
+          instance.workflow,
+          instance.executionId
+        )
         activityInstance.interrupted = instance.interrupted
         return yield* activity.executeEncoded.pipe(
           Workflow.intoResult,
@@ -609,7 +628,7 @@ export const layerMemory: Layer.Layer<WorkflowEngine> = Layer.scoped(
           const exit = state.fiber?.unsafePoll()
           return exit ?? Effect.succeed(undefined)
         }),
-      deferredResult: Effect.fnUntraced(function*(deferred) {
+      deferredResult: Effect.fnUntraced(function* (deferred) {
         const instance = yield* WorkflowInstance
         const id = `${instance.executionId}/${deferred.name}`
         return deferredResults.get(id)
@@ -622,16 +641,22 @@ export const layerMemory: Layer.Layer<WorkflowEngine> = Layer.scoped(
           return resume(options.executionId)
         }),
       scheduleClock: (workflow, options) =>
-        engine.deferredDone(options.clock.deferred, {
-          workflowName: workflow.name,
-          executionId: options.executionId,
-          deferredName: options.clock.deferred.name,
-          exit: Exit.void
-        }).pipe(
-          Effect.delay(options.clock.duration),
-          FiberMap.run(clocks, `${options.executionId}/${options.clock.name}`, { onlyIfMissing: true }),
-          Effect.asVoid
-        )
+        engine
+          .deferredDone(options.clock.deferred, {
+            workflowName: workflow.name,
+            executionId: options.executionId,
+            deferredName: options.clock.deferred.name,
+            exit: Exit.void
+          })
+          .pipe(
+            Effect.delay(options.clock.duration),
+            FiberMap.run(
+              clocks,
+              `${options.executionId}/${options.clock.name}`,
+              { onlyIfMissing: true }
+            ),
+            Effect.asVoid
+          )
     })
 
     return engine
