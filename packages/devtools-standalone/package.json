@@ -1,6 +1,6 @@
 {
   "name": "@wolfcola/devtools-standalone",
-  "version": "0.0.1",
+  "version": "1.2.0",
   "private": true,
   "description": "Standalone Electron OIDC/OAuth2 debugger",
   "type": "module",

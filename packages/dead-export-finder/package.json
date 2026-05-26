@@ -1,6 +1,6 @@
 {
   "name": "@wolfcola/dead-export-finder",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "type": "module",
   "private": false,
   "description": "Find dead exports across monorepo package boundaries",
