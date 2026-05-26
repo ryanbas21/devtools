@@ -1,5 +1,23 @@
 # @wolfcola/devtools-bridge
 
+## 1.2.0
+
+### Minor Changes
+
+- [#57](https://github.com/ryanbas21/devtools/pull/57) [`4b2b276`](https://github.com/ryanbas21/devtools/commit/4b2b27643c4533e79732c9cc69ca25c9ff581efd) Thanks [@ryanbas21](https://github.com/ryanbas21)! - Add standalone Electron debugger with MCP integration
+
+  New `attachDebugger()` API in devtools-bridge connects apps to the standalone
+  debugger via WebSocket. Includes auto-launch, fetch/XHR/Node HTTP interceptors,
+  and reconnection with session management. The standalone app runs as an Electron
+  desktop app or headless MCP server (`--mcp` flag) with 10 tools for session
+  inspection, event querying, diagnosis, and export.
+
+### Patch Changes
+
+- Updated dependencies [[`bc42519`](https://github.com/ryanbas21/devtools/commit/bc42519de6075ec9f60d1b3091ef0603b9ead74a), [`4b2b276`](https://github.com/ryanbas21/devtools/commit/4b2b27643c4533e79732c9cc69ca25c9ff581efd)]:
+  - @wolfcola/devtools-core@1.2.0
+  - @wolfcola/devtools-types@1.2.0
+
 ## 1.1.1
 
 ### Patch Changes
