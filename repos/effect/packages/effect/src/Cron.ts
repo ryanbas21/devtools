@@ -236,7 +236,9 @@ const lookupTable = (
  * @since 2.0.0
  * @category symbol
  */
-export const ParseErrorTypeId: unique symbol = Symbol.for("effect/Cron/errors/ParseError")
+export const ParseErrorTypeId: unique symbol = Symbol.for(
+  "effect/Cron/errors/ParseError"
+)
 
 /**
  * @since 2.0.0
@@ -266,7 +268,8 @@ export class ParseError extends Data.TaggedError("CronParseError")<{
  * @since 2.0.0
  * @category guards
  */
-export const isParseError = (u: unknown): u is ParseError => hasProperty(u, ParseErrorTypeId)
+export const isParseError = (u: unknown): u is ParseError =>
+  hasProperty(u, ParseErrorTypeId)
 
 /**
  * Parses a cron expression into a `Cron` instance.
@@ -290,7 +293,10 @@ export const isParseError = (u: unknown): u is ParseError => hasProperty(u, Pars
  * @since 2.0.0
  * @category constructors
  */
-export const parse = (cron: string, tz?: DateTime.TimeZone | string): Either.Either<Cron, ParseError> => {
+export const parse = (
+  cron: string,
+  tz?: DateTime.TimeZone | string
+): Either.Either<Cron, ParseError> => {
   const segments = cron.split(" ").filter(String.isNonEmpty)
   if (segments.length !== 5 && segments.length !== 6) {
     return Either.left(
@@ -306,13 +312,17 @@ export const parse = (cron: string, tz?: DateTime.TimeZone | string): Either.Eit
   }
 
   const [seconds, minutes, hours, days, months, weekdays] = segments
-  const zone = tz === undefined || dateTime.isTimeZone(tz) ?
-    Either.right(tz) :
-    Either.fromOption(dateTime.zoneFromString(tz), () =>
-      new ParseError({
-        message: `Invalid time zone in cron expression`,
-        input: tz
-      }))
+  const zone =
+    tz === undefined || dateTime.isTimeZone(tz)
+      ? Either.right(tz)
+      : Either.fromOption(
+          dateTime.zoneFromString(tz),
+          () =>
+            new ParseError({
+              message: `Invalid time zone in cron expression`,
+              input: tz
+            })
+        )
 
   return Either.all({
     tz: zone,
@@ -365,8 +375,10 @@ export const parse = (cron: string, tz?: DateTime.TimeZone | string): Either.Eit
  * @since 2.0.0
  * @category constructors
  */
-export const unsafeParse = (cron: string, tz?: DateTime.TimeZone | string): Cron =>
-  Either.getOrThrowWith(parse(cron, tz), identity)
+export const unsafeParse = (
+  cron: string,
+  tz?: DateTime.TimeZone | string
+): Cron => Either.getOrThrowWith(parse(cron, tz), identity)
 
 /**
  * Checks if a given `Date` falls within an active `Cron` time window.
@@ -386,9 +398,11 @@ export const unsafeParse = (cron: string, tz?: DateTime.TimeZone | string): Cron
  * @since 2.0.0
  */
 export const match = (cron: Cron, date: DateTime.DateTime.Input): boolean => {
-  const parts = dateTime.unsafeMakeZoned(date, {
-    timeZone: Option.getOrUndefined(cron.tz)
-  }).pipe(dateTime.toParts)
+  const parts = dateTime
+    .unsafeMakeZoned(date, {
+      timeZone: Option.getOrUndefined(cron.tz)
+    })
+    .pipe(dateTime.toParts)
 
   if (cron.seconds.size !== 0 && !cron.seconds.has(parts.seconds)) {
     return false
@@ -422,7 +436,9 @@ export const match = (cron: Cron, date: DateTime.DateTime.Input): boolean => {
 }
 
 const daysInMonth = (date: Date): number =>
-  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate()
+  new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)
+  ).getUTCDate()
 
 /**
  * Returns the next run `Date` for the given `Cron` instance.
@@ -473,7 +489,11 @@ export const prev = (cron: Cron, startFrom?: DateTime.DateTime.Input): Date => {
 }
 
 /** @internal */
-const stepCron = (cron: Cron, startFrom: DateTime.DateTime.Input | undefined, direction: "next" | "prev"): Date => {
+const stepCron = (
+  cron: Cron,
+  startFrom: DateTime.DateTime.Input | undefined,
+  direction: "next" | "prev"
+): Date => {
   const tz = Option.getOrUndefined(cron.tz)
   const zoned = dateTime.unsafeMakeZoned(startFrom ?? new Date(), {
     timeZone: tz
@@ -488,19 +508,24 @@ const stepCron = (cron: Cron, startFrom: DateTime.DateTime.Input | undefined, di
     ? (next: number, current: number) => next < current
     : (next: number, current: number) => next > current
 
-  const utc = tz !== undefined && dateTime.isTimeZoneNamed(tz) && tz.id === "UTC"
-  const adjustDst = utc ? constVoid : (current: Date) => {
-    const adjusted = dateTime.unsafeMakeZoned(current, {
-      timeZone: zoned.zone,
-      adjustForTimeZone: true,
-      disambiguation: prev ? "later" : undefined
-    }).pipe(dateTime.toDate)
+  const utc =
+    tz !== undefined && dateTime.isTimeZoneNamed(tz) && tz.id === "UTC"
+  const adjustDst = utc
+    ? constVoid
+    : (current: Date) => {
+        const adjusted = dateTime
+          .unsafeMakeZoned(current, {
+            timeZone: zoned.zone,
+            adjustForTimeZone: true,
+            disambiguation: prev ? "later" : undefined
+          })
+          .pipe(dateTime.toDate)
 
-    const drift = current.getTime() - adjusted.getTime()
-    if (prev ? drift !== 0 : drift > 0) {
-      current.setTime(adjusted.getTime())
-    }
-  }
+        const drift = current.getTime() - adjusted.getTime()
+        if (prev ? drift !== 0 : drift > 0) {
+          current.setTime(adjusted.getTime())
+        }
+      }
 
   const result = dateTime.mutate(zoned, (current) => {
     current.setUTCSeconds(current.getUTCSeconds() + tick, 0)
@@ -525,7 +550,11 @@ const stepCron = (cron: Cron, startFrom: DateTime.DateTime.Input | undefined, di
         const currentMinute = current.getUTCMinutes()
         const nextMinute = table.minute[currentMinute]
         if (nextMinute === undefined) {
-          current.setUTCHours(current.getUTCHours() + tick, boundary.minute, boundary.second)
+          current.setUTCHours(
+            current.getUTCHours() + tick,
+            boundary.minute,
+            boundary.second
+          )
           adjustDst(current)
           continue
         }
@@ -578,12 +607,20 @@ const stepCron = (cron: Cron, startFrom: DateTime.DateTime.Input | undefined, di
               // Current day offset + gap from end of prev month to target day
               // Example: June 3 → May 20 with boundary.day=20: -(3 + (31 - 20)) = -14
               const prevMonthDays = daysInMonth(
-                new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), 0))
+                new Date(
+                  Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), 0)
+                )
               )
               b = -(currentDay + (prevMonthDays - boundary.day))
             } else {
               b = daysInMonth(current) - currentDay + boundary.day
             }
+          } else if (!prev && nextDay > daysInMonth(current)) {
+            // The next matching day does not exist in the current month (e.g. day 31
+            // in a 30-day month). Setting it directly would overflow into the following
+            // month and skip its earlier matching days, so wrap to the first matching
+            // day of the next month instead.
+            b = daysInMonth(current) - currentDay + boundary.day
           } else {
             b = nextDay - currentDay
           }
@@ -605,7 +642,9 @@ const stepCron = (cron: Cron, startFrom: DateTime.DateTime.Input | undefined, di
           if (cron.days.size !== 0) {
             return boundary.day
           }
-          const maxDayInMonth = daysInMonth(new Date(Date.UTC(current.getUTCFullYear(), targetMonthIndex, 1)))
+          const maxDayInMonth = daysInMonth(
+            new Date(Date.UTC(current.getUTCFullYear(), targetMonthIndex, 1))
+          )
           return Math.min(boundary.day, maxDayInMonth)
         }
         if (nextMonth === undefined) {
@@ -617,7 +656,10 @@ const stepCron = (cron: Cron, startFrom: DateTime.DateTime.Input | undefined, di
         }
         if (needsStep(nextMonth, currentMonth)) {
           const targetMonthIndex = nextMonth - 1
-          current.setUTCMonth(targetMonthIndex, clampBoundaryDay(targetMonthIndex))
+          current.setUTCMonth(
+            targetMonthIndex,
+            clampBoundaryDay(targetMonthIndex)
+          )
           current.setUTCHours(boundary.hour, boundary.minute, boundary.second)
           adjustDst(current)
           continue
@@ -638,9 +680,12 @@ const stepCron = (cron: Cron, startFrom: DateTime.DateTime.Input | undefined, di
  *
  * @since 2.0.0
  */
-export const sequence = function*(cron: Cron, startFrom?: DateTime.DateTime.Input): IterableIterator<Date> {
+export const sequence = function* (
+  cron: Cron,
+  startFrom?: DateTime.DateTime.Input
+): IterableIterator<Date> {
   while (true) {
-    yield startFrom = next(cron, startFrom)
+    yield (startFrom = next(cron, startFrom))
   }
 }
 
@@ -650,9 +695,12 @@ export const sequence = function*(cron: Cron, startFrom?: DateTime.DateTime.Inpu
  *
  * @since 3.20.0
  */
-export const sequenceReverse = function*(cron: Cron, startFrom?: DateTime.DateTime.Input): IterableIterator<Date> {
+export const sequenceReverse = function* (
+  cron: Cron,
+  startFrom?: DateTime.DateTime.Input
+): IterableIterator<Date> {
   while (true) {
-    yield startFrom = prev(cron, startFrom)
+    yield (startFrom = prev(cron, startFrom))
   }
 }
 
@@ -660,17 +708,21 @@ export const sequenceReverse = function*(cron: Cron, startFrom?: DateTime.DateTi
  * @category instances
  * @since 2.0.0
  */
-export const Equivalence: equivalence.Equivalence<Cron> = equivalence.make((self, that) =>
-  restrictionsEquals(self.seconds, that.seconds) &&
-  restrictionsEquals(self.minutes, that.minutes) &&
-  restrictionsEquals(self.hours, that.hours) &&
-  restrictionsEquals(self.days, that.days) &&
-  restrictionsEquals(self.months, that.months) &&
-  restrictionsEquals(self.weekdays, that.weekdays)
+export const Equivalence: equivalence.Equivalence<Cron> = equivalence.make(
+  (self, that) =>
+    restrictionsEquals(self.seconds, that.seconds) &&
+    restrictionsEquals(self.minutes, that.minutes) &&
+    restrictionsEquals(self.hours, that.hours) &&
+    restrictionsEquals(self.days, that.days) &&
+    restrictionsEquals(self.months, that.months) &&
+    restrictionsEquals(self.weekdays, that.weekdays)
 )
 
 const restrictionsArrayEquals = equivalence.array(equivalence.number)
-const restrictionsEquals = (self: ReadonlySet<number>, that: ReadonlySet<number>): boolean =>
+const restrictionsEquals = (
+  self: ReadonlySet<number>,
+  that: ReadonlySet<number>
+): boolean =>
   restrictionsArrayEquals(Arr.fromIterable(self), Arr.fromIterable(that))
 
 /**
@@ -759,13 +811,28 @@ const parseSegment = (
 
     if (step !== undefined) {
       if (!Number.isInteger(step)) {
-        return Either.left(new ParseError({ message: `Expected step value to be a positive integer`, input }))
+        return Either.left(
+          new ParseError({
+            message: `Expected step value to be a positive integer`,
+            input
+          })
+        )
       }
       if (step < 1) {
-        return Either.left(new ParseError({ message: `Expected step value to be greater than 0`, input }))
+        return Either.left(
+          new ParseError({
+            message: `Expected step value to be greater than 0`,
+            input
+          })
+        )
       }
       if (step > options.max) {
-        return Either.left(new ParseError({ message: `Expected step value to be less than ${options.max}`, input }))
+        return Either.left(
+          new ParseError({
+            message: `Expected step value to be less than ${options.max}`,
+            input
+          })
+        )
       }
     }
 
@@ -776,11 +843,16 @@ const parseSegment = (
     } else {
       const [left, right] = splitRange(raw, options.aliases)
       if (!Number.isInteger(left)) {
-        return Either.left(new ParseError({ message: `Expected a positive integer`, input }))
+        return Either.left(
+          new ParseError({ message: `Expected a positive integer`, input })
+        )
       }
       if (left < options.min || left > options.max) {
         return Either.left(
-          new ParseError({ message: `Expected a value between ${options.min} and ${options.max}`, input })
+          new ParseError({
+            message: `Expected a value between ${options.min} and ${options.max}`,
+            input
+          })
         )
       }
 
@@ -788,15 +860,22 @@ const parseSegment = (
         values.add(left)
       } else {
         if (!Number.isInteger(right)) {
-          return Either.left(new ParseError({ message: `Expected a positive integer`, input }))
+          return Either.left(
+            new ParseError({ message: `Expected a positive integer`, input })
+          )
         }
         if (right < options.min || right > options.max) {
           return Either.left(
-            new ParseError({ message: `Expected a value between ${options.min} and ${options.max}`, input })
+            new ParseError({
+              message: `Expected a value between ${options.min} and ${options.max}`,
+              input
+            })
           )
         }
         if (left > right) {
-          return Either.left(new ParseError({ message: `Invalid value range`, input }))
+          return Either.left(
+            new ParseError({ message: `Invalid value range`, input })
+          )
         }
 
         for (let i = left; i <= right; i += step ?? 1) {
@@ -822,10 +901,16 @@ const splitStep = (input: string): [string, number | undefined] => {
   return [input, undefined]
 }
 
-const splitRange = (input: string, aliases?: Record<string, number>): [number, number | undefined] => {
+const splitRange = (
+  input: string,
+  aliases?: Record<string, number>
+): [number, number | undefined] => {
   const seperator = input.indexOf("-")
   if (seperator !== -1) {
-    return [aliasOrValue(input.slice(0, seperator), aliases), aliasOrValue(input.slice(seperator + 1), aliases)]
+    return [
+      aliasOrValue(input.slice(0, seperator), aliases),
+      aliasOrValue(input.slice(seperator + 1), aliases)
+    ]
   }
 
   return [aliasOrValue(input, aliases), undefined]

@@ -14,6 +14,7 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import { identity } from "effect/Function"
 import * as Layer from "effect/Layer"
+import * as Option from "effect/Option"
 import * as Redacted from "effect/Redacted"
 import * as Schema from "effect/Schema"
 import type * as Scope from "effect/Scope"
@@ -25,9 +26,10 @@ import { OpenAiConfig } from "./OpenAiConfig.js"
  * @since 1.0.0
  * @category Context
  */
-export class OpenAiClient extends Context.Tag(
-  "@effect/ai-openai/OpenAiClient"
-)<OpenAiClient, Service>() {}
+export class OpenAiClient extends Context.Tag("@effect/ai-openai/OpenAiClient")<
+  OpenAiClient,
+  Service
+>() {}
 
 /**
  * @since 1.0.0
@@ -58,7 +60,10 @@ export interface Service {
  * @since 1.0.0
  * @category Models
  */
-export type StreamCompletionRequest = Omit<typeof Generated.CreateChatCompletionRequest.Encoded, "stream">
+export type StreamCompletionRequest = Omit<
+  typeof Generated.CreateChatCompletionRequest.Encoded,
+  "stream"
+>
 
 /**
  * @since 1.0.0
@@ -87,24 +92,39 @@ export const make = (options: {
    * A method which can be used to transform the underlying `HttpClient` which
    * will be used to communicate with the OpenAi API.
    */
-  readonly transformClient?: ((client: HttpClient.HttpClient) => HttpClient.HttpClient) | undefined
+  readonly transformClient?:
+    | ((client: HttpClient.HttpClient) => HttpClient.HttpClient)
+    | undefined
 }): Effect.Effect<Service, never, HttpClient.HttpClient | Scope.Scope> =>
-  Effect.gen(function*() {
+  Effect.gen(function* () {
     const organizationHeader = "OpenAI-Organization"
     const projectHeader = "OpenAI-Project"
 
-    yield* Effect.locallyScopedWith(Headers.currentRedactedNames, Arr.appendAll([organizationHeader, projectHeader]))
+    yield* Effect.locallyScopedWith(
+      Headers.currentRedactedNames,
+      Arr.appendAll([organizationHeader, projectHeader])
+    )
 
     const httpClient = (yield* HttpClient.HttpClient).pipe(
       HttpClient.mapRequest((request) =>
         request.pipe(
-          HttpClientRequest.prependUrl(options.apiUrl ?? "https://api.openai.com/v1"),
-          options.apiKey ? HttpClientRequest.bearerToken(options.apiKey) : identity,
+          HttpClientRequest.prependUrl(
+            options.apiUrl ?? "https://api.openai.com/v1"
+          ),
+          options.apiKey
+            ? HttpClientRequest.bearerToken(options.apiKey)
+            : identity,
           options.organizationId !== undefined
-            ? HttpClientRequest.setHeader(organizationHeader, Redacted.value(options.organizationId))
+            ? HttpClientRequest.setHeader(
+                organizationHeader,
+                Redacted.value(options.organizationId)
+              )
             : identity,
           options.projectId !== undefined
-            ? HttpClientRequest.setHeader(projectHeader, Redacted.value(options.projectId))
+            ? HttpClientRequest.setHeader(
+                projectHeader,
+                Redacted.value(options.projectId)
+              )
             : identity,
           HttpClientRequest.acceptJson
         )
@@ -117,7 +137,9 @@ export const make = (options: {
     const client = Generated.make(httpClient, {
       transformClient: (client) =>
         OpenAiConfig.getOrUndefined.pipe(
-          Effect.map((config) => config?.transformClient ? config.transformClient(client) : client)
+          Effect.map((config) =>
+            config?.transformClient ? config.transformClient(client) : client
+          )
         )
     })
 
@@ -131,7 +153,21 @@ export const make = (options: {
         Stream.unwrapScoped,
         Stream.decodeText(),
         Stream.pipeThroughChannel(Sse.makeChannel()),
-        Stream.mapEffect((event) => decodeEvent(event.data)),
+        // Decode each SSE event, but don't let a single unrecognized or malformed
+        // frame abort the whole stream. OpenAI emits events absent from the generated
+        // schema (e.g. `keepalive` heartbeats during long Responses turns); skip what
+        // we can't decode and keep the stream alive.
+        Stream.mapEffect((event) =>
+          decodeEvent(event.data).pipe(
+            Effect.asSome,
+            Effect.catchTag("ParseError", (error) =>
+              Effect.logDebug("Skipping undecodable stream event", error).pipe(
+                Effect.as(Option.none())
+              )
+            )
+          )
+        ),
+        Stream.filterMap(identity),
         Stream.catchTags({
           RequestError: (error) =>
             AiError.HttpRequestError.fromRequestError({
@@ -141,12 +177,6 @@ export const make = (options: {
             }),
           ResponseError: (error) =>
             AiError.HttpResponseError.fromResponseError({
-              module: "OpenAiClient",
-              method: "streamRequest",
-              error
-            }),
-          ParseError: (error) =>
-            AiError.MalformedOutput.fromParseError({
               module: "OpenAiClient",
               method: "streamRequest",
               error
@@ -188,7 +218,11 @@ export const make = (options: {
         body: HttpBody.unsafeJson({ ...options, stream: true })
       })
       return streamRequest(request, ResponseStreamEvent).pipe(
-        Stream.takeUntil((event) => event.type === "response.completed" || event.type === "response.incomplete")
+        Stream.takeUntil(
+          (event) =>
+            event.type === "response.completed" ||
+            event.type === "response.incomplete"
+        )
       )
     }
 
@@ -236,22 +270,27 @@ export const layer = (options: {
   readonly apiUrl?: string | undefined
   readonly organizationId?: Redacted.Redacted | undefined
   readonly projectId?: Redacted.Redacted | undefined
-  readonly transformClient?: (client: HttpClient.HttpClient) => HttpClient.HttpClient
-}): Layer.Layer<OpenAiClient, never, HttpClient.HttpClient> => Layer.scoped(OpenAiClient, make(options))
+  readonly transformClient?: (
+    client: HttpClient.HttpClient
+  ) => HttpClient.HttpClient
+}): Layer.Layer<OpenAiClient, never, HttpClient.HttpClient> =>
+  Layer.scoped(OpenAiClient, make(options))
 
 /**
  * @since 1.0.0
  * @category Layers
  */
-export const layerConfig = (
-  options: {
-    readonly apiKey?: Config.Config<Redacted.Redacted | undefined> | undefined
-    readonly apiUrl?: Config.Config<string | undefined> | undefined
-    readonly organizationId?: Config.Config<Redacted.Redacted | undefined> | undefined
-    readonly projectId?: Config.Config<Redacted.Redacted | undefined> | undefined
-    readonly transformClient?: (client: HttpClient.HttpClient) => HttpClient.HttpClient
-  }
-): Layer.Layer<OpenAiClient, ConfigError, HttpClient.HttpClient> => {
+export const layerConfig = (options: {
+  readonly apiKey?: Config.Config<Redacted.Redacted | undefined> | undefined
+  readonly apiUrl?: Config.Config<string | undefined> | undefined
+  readonly organizationId?:
+    | Config.Config<Redacted.Redacted | undefined>
+    | undefined
+  readonly projectId?: Config.Config<Redacted.Redacted | undefined> | undefined
+  readonly transformClient?: (
+    client: HttpClient.HttpClient
+  ) => HttpClient.HttpClient
+}): Layer.Layer<OpenAiClient, ConfigError, HttpClient.HttpClient> => {
   const { transformClient, ...configs } = options
   return Config.all(configs).pipe(
     Effect.flatMap((configs) => make({ ...configs, transformClient })),
@@ -402,9 +441,7 @@ export class ResponseFailedEvent extends Schema.Class<ResponseFailedEvent>(
 }) {}
 
 const WebSearchToolCallForAddEvent = Schema.asSchema(
-  Generated.WebSearchToolCall.pipe(
-    Schema.omit("action")
-  )
+  Generated.WebSearchToolCall.pipe(Schema.omit("action"))
 )
 
 const AddEventOutputItem = Schema.Union(
@@ -562,16 +599,18 @@ export class LogProbs extends Schema.Class<LogProbs>(
   /**
    * The log probability of the top 20 most likely tokens.
    */
-  top_logprobs: Schema.Array(Schema.Struct({
-    /**
-     * The log probability of this token.
-     */
-    logprob: Schema.Number,
-    /**
-     * A possible text token.
-     */
-    token: Schema.String
-  }))
+  top_logprobs: Schema.Array(
+    Schema.Struct({
+      /**
+       * The log probability of this token.
+       */
+      logprob: Schema.Number,
+      /**
+       * A possible text token.
+       */
+      token: Schema.String
+    })
+  )
 }) {}
 
 /**
@@ -1218,28 +1257,26 @@ export class ResponseReasoningTextDoneEvent extends Schema.Class<ResponseReasoni
  * @since 1.0.0
  * @category Schemas
  */
-export class ResponseImageGenerationCallInProgressEvent
-  extends Schema.Class<ResponseImageGenerationCallInProgressEvent>(
-    "@effect/ai-openai/ResponseImageGenerationCallInProgressEvent"
-  )({
-    /**
-     * The type of the event. Always `"response.image_generation_call.in_progress"`.
-     */
-    type: Schema.Literal("response.image_generation_call.in_progress"),
-    /**
-     * The sequence number for this event.
-     */
-    sequence_number: Schema.Int,
-    /**
-     * The index of the output item in the response's output array.
-     */
-    output_index: Schema.Int,
-    /**
-     * The unique identifier of the image generation item being processed.
-     */
-    item_id: Schema.String
-  })
-{}
+export class ResponseImageGenerationCallInProgressEvent extends Schema.Class<ResponseImageGenerationCallInProgressEvent>(
+  "@effect/ai-openai/ResponseImageGenerationCallInProgressEvent"
+)({
+  /**
+   * The type of the event. Always `"response.image_generation_call.in_progress"`.
+   */
+  type: Schema.Literal("response.image_generation_call.in_progress"),
+  /**
+   * The sequence number for this event.
+   */
+  sequence_number: Schema.Int,
+  /**
+   * The index of the output item in the response's output array.
+   */
+  output_index: Schema.Int,
+  /**
+   * The unique identifier of the image generation item being processed.
+   */
+  item_id: Schema.String
+}) {}
 
 /**
  * Emitted when an image generation tool call is actively generating an image
@@ -1248,28 +1285,26 @@ export class ResponseImageGenerationCallInProgressEvent
  * @since 1.0.0
  * @category Schemas
  */
-export class ResponseImageGenerationCallGeneratingEvent
-  extends Schema.Class<ResponseImageGenerationCallGeneratingEvent>(
-    "@effect/ai-openai/ResponseImageGenerationCallGeneratingEvent"
-  )({
-    /**
-     * The type of the event. Always `"response.image_generation_call.generating"`.
-     */
-    type: Schema.Literal("response.image_generation_call.generating"),
-    /**
-     * The sequence number for this event.
-     */
-    sequence_number: Schema.Int,
-    /**
-     * The index of the output item in the response's output array.
-     */
-    output_index: Schema.Int,
-    /**
-     * The unique identifier of the image generation item being processed.
-     */
-    item_id: Schema.String
-  })
-{}
+export class ResponseImageGenerationCallGeneratingEvent extends Schema.Class<ResponseImageGenerationCallGeneratingEvent>(
+  "@effect/ai-openai/ResponseImageGenerationCallGeneratingEvent"
+)({
+  /**
+   * The type of the event. Always `"response.image_generation_call.generating"`.
+   */
+  type: Schema.Literal("response.image_generation_call.generating"),
+  /**
+   * The sequence number for this event.
+   */
+  sequence_number: Schema.Int,
+  /**
+   * The index of the output item in the response's output array.
+   */
+  output_index: Schema.Int,
+  /**
+   * The unique identifier of the image generation item being processed.
+   */
+  item_id: Schema.String
+}) {}
 
 /**
  * Emitted when a partial image is available during image generation streaming.
@@ -1277,37 +1312,35 @@ export class ResponseImageGenerationCallGeneratingEvent
  * @since 1.0.0
  * @category Schemas
  */
-export class ResponseImageGenerationCallPartialImageEvent
-  extends Schema.Class<ResponseImageGenerationCallPartialImageEvent>(
-    "@effect/ai-openai/ResponseImageGenerationCallPartialImageEvent"
-  )({
-    /**
-     * The type of the event. Always `"response.image_generation_call.partial_image"`.
-     */
-    type: Schema.Literal("response.image_generation_call.partial_image"),
-    /**
-     * The sequence number for this event.
-     */
-    sequence_number: Schema.Int,
-    /**
-     * The index of the output item in the response's output array.
-     */
-    output_index: Schema.Int,
-    /**
-     * The unique identifier of the image generation item being processed.
-     */
-    item_id: Schema.String,
-    /**
-     * `0`-based index for the partial image (backend is `1`-based, but this is
-     * `0`-based for the user).
-     */
-    partial_image_index: Schema.Int,
-    /**
-     * Base64-encoded partial image data, suitable for rendering as an image.
-     */
-    partial_image_b64: Schema.String
-  })
-{}
+export class ResponseImageGenerationCallPartialImageEvent extends Schema.Class<ResponseImageGenerationCallPartialImageEvent>(
+  "@effect/ai-openai/ResponseImageGenerationCallPartialImageEvent"
+)({
+  /**
+   * The type of the event. Always `"response.image_generation_call.partial_image"`.
+   */
+  type: Schema.Literal("response.image_generation_call.partial_image"),
+  /**
+   * The sequence number for this event.
+   */
+  sequence_number: Schema.Int,
+  /**
+   * The index of the output item in the response's output array.
+   */
+  output_index: Schema.Int,
+  /**
+   * The unique identifier of the image generation item being processed.
+   */
+  item_id: Schema.String,
+  /**
+   * `0`-based index for the partial image (backend is `1`-based, but this is
+   * `0`-based for the user).
+   */
+  partial_image_index: Schema.Int,
+  /**
+   * Base64-encoded partial image data, suitable for rendering as an image.
+   */
+  partial_image_b64: Schema.String
+}) {}
 
 /**
  * Emitted when an image generation tool call has completed and the final image
@@ -1570,29 +1603,27 @@ export class ResponseMcpListToolsFailedEvent extends Schema.Class<ResponseMcpLis
  * @since 1.0.0
  * @category Schemas
  */
-export class ResponseCodeInterpreterCallInProgressEvent
-  extends Schema.Class<ResponseCodeInterpreterCallInProgressEvent>(
-    "@effect/ai-openai/ResponseCodeInterpreterCallInProgressEvent"
-  )({
-    /**
-     * The type of the event. Always `"response.code_interpreter_call.in_progress"`.
-     */
-    type: Schema.Literal("response.code_interpreter_call.in_progress"),
-    /**
-     * The sequence number for this event.
-     */
-    sequence_number: Schema.Int,
-    /**
-     * The index of the output item in the response for which the code interpreter
-     * call is in progress.
-     */
-    output_index: Schema.Int,
-    /**
-     * The unique identifier of the code interpreter tool call item.
-     */
-    item_id: Schema.String
-  })
-{}
+export class ResponseCodeInterpreterCallInProgressEvent extends Schema.Class<ResponseCodeInterpreterCallInProgressEvent>(
+  "@effect/ai-openai/ResponseCodeInterpreterCallInProgressEvent"
+)({
+  /**
+   * The type of the event. Always `"response.code_interpreter_call.in_progress"`.
+   */
+  type: Schema.Literal("response.code_interpreter_call.in_progress"),
+  /**
+   * The sequence number for this event.
+   */
+  sequence_number: Schema.Int,
+  /**
+   * The index of the output item in the response for which the code interpreter
+   * call is in progress.
+   */
+  output_index: Schema.Int,
+  /**
+   * The unique identifier of the code interpreter tool call item.
+   */
+  item_id: Schema.String
+}) {}
 
 /**
  * Emitted when the code interpreter is actively interpreting the code snippet.
@@ -1600,29 +1631,27 @@ export class ResponseCodeInterpreterCallInProgressEvent
  * @since 1.0.0
  * @category Schemas
  */
-export class ResponseCodeInterpreterCallInterpretingEvent
-  extends Schema.Class<ResponseCodeInterpreterCallInterpretingEvent>(
-    "@effect/ai-openai/ResponseCodeInterpreterCallInterpretingEvent"
-  )({
-    /**
-     * The type of the event. Always `"response.code_interpreter_call.interpreting"`.
-     */
-    type: Schema.Literal("response.code_interpreter_call.interpreting"),
-    /**
-     * The sequence number for this event.
-     */
-    sequence_number: Schema.Int,
-    /**
-     * The index of the output item in the response for which the code
-     * interpreter is interpreting code.
-     */
-    output_index: Schema.Int,
-    /**
-     * The unique identifier of the code interpreter tool call item.
-     */
-    item_id: Schema.String
-  })
-{}
+export class ResponseCodeInterpreterCallInterpretingEvent extends Schema.Class<ResponseCodeInterpreterCallInterpretingEvent>(
+  "@effect/ai-openai/ResponseCodeInterpreterCallInterpretingEvent"
+)({
+  /**
+   * The type of the event. Always `"response.code_interpreter_call.interpreting"`.
+   */
+  type: Schema.Literal("response.code_interpreter_call.interpreting"),
+  /**
+   * The sequence number for this event.
+   */
+  sequence_number: Schema.Int,
+  /**
+   * The index of the output item in the response for which the code
+   * interpreter is interpreting code.
+   */
+  output_index: Schema.Int,
+  /**
+   * The unique identifier of the code interpreter tool call item.
+   */
+  item_id: Schema.String
+}) {}
 
 /**
  * Emitted when the code interpreter call is completed.
@@ -1814,57 +1843,59 @@ export class ResponseErrorEvent extends Schema.Class<ResponseErrorEvent>(
  * @since 1.0.0
  * @category Schemas
  */
-export const ResponseStreamEvent: Schema.Union<[
-  typeof ResponseCreatedEvent,
-  typeof ResponseQueuedEvent,
-  typeof ResponseInProgressEvent,
-  typeof ResponseCompletedEvent,
-  typeof ResponseIncompleteEvent,
-  typeof ResponseFailedEvent,
-  typeof ResponseOutputItemAddedEvent,
-  typeof ResponseOutputItemDoneEvent,
-  typeof ResponseContentPartAddedEvent,
-  typeof ResponseContentPartDoneEvent,
-  typeof ResponseOutputTextDeltaEvent,
-  typeof ResponseOutputTextDoneEvent,
-  typeof ResponseOutputTextAnnotationAddedEvent,
-  typeof ResponseRefusalDeltaEvent,
-  typeof ResponseRefusalDoneEvent,
-  typeof ResponseFunctionCallArgumentsDeltaEvent,
-  typeof ResponseFunctionCallArgumentsDoneEvent,
-  typeof ResponseFileSearchCallInProgressEvent,
-  typeof ResponseFileSearchCallSearchingEvent,
-  typeof ResponseFileSearchCallCompletedEvent,
-  typeof ResponseWebSearchCallInProgressEvent,
-  typeof ResponseWebSearchCallSearchingEvent,
-  typeof ResponseWebSearchCallCompletedEvent,
-  typeof ResponseReasoningSummaryPartAddedEvent,
-  typeof ResponseReasoningSummaryPartDoneEvent,
-  typeof ResponseReasoningSummaryTextDeltaEvent,
-  typeof ResponseReasoningSummaryTextDoneEvent,
-  typeof ResponseReasoningTextDeltaEvent,
-  typeof ResponseReasoningTextDoneEvent,
-  typeof ResponseImageGenerationCallInProgressEvent,
-  typeof ResponseImageGenerationCallGeneratingEvent,
-  typeof ResponseImageGenerationCallPartialImageEvent,
-  typeof ResponseImageGenerationCallCompletedEvent,
-  typeof ResponseMcpCallArgumentsDeltaEvent,
-  typeof ResponseMcpCallArgumentsDoneEvent,
-  typeof ResponseMcpCallInProgressEvent,
-  typeof ResponseMcpCallCompletedEvent,
-  typeof ResponseMcpCallFailedEvent,
-  typeof ResponseMcpListToolsInProgressEvent,
-  typeof ResponseMcpListToolsCompletedEvent,
-  typeof ResponseMcpListToolsFailedEvent,
-  typeof ResponseCodeInterpreterCallInProgressEvent,
-  typeof ResponseCodeInterpreterCallInterpretingEvent,
-  typeof ResponseCodeInterpreterCallCompletedEvent,
-  typeof ResponseCodeInterpreterCallCodeDeltaEvent,
-  typeof ResponseCodeInterpreterCallCodeDoneEvent,
-  typeof ResponseCustomToolCallInputDeltaEvent,
-  typeof ResponseCustomToolCallInputDoneEvent,
-  typeof ResponseErrorEvent
-]> = Schema.Union(
+export const ResponseStreamEvent: Schema.Union<
+  [
+    typeof ResponseCreatedEvent,
+    typeof ResponseQueuedEvent,
+    typeof ResponseInProgressEvent,
+    typeof ResponseCompletedEvent,
+    typeof ResponseIncompleteEvent,
+    typeof ResponseFailedEvent,
+    typeof ResponseOutputItemAddedEvent,
+    typeof ResponseOutputItemDoneEvent,
+    typeof ResponseContentPartAddedEvent,
+    typeof ResponseContentPartDoneEvent,
+    typeof ResponseOutputTextDeltaEvent,
+    typeof ResponseOutputTextDoneEvent,
+    typeof ResponseOutputTextAnnotationAddedEvent,
+    typeof ResponseRefusalDeltaEvent,
+    typeof ResponseRefusalDoneEvent,
+    typeof ResponseFunctionCallArgumentsDeltaEvent,
+    typeof ResponseFunctionCallArgumentsDoneEvent,
+    typeof ResponseFileSearchCallInProgressEvent,
+    typeof ResponseFileSearchCallSearchingEvent,
+    typeof ResponseFileSearchCallCompletedEvent,
+    typeof ResponseWebSearchCallInProgressEvent,
+    typeof ResponseWebSearchCallSearchingEvent,
+    typeof ResponseWebSearchCallCompletedEvent,
+    typeof ResponseReasoningSummaryPartAddedEvent,
+    typeof ResponseReasoningSummaryPartDoneEvent,
+    typeof ResponseReasoningSummaryTextDeltaEvent,
+    typeof ResponseReasoningSummaryTextDoneEvent,
+    typeof ResponseReasoningTextDeltaEvent,
+    typeof ResponseReasoningTextDoneEvent,
+    typeof ResponseImageGenerationCallInProgressEvent,
+    typeof ResponseImageGenerationCallGeneratingEvent,
+    typeof ResponseImageGenerationCallPartialImageEvent,
+    typeof ResponseImageGenerationCallCompletedEvent,
+    typeof ResponseMcpCallArgumentsDeltaEvent,
+    typeof ResponseMcpCallArgumentsDoneEvent,
+    typeof ResponseMcpCallInProgressEvent,
+    typeof ResponseMcpCallCompletedEvent,
+    typeof ResponseMcpCallFailedEvent,
+    typeof ResponseMcpListToolsInProgressEvent,
+    typeof ResponseMcpListToolsCompletedEvent,
+    typeof ResponseMcpListToolsFailedEvent,
+    typeof ResponseCodeInterpreterCallInProgressEvent,
+    typeof ResponseCodeInterpreterCallInterpretingEvent,
+    typeof ResponseCodeInterpreterCallCompletedEvent,
+    typeof ResponseCodeInterpreterCallCodeDeltaEvent,
+    typeof ResponseCodeInterpreterCallCodeDoneEvent,
+    typeof ResponseCustomToolCallInputDeltaEvent,
+    typeof ResponseCustomToolCallInputDoneEvent,
+    typeof ResponseErrorEvent
+  ]
+> = Schema.Union(
   ResponseCreatedEvent,
   ResponseQueuedEvent,
   ResponseInProgressEvent,

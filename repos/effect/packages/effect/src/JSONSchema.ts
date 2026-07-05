@@ -12,7 +12,13 @@ import * as Record from "./Record.js"
 import type * as Schema from "./Schema.js"
 import * as AST from "./SchemaAST.js"
 
-type JsonValue = string | number | boolean | null | Array<JsonValue> | { [key: string]: JsonValue }
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Array<JsonValue>
+  | { [key: string]: JsonValue }
 
 /**
  * @category model
@@ -64,10 +70,7 @@ export interface JsonSchema7Void extends JsonSchemaAnnotations {
  */
 export interface JsonSchema7object extends JsonSchemaAnnotations {
   $id: "/schemas/object"
-  anyOf: [
-    { type: "object" },
-    { type: "array" }
-  ]
+  anyOf: [{ type: "object" }, { type: "array" }]
 }
 
 /**
@@ -76,10 +79,7 @@ export interface JsonSchema7object extends JsonSchemaAnnotations {
  */
 export interface JsonSchema7empty extends JsonSchemaAnnotations {
   $id: "/schemas/%7B%7D"
-  anyOf: [
-    { type: "object" },
-    { type: "array" }
-  ]
+  anyOf: [{ type: "object" }, { type: "array" }]
 }
 
 /**
@@ -261,15 +261,20 @@ export type JsonSchema7Root = JsonSchema7 & {
  * @category encoding
  * @since 3.10.0
  */
-export const make = <A, I, R>(schema: Schema.Schema<A, I, R>, options?: {
-  readonly target?: Target | undefined
-}): JsonSchema7Root => {
+export const make = <A, I, R>(
+  schema: Schema.Schema<A, I, R>,
+  options?: {
+    readonly target?: Target | undefined
+  }
+): JsonSchema7Root => {
   const definitions: Record<string, any> = {}
   const target = options?.target ?? "jsonSchema7"
-  const ast = AST.isTransformation(schema.ast) && isParseJsonTransformation(schema.ast.from)
-    // Special case top level `parseJson` transformations
-    ? schema.ast.to
-    : schema.ast
+  const ast =
+    AST.isTransformation(schema.ast) &&
+    isParseJsonTransformation(schema.ast.from)
+      ? // Special case top level `parseJson` transformations
+        schema.ast.to
+      : schema.ast
   const jsonSchema = fromAST(ast, {
     definitions,
     target
@@ -287,7 +292,11 @@ export const make = <A, I, R>(schema: Schema.Schema<A, I, R>, options?: {
   return out
 }
 
-type Target = "jsonSchema7" | "jsonSchema2019-09" | "openApi3.1" | "jsonSchema2020-12"
+type Target =
+  | "jsonSchema7"
+  | "jsonSchema2019-09"
+  | "openApi3.1"
+  | "jsonSchema2020-12"
 
 type TopLevelReferenceStrategy = "skip" | "keep"
 
@@ -334,18 +343,24 @@ export function getMetaSchemaUri(target: Target) {
  * @since 3.11.5
  * @experimental
  */
-export const fromAST = (ast: AST.AST, options: {
-  readonly definitions: Record<string, JsonSchema7>
-  readonly definitionPath?: string | undefined
-  readonly target?: Target | undefined
-  readonly topLevelReferenceStrategy?: TopLevelReferenceStrategy | undefined
-  readonly additionalPropertiesStrategy?: AdditionalPropertiesStrategy | undefined
-}): JsonSchema7 => {
+export const fromAST = (
+  ast: AST.AST,
+  options: {
+    readonly definitions: Record<string, JsonSchema7>
+    readonly definitionPath?: string | undefined
+    readonly target?: Target | undefined
+    readonly topLevelReferenceStrategy?: TopLevelReferenceStrategy | undefined
+    readonly additionalPropertiesStrategy?:
+      | AdditionalPropertiesStrategy
+      | undefined
+  }
+): JsonSchema7 => {
   const definitionPath = options.definitionPath ?? "#/$defs/"
   const getRef = (id: string) => definitionPath + id
   const target = options.target ?? "jsonSchema7"
   const topLevelReferenceStrategy = options.topLevelReferenceStrategy ?? "keep"
-  const additionalPropertiesStrategy = options.additionalPropertiesStrategy ?? "strict"
+  const additionalPropertiesStrategy =
+    options.additionalPropertiesStrategy ?? "strict"
   return go(
     ast,
     options.definitions,
@@ -381,29 +396,29 @@ const constVoid: JsonSchema7Void = {
 
 const constObject: JsonSchema7object = {
   $id: "/schemas/object",
-  "anyOf": [
-    { "type": "object" },
-    { "type": "array" }
-  ]
+  anyOf: [{ type: "object" }, { type: "array" }]
 }
 
 const constEmptyStruct: JsonSchema7empty = {
   $id: "/schemas/%7B%7D",
-  "anyOf": [
-    { "type": "object" },
-    { "type": "array" }
-  ]
+  anyOf: [{ type: "object" }, { type: "array" }]
 }
 
-function getRawDescription(annotated: AST.Annotated | undefined): string | undefined {
-  if (annotated !== undefined) return Option.getOrUndefined(AST.getDescriptionAnnotation(annotated))
+function getRawDescription(
+  annotated: AST.Annotated | undefined
+): string | undefined {
+  if (annotated !== undefined)
+    return Option.getOrUndefined(AST.getDescriptionAnnotation(annotated))
 }
 
 function getRawTitle(annotated: AST.Annotated | undefined): string | undefined {
-  if (annotated !== undefined) return Option.getOrUndefined(AST.getTitleAnnotation(annotated))
+  if (annotated !== undefined)
+    return Option.getOrUndefined(AST.getTitleAnnotation(annotated))
 }
 
-function getRawDefault(annotated: AST.Annotated | undefined): Option.Option<unknown> {
+function getRawDefault(
+  annotated: AST.Annotated | undefined
+): Option.Option<unknown> {
   if (annotated !== undefined) return AST.getDefaultAnnotation(annotated)
   return Option.none()
 }
@@ -413,32 +428,58 @@ function encodeDefault(ast: AST.AST, def: unknown): Option.Option<unknown> {
   return getOption(def)
 }
 
-function getRawExamples(annotated: AST.Annotated | undefined): ReadonlyArray<unknown> | undefined {
-  if (annotated !== undefined) return Option.getOrUndefined(AST.getExamplesAnnotation(annotated))
+function getRawExamples(
+  annotated: AST.Annotated | undefined
+): ReadonlyArray<unknown> | undefined {
+  if (annotated !== undefined)
+    return Option.getOrUndefined(AST.getExamplesAnnotation(annotated))
 }
 
-function encodeExamples(ast: AST.AST, examples: ReadonlyArray<unknown>): Array<JsonValue> | undefined {
+function encodeExamples(
+  ast: AST.AST,
+  examples: ReadonlyArray<unknown>
+): Array<JsonValue> | undefined {
   const getOption = ParseResult.getOption(ast, false)
-  const out = Arr.filterMap(examples, (e) => getOption(e).pipe(Option.filter(isJsonValue)))
+  const out = Arr.filterMap(examples, (e) =>
+    getOption(e).pipe(Option.filter(isJsonValue))
+  )
   return out.length > 0 ? out : undefined
 }
 
-function filterBuiltIn(ast: AST.AST, annotation: string | undefined, key: symbol): string | undefined {
+function filterBuiltIn(
+  ast: AST.AST,
+  annotation: string | undefined,
+  key: symbol
+): string | undefined {
   if (annotation !== undefined) {
     switch (ast._tag) {
       case "StringKeyword":
-        return annotation !== AST.stringKeyword.annotations[key] ? annotation : undefined
+        return annotation !== AST.stringKeyword.annotations[key]
+          ? annotation
+          : undefined
       case "NumberKeyword":
-        return annotation !== AST.numberKeyword.annotations[key] ? annotation : undefined
+        return annotation !== AST.numberKeyword.annotations[key]
+          ? annotation
+          : undefined
       case "BooleanKeyword":
-        return annotation !== AST.booleanKeyword.annotations[key] ? annotation : undefined
+        return annotation !== AST.booleanKeyword.annotations[key]
+          ? annotation
+          : undefined
     }
   }
   return annotation
 }
 
-function isJsonValue(value: unknown, visited: Set<unknown> = new Set()): value is JsonValue {
-  if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+function isJsonValue(
+  value: unknown,
+  visited: Set<unknown> = new Set()
+): value is JsonValue {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
     return true
   }
   if (Array.isArray(value) || typeof value === "object") {
@@ -497,7 +538,10 @@ function pruneJsonSchemaAnnotations(
   return out
 }
 
-function getContextJsonSchemaAnnotations(ast: AST.AST, annotated: AST.Annotated): JsonSchemaAnnotations | undefined {
+function getContextJsonSchemaAnnotations(
+  ast: AST.AST,
+  annotated: AST.Annotated
+): JsonSchemaAnnotations | undefined {
   return pruneJsonSchemaAnnotations(
     ast,
     getRawDescription(annotated),
@@ -507,7 +551,9 @@ function getContextJsonSchemaAnnotations(ast: AST.AST, annotated: AST.Annotated)
   )
 }
 
-function getJsonSchemaAnnotations(ast: AST.AST): JsonSchemaAnnotations | undefined {
+function getJsonSchemaAnnotations(
+  ast: AST.AST
+): JsonSchemaAnnotations | undefined {
   return pruneJsonSchemaAnnotations(
     ast,
     filterBuiltIn(ast, getRawDescription(ast), AST.DescriptionAnnotationId),
@@ -532,21 +578,31 @@ function mergeJsonSchemaAnnotations(
 
 const pruneUndefined = (ast: AST.AST): AST.AST | undefined => {
   if (Option.isNone(AST.getJSONSchemaAnnotation(ast))) {
-    return AST.pruneUndefined(ast, pruneUndefined, (ast) => pruneUndefined(ast.from))
+    return AST.pruneUndefined(ast, pruneUndefined, (ast) =>
+      pruneUndefined(ast.from)
+    )
   }
 }
 
 const isParseJsonTransformation = (ast: AST.AST): boolean =>
   ast.annotations[AST.SchemaIdAnnotationId] === AST.ParseJsonSchemaId
 
-const isOverrideAnnotation = (ast: AST.AST, jsonSchema: JsonSchema7): boolean => {
+const isOverrideAnnotation = (
+  ast: AST.AST,
+  jsonSchema: JsonSchema7
+): boolean => {
   if (AST.isRefinement(ast)) {
     const schemaId = ast.annotations[AST.SchemaIdAnnotationId]
     if (schemaId === schemaId_.IntSchemaId) {
       return "type" in jsonSchema && jsonSchema.type !== "integer"
     }
   }
-  return ("type" in jsonSchema) || ("oneOf" in jsonSchema) || ("anyOf" in jsonSchema) || ("$ref" in jsonSchema)
+  return (
+    "type" in jsonSchema ||
+    "oneOf" in jsonSchema ||
+    "anyOf" in jsonSchema ||
+    "$ref" in jsonSchema
+  )
 }
 
 const mergeRefinements = (from: any, jsonSchema: any, ast: AST.AST): any => {
@@ -567,8 +623,14 @@ const mergeRefinements = (from: any, jsonSchema: any, ast: AST.AST): any => {
   handle("maxItems", (i) => i.maxItems < jsonSchema.maxItems)
   handle("minimum", (i) => i.minimum > jsonSchema.minimum)
   handle("maximum", (i) => i.maximum < jsonSchema.maximum)
-  handle("exclusiveMinimum", (i) => i.exclusiveMinimum > jsonSchema.exclusiveMinimum)
-  handle("exclusiveMaximum", (i) => i.exclusiveMaximum < jsonSchema.exclusiveMaximum)
+  handle(
+    "exclusiveMinimum",
+    (i) => i.exclusiveMinimum > jsonSchema.exclusiveMinimum
+  )
+  handle(
+    "exclusiveMaximum",
+    (i) => i.exclusiveMaximum < jsonSchema.exclusiveMaximum
+  )
   handle("multipleOf", (i) => i.multipleOf !== jsonSchema.multipleOf)
 
   if (out.allOf.length === 0) {
@@ -608,7 +670,10 @@ function addASTAnnotations(jsonSchema: JsonSchema7, ast: AST.AST): JsonSchema7 {
   return addAnnotations(jsonSchema, getJsonSchemaAnnotations(ast))
 }
 
-function addAnnotations(jsonSchema: JsonSchema7, annotations: JsonSchemaAnnotations | undefined): JsonSchema7 {
+function addAnnotations(
+  jsonSchema: JsonSchema7,
+  annotations: JsonSchemaAnnotations | undefined
+): JsonSchema7 {
   if (annotations === undefined || Object.keys(annotations).length === 0) {
     return jsonSchema
   }
@@ -624,7 +689,11 @@ function getIdentifierAnnotation(ast: AST.AST): string | undefined {
     if (AST.isSuspend(ast)) {
       return getIdentifierAnnotation(ast.f())
     }
-    if (AST.isTransformation(ast) && AST.isTypeLiteral(ast.from) && AST.isDeclaration(ast.to)) {
+    if (
+      AST.isTransformation(ast) &&
+      AST.isTypeLiteral(ast.from) &&
+      AST.isDeclaration(ast.to)
+    ) {
       const to = ast.to
       const surrogate = AST.getSurrogateAnnotation(to)
       if (Option.isSome(surrogate)) {
@@ -650,11 +719,19 @@ function go(
   ) {
     const id = getIdentifierAnnotation(ast)
     if (id !== undefined) {
-      const escapedId = id.replace(/~/ig, "~0").replace(/\//ig, "~1")
+      const escapedId = id.replace(/~/gi, "~0").replace(/\//gi, "~1")
       const out = { $ref: options.getRef(escapedId) }
       if (!Record.has($defs, id)) {
         $defs[id] = out
-        $defs[id] = go(ast, $defs, "ignore-identifier", path, options, "handle-annotation", errors)
+        $defs[id] = go(
+          ast,
+          $defs,
+          "ignore-identifier",
+          path,
+          options,
+          "handle-annotation",
+          errors
+        )
       }
       return out
     }
@@ -676,17 +753,41 @@ function go(
             const t = AST.getTransformationFrom(ast)
             if (t === undefined) {
               return mergeRefinements(
-                go(ast.from, $defs, identifier, path, options, "handle-annotation", errors),
+                go(
+                  ast.from,
+                  $defs,
+                  identifier,
+                  path,
+                  options,
+                  "handle-annotation",
+                  errors
+                ),
                 handler,
                 ast
               )
             } else {
-              return go(t, $defs, identifier, path, options, "handle-annotation", errors)
+              return go(
+                t,
+                $defs,
+                identifier,
+                path,
+                options,
+                "handle-annotation",
+                errors
+              )
             }
           }
           default:
             return {
-              ...go(ast, $defs, identifier, path, options, "ignore-annotation", errors),
+              ...go(
+                ast,
+                $defs,
+                identifier,
+                path,
+                options,
+                "ignore-annotation",
+                errors
+              ),
               ...handler
             } as any
         }
@@ -695,7 +796,15 @@ function go(
   }
   const surrogate = AST.getSurrogateAnnotation(ast)
   if (Option.isSome(surrogate)) {
-    return go(surrogate.value, $defs, identifier, path, options, "handle-annotation", errors)
+    return go(
+      surrogate.value,
+      $defs,
+      identifier,
+      path,
+      options,
+      "handle-annotation",
+      errors
+    )
   }
   switch (ast._tag) {
     // Unsupported
@@ -705,14 +814,29 @@ function go(
     case "UniqueSymbol":
     case "SymbolKeyword": {
       if (errors === "ignore-errors") return addASTAnnotations(constAny, ast)
-      throw new Error(errors_.getJSONSchemaMissingAnnotationErrorMessage(path, ast))
+      throw new Error(
+        errors_.getJSONSchemaMissingAnnotationErrorMessage(path, ast)
+      )
     }
     case "Suspend": {
       if (identifier === "handle-identifier") {
         if (errors === "ignore-errors") return addASTAnnotations(constAny, ast)
-        throw new Error(errors_.getJSONSchemaMissingIdentifierAnnotationErrorMessage(path, ast))
+        throw new Error(
+          errors_.getJSONSchemaMissingIdentifierAnnotationErrorMessage(
+            path,
+            ast
+          )
+        )
       }
-      return go(ast.f(), $defs, "ignore-identifier", path, options, "handle-annotation", errors)
+      return go(
+        ast.f(),
+        $defs,
+        "ignore-identifier",
+        path,
+        options,
+        "handle-annotation",
+        errors
+      )
     }
     // Primitives
     case "NeverKeyword":
@@ -743,30 +867,53 @@ function go(
         return addASTAnnotations({ type: "boolean", enum: [literal] }, ast)
       }
       if (errors === "ignore-errors") return addASTAnnotations(constAny, ast)
-      throw new Error(errors_.getJSONSchemaMissingAnnotationErrorMessage(path, ast))
+      throw new Error(
+        errors_.getJSONSchemaMissingAnnotationErrorMessage(path, ast)
+      )
     }
     case "Enums": {
       const anyOf = ast.enums.map((e) => {
-        const type: "string" | "number" = Predicate.isNumber(e[1]) ? "number" : "string"
+        const type: "string" | "number" = Predicate.isNumber(e[1])
+          ? "number"
+          : "string"
         return { type, title: e[0], enum: [e[1]] }
       })
-      return anyOf.length >= 1 ?
-        addASTAnnotations({
-          $comment: "/schemas/enums",
-          anyOf
-        }, ast) :
-        addASTAnnotations(constNever, ast)
+      return anyOf.length >= 1
+        ? addASTAnnotations(
+            {
+              $comment: "/schemas/enums",
+              anyOf
+            },
+            ast
+          )
+        : addASTAnnotations(constNever, ast)
     }
     case "TupleType": {
       const elements = ast.elements.map((e, i) =>
         mergeJsonSchemaAnnotations(
-          go(e.type, $defs, "handle-identifier", path.concat(i), options, "handle-annotation", errors),
+          go(
+            e.type,
+            $defs,
+            "handle-identifier",
+            path.concat(i),
+            options,
+            "handle-annotation",
+            errors
+          ),
           getContextJsonSchemaAnnotations(e.type, e)
         )
       )
       const rest = ast.rest.map((type) =>
         mergeJsonSchemaAnnotations(
-          go(type.type, $defs, "handle-identifier", path, options, "handle-annotation", errors),
+          go(
+            type.type,
+            $defs,
+            "handle-identifier",
+            path,
+            options,
+            "handle-annotation",
+            errors
+          ),
           getContextJsonSchemaAnnotations(type.type, type)
         )
       )
@@ -776,7 +923,8 @@ function go(
       // ---------------------------------------------
       const len = ast.elements.length
       if (len > 0) {
-        output.minItems = len - ast.elements.filter((element) => element.isOptional).length
+        output.minItems =
+          len - ast.elements.filter((element) => element.isOptional).length
         if (options.target === "jsonSchema7") {
           output.items = elements
         } else {
@@ -789,7 +937,9 @@ function go(
       const restLength = rest.length
       if (restLength > 0) {
         const head = rest[0]
-        const isHomogeneous = restLength === 1 && ast.elements.every((e) => e.type === ast.rest[0].type)
+        const isHomogeneous =
+          restLength === 1 &&
+          ast.elements.every((e) => e.type === ast.rest[0].type)
         if (isHomogeneous) {
           if (options.target === "jsonSchema7") {
             output.items = head
@@ -809,8 +959,11 @@ function go(
         // handle post rest elements
         // ---------------------------------------------
         if (restLength > 1) {
-          if (errors === "ignore-errors") return addASTAnnotations(constAny, ast)
-          throw new Error(errors_.getJSONSchemaUnsupportedPostRestElementsErrorMessage(path))
+          if (errors === "ignore-errors")
+            return addASTAnnotations(constAny, ast)
+          throw new Error(
+            errors_.getJSONSchemaUnsupportedPostRestElementsErrorMessage(path)
+          )
         }
       } else {
         if (len > 0) {
@@ -827,7 +980,10 @@ function go(
       return addASTAnnotations(output, ast)
     }
     case "TypeLiteral": {
-      if (ast.propertySignatures.length === 0 && ast.indexSignatures.length === 0) {
+      if (
+        ast.propertySignatures.length === 0 &&
+        ast.indexSignatures.length === 0
+      ) {
         return addASTAnnotations(constEmptyStruct, ast)
       }
       const output: JsonSchema7Object = {
@@ -843,7 +999,7 @@ function go(
         const parameter = is.parameter
         switch (parameter._tag) {
           case "StringKeyword": {
-            output.additionalProperties = go(
+            const additionalProperties = go(
               pruned,
               $defs,
               "handle-identifier",
@@ -852,10 +1008,23 @@ function go(
               "handle-annotation",
               errors
             )
+            output.additionalProperties = isNeverWithoutCustomAnnotations(
+              additionalProperties
+            )
+              ? false
+              : additionalProperties
             break
           }
           case "TemplateLiteral": {
-            patternProperties = go(pruned, $defs, "handle-identifier", path, options, "handle-annotation", errors)
+            patternProperties = go(
+              pruned,
+              $defs,
+              "handle-identifier",
+              path,
+              options,
+              "handle-annotation",
+              errors
+            )
             propertyNames = {
               type: "string",
               pattern: AST.getTemplateLiteralRegExp(parameter).source
@@ -863,8 +1032,24 @@ function go(
             break
           }
           case "Refinement": {
-            patternProperties = go(pruned, $defs, "handle-identifier", path, options, "handle-annotation", errors)
-            propertyNames = go(parameter, $defs, "handle-identifier", path, options, "handle-annotation", errors)
+            patternProperties = go(
+              pruned,
+              $defs,
+              "handle-identifier",
+              path,
+              options,
+              "handle-annotation",
+              errors
+            )
+            propertyNames = go(
+              parameter,
+              $defs,
+              "handle-identifier",
+              path,
+              options,
+              "handle-annotation",
+              errors
+            )
             break
           }
           case "SymbolKeyword": {
@@ -901,7 +1086,15 @@ function go(
           const pruned = pruneUndefined(ps.type)
           const type = pruned ?? ps.type
           output.properties[name] = mergeJsonSchemaAnnotations(
-            go(type, $defs, "handle-identifier", path.concat(ps.name), options, "handle-annotation", errors),
+            go(
+              type,
+              $defs,
+              "handle-identifier",
+              path.concat(ps.name),
+              options,
+              "handle-annotation",
+              errors
+            ),
             getContextJsonSchemaAnnotations(type, ps)
           )
           // ---------------------------------------------
@@ -911,8 +1104,11 @@ function go(
             output.required.push(name)
           }
         } else {
-          if (errors === "ignore-errors") return addASTAnnotations(constAny, ast)
-          throw new Error(errors_.getJSONSchemaUnsupportedKeyErrorMessage(name, path))
+          if (errors === "ignore-errors")
+            return addASTAnnotations(constAny, ast)
+          throw new Error(
+            errors_.getJSONSchemaUnsupportedKeyErrorMessage(name, path)
+          )
         }
       }
       // ---------------------------------------------
@@ -930,7 +1126,15 @@ function go(
     }
     case "Union": {
       const members: Array<JsonSchema7> = ast.types.map((t) =>
-        go(t, $defs, "handle-identifier", path, options, "handle-annotation", errors)
+        go(
+          t,
+          $defs,
+          "handle-identifier",
+          path,
+          options,
+          "handle-annotation",
+          errors
+        )
       )
       const anyOf = compactUnion(members)
       switch (anyOf.length) {
@@ -943,33 +1147,68 @@ function go(
       }
     }
     case "Refinement":
-      return go(ast.from, $defs, identifier, path, options, "handle-annotation", errors)
+      return go(
+        ast.from,
+        $defs,
+        identifier,
+        path,
+        options,
+        "handle-annotation",
+        errors
+      )
     case "TemplateLiteral": {
       const regex = AST.getTemplateLiteralRegExp(ast)
-      return addASTAnnotations({
-        type: "string",
-        title: String(ast),
-        description: "a template literal",
-        pattern: regex.source
-      }, ast)
+      return addASTAnnotations(
+        {
+          type: "string",
+          title: String(ast),
+          description: "a template literal",
+          pattern: regex.source
+        },
+        ast
+      )
     }
     case "Transformation": {
       if (isParseJsonTransformation(ast.from)) {
         const out: JsonSchema7String & { contentSchema?: JsonSchema7 } = {
-          "type": "string",
-          "contentMediaType": "application/json"
+          type: "string",
+          contentMediaType: "application/json"
         }
         if (isContentSchemaSupported(options)) {
-          out["contentSchema"] = go(ast.to, $defs, identifier, path, options, "handle-annotation", errors)
+          out["contentSchema"] = go(
+            ast.to,
+            $defs,
+            identifier,
+            path,
+            options,
+            "handle-annotation",
+            errors
+          )
         }
         return out
       }
-      const from = go(ast.from, $defs, identifier, path, options, "handle-annotation", errors)
+      const from = go(
+        ast.from,
+        $defs,
+        identifier,
+        path,
+        options,
+        "handle-annotation",
+        errors
+      )
       if (
         ast.transformation._tag === "TypeLiteralTransformation" &&
         isJsonSchema7Object(from)
       ) {
-        const to = go(ast.to, {}, "ignore-identifier", path, options, "handle-annotation", "ignore-errors")
+        const to = go(
+          ast.to,
+          {},
+          "ignore-identifier",
+          path,
+          options,
+          "handle-annotation",
+          "ignore-errors"
+        )
         if (isJsonSchema7Object(to)) {
           for (const t of ast.transformation.propertySignatureTransformations) {
             const toKey = t.to
@@ -980,13 +1219,22 @@ function go(
                 const fromProperty = from.properties[fromKey]
                 if (Predicate.isRecord(fromProperty)) {
                   const annotations: JsonSchemaAnnotations = {}
-                  if (Predicate.isString(toProperty.title)) annotations.title = toProperty.title
-                  if (Predicate.isString(toProperty.description)) annotations.description = toProperty.description
-                  if (Array.isArray(toProperty.examples)) annotations.examples = toProperty.examples
-                  if (Object.hasOwn(toProperty, "default") && toProperty.default !== undefined) {
+                  if (Predicate.isString(toProperty.title))
+                    annotations.title = toProperty.title
+                  if (Predicate.isString(toProperty.description))
+                    annotations.description = toProperty.description
+                  if (Array.isArray(toProperty.examples))
+                    annotations.examples = toProperty.examples
+                  if (
+                    Object.hasOwn(toProperty, "default") &&
+                    toProperty.default !== undefined
+                  ) {
                     annotations.default = toProperty.default
                   }
-                  from.properties[fromKey] = addAnnotations(fromProperty, annotations)
+                  from.properties[fromKey] = addAnnotations(
+                    fromProperty,
+                    annotations
+                  )
                 }
               }
             }
@@ -998,13 +1246,24 @@ function go(
   }
 }
 
-function isJsonSchema7Object(jsonSchema: unknown): jsonSchema is JsonSchema7Object {
-  return Predicate.isRecord(jsonSchema) && jsonSchema.type === "object" && Predicate.isRecord(jsonSchema.properties)
+function isJsonSchema7Object(
+  jsonSchema: unknown
+): jsonSchema is JsonSchema7Object {
+  return (
+    Predicate.isRecord(jsonSchema) &&
+    jsonSchema.type === "object" &&
+    Predicate.isRecord(jsonSchema.properties)
+  )
 }
 
 function isNeverWithoutCustomAnnotations(jsonSchema: JsonSchema7): boolean {
-  return jsonSchema === constNever || (Predicate.hasProperty(jsonSchema, "$id") && jsonSchema.$id === constNever.$id &&
-    Object.keys(jsonSchema).length === 3 && jsonSchema.title === AST.neverKeyword.annotations[AST.TitleAnnotationId])
+  return (
+    jsonSchema === constNever ||
+    (Predicate.hasProperty(jsonSchema, "$id") &&
+      jsonSchema.$id === constNever.$id &&
+      Object.keys(jsonSchema).length === 3 &&
+      jsonSchema.title === AST.neverKeyword.annotations[AST.TitleAnnotationId])
+  )
 }
 
 function isAny(jsonSchema: JsonSchema7): jsonSchema is JsonSchema7Any {
@@ -1019,8 +1278,14 @@ function isVoid(jsonSchema: JsonSchema7): jsonSchema is JsonSchema7Void {
   return "$id" in jsonSchema && jsonSchema.$id === constVoid.$id
 }
 
-function isCompactableLiteral(jsonSchema: JsonSchema7 | undefined): jsonSchema is JsonSchema7Enum {
-  return Predicate.hasProperty(jsonSchema, "enum") && "type" in jsonSchema && Object.keys(jsonSchema).length === 2
+function isCompactableLiteral(
+  jsonSchema: JsonSchema7 | undefined
+): jsonSchema is JsonSchema7Enum {
+  return (
+    Predicate.hasProperty(jsonSchema, "enum") &&
+    "type" in jsonSchema &&
+    Object.keys(jsonSchema).length === 2
+  )
 }
 
 function compactUnion(members: Array<JsonSchema7>): Array<JsonSchema7> {

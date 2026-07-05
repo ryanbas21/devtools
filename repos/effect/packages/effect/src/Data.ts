@@ -19,7 +19,9 @@ export declare namespace Case {
    */
   export interface Constructor<A, Tag extends keyof A = never> {
     (
-      args: Types.VoidIfEmpty<{ readonly [P in keyof A as P extends Tag ? never : P]: A[P] }>
+      args: Types.VoidIfEmpty<{
+        readonly [P in keyof A as P extends Tag ? never : P]: A[P]
+      }>
     ): A
   }
 }
@@ -44,13 +46,17 @@ export declare namespace Case {
  * @category constructors
  * @since 2.0.0
  */
-export const struct: <A extends Record<string, any>>(a: A) => { readonly [P in keyof A]: A[P] } = internal.struct
+export const struct: <A extends Record<string, any>>(
+  a: A
+) => { readonly [P in keyof A]: A[P] } = internal.struct
 
 /**
  * @category constructors
  * @since 2.0.0
  */
-export const unsafeStruct = <A extends Record<string, any>>(as: A): { readonly [P in keyof A]: A[P] } =>
+export const unsafeStruct = <A extends Record<string, any>>(
+  as: A
+): { readonly [P in keyof A]: A[P] } =>
   Object.setPrototypeOf(as, StructuralPrototype)
 
 /**
@@ -73,7 +79,8 @@ export const unsafeStruct = <A extends Record<string, any>>(as: A): { readonly [
  * @category constructors
  * @since 2.0.0
  */
-export const tuple = <As extends ReadonlyArray<any>>(...as: As): Readonly<As> => unsafeArray(as)
+export const tuple = <As extends ReadonlyArray<any>>(...as: As): Readonly<As> =>
+  unsafeArray(as)
 
 /**
  * @example
@@ -101,17 +108,23 @@ export const tuple = <As extends ReadonlyArray<any>>(...as: As): Readonly<As> =>
  * @category constructors
  * @since 2.0.0
  */
-export const array = <As extends ReadonlyArray<any>>(as: As): Readonly<As> => unsafeArray(as.slice(0) as unknown as As)
+export const array = <As extends ReadonlyArray<any>>(as: As): Readonly<As> =>
+  unsafeArray(as.slice(0) as unknown as As)
 
 /**
  * @category constructors
  * @since 2.0.0
  */
-export const unsafeArray = <As extends ReadonlyArray<any>>(as: As): Readonly<As> =>
-  Object.setPrototypeOf(as, internal.ArrayProto)
+export const unsafeArray = <As extends ReadonlyArray<any>>(
+  as: As
+): Readonly<As> => Object.setPrototypeOf(as, internal.ArrayProto)
 
-const _case = <A>(): Case.Constructor<A> => (args) =>
-  (args === undefined ? Object.create(StructuralPrototype) : struct(args)) as any
+const _case =
+  <A>(): Case.Constructor<A> =>
+  (args) =>
+    (args === undefined
+      ? Object.create(StructuralPrototype)
+      : struct(args)) as any
 
 export {
   /**
@@ -168,14 +181,16 @@ export {
  * @since 2.0.0
  * @category constructors
  */
-export const tagged = <A extends { readonly _tag: string }>(
-  tag: A["_tag"]
-): Case.Constructor<A, "_tag"> =>
-(args) => {
-  const value = args === undefined ? Object.create(StructuralPrototype) : struct(args)
-  value._tag = tag
-  return value
-}
+export const tagged =
+  <A extends { readonly _tag: string }>(
+    tag: A["_tag"]
+  ): Case.Constructor<A, "_tag"> =>
+  (args) => {
+    const value =
+      args === undefined ? Object.create(StructuralPrototype) : struct(args)
+    value._tag = tag
+    return value
+  }
 
 /**
  * Provides a constructor for a Case Class.
@@ -200,7 +215,7 @@ export const tagged = <A extends { readonly _tag: string }>(
  * @since 2.0.0
  * @category constructors
  */
-export const Class: new<A extends Record<string, any> = {}>(
+export const Class: new <A extends Record<string, any> = {}>(
   args: Types.VoidIfEmpty<{ readonly [P in keyof A]: A[P] }>
 ) => Readonly<A> = internal.Structural as any
 
@@ -231,8 +246,10 @@ export const Class: new<A extends Record<string, any> = {}>(
  */
 export const TaggedClass = <Tag extends string>(
   tag: Tag
-): new<A extends Record<string, any> = {}>(
-  args: Types.VoidIfEmpty<{ readonly [P in keyof A as P extends "_tag" ? never : P]: A[P] }>
+): new <A extends Record<string, any> = {}>(
+  args: Types.VoidIfEmpty<{
+    readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]
+  }>
 ) => Readonly<A> & { readonly _tag: Tag } => {
   class Base extends Class<any> {
     readonly _tag = tag
@@ -244,7 +261,7 @@ export const TaggedClass = <Tag extends string>(
  * @since 2.0.0
  * @category constructors
  */
-export const Structural: new<A>(
+export const Structural: new <A>(
   args: Types.VoidIfEmpty<{ readonly [P in keyof A]: A[P] }>
 ) => {} = internal.Structural as any
 
@@ -279,19 +296,26 @@ export const Structural: new<A>(
  */
 export type TaggedEnum<
   A extends Record<string, Record<string, any>> & UntaggedChildren<A>
-> = keyof A extends infer Tag ?
-  Tag extends keyof A ? Types.Simplify<{ readonly _tag: Tag } & { readonly [K in keyof A[Tag]]: A[Tag][K] }>
-  : never
-  : never
-
-type ChildrenAreTagged<A> = keyof A extends infer K ? K extends keyof A ? "_tag" extends keyof A[K] ? true
-    : false
-  : never
+> = keyof A extends infer Tag
+  ? Tag extends keyof A
+    ? Types.Simplify<
+        { readonly _tag: Tag } & { readonly [K in keyof A[Tag]]: A[Tag][K] }
+      >
+    : never
   : never
 
-type UntaggedChildren<A> = true extends ChildrenAreTagged<A>
-  ? "It looks like you're trying to create a tagged enum, but one or more of its members already has a `_tag` property."
-  : unknown
+type ChildrenAreTagged<A> = keyof A extends infer K
+  ? K extends keyof A
+    ? "_tag" extends keyof A[K]
+      ? true
+      : false
+    : never
+  : never
+
+type UntaggedChildren<A> =
+  true extends ChildrenAreTagged<A>
+    ? "It looks like you're trying to create a tagged enum, but one or more of its members already has a `_tag` property."
+    : unknown
 
 /**
  * @since 2.0.0
@@ -335,7 +359,10 @@ export declare namespace TaggedEnum {
     A extends { readonly _tag: string },
     K extends A["_tag"],
     E = Extract<A, { readonly _tag: K }>
-  > = { readonly [K in keyof E as K extends "_tag" ? never : K]: E[K] } extends infer T ? Types.VoidIfEmpty<T>
+  > = {
+    readonly [K in keyof E as K extends "_tag" ? never : K]: E[K]
+  } extends infer T
+    ? Types.VoidIfEmpty<T>
     : never
 
   /**
@@ -350,22 +377,30 @@ export declare namespace TaggedEnum {
    * @since 3.1.0
    */
   export type Constructor<A extends { readonly _tag: string }> = Types.Simplify<
-    & {
-      readonly [Tag in A["_tag"]]: Case.Constructor<Extract<A, { readonly _tag: Tag }>, "_tag">
-    }
-    & {
-      readonly $is: <Tag extends A["_tag"]>(tag: Tag) => (u: unknown) => u is Extract<A, { readonly _tag: Tag }>
+    {
+      readonly [Tag in A["_tag"]]: Case.Constructor<
+        Extract<A, { readonly _tag: Tag }>,
+        "_tag"
+      >
+    } & {
+      readonly $is: <Tag extends A["_tag"]>(
+        tag: Tag
+      ) => (u: unknown) => u is Extract<A, { readonly _tag: Tag }>
       readonly $match: {
         <
           const Cases extends {
-            readonly [Tag in A["_tag"]]: (args: Extract<A, { readonly _tag: Tag }>) => any
+            readonly [Tag in A["_tag"]]: (
+              args: Extract<A, { readonly _tag: Tag }>
+            ) => any
           }
         >(
           cases: Cases & { [K in Exclude<keyof Cases, A["_tag"]>]: never }
         ): (value: A) => Unify<ReturnType<Cases[A["_tag"]]>>
         <
           const Cases extends {
-            readonly [Tag in A["_tag"]]: (args: Extract<A, { readonly _tag: Tag }>) => any
+            readonly [Tag in A["_tag"]]: (
+              args: Extract<A, { readonly _tag: Tag }>
+            ) => any
           }
         >(
           value: A,
@@ -389,18 +424,16 @@ export declare namespace TaggedEnum {
     }
     readonly $match: {
       <
-        A,
-        B,
-        C,
-        D,
-        Cases extends {
-          readonly [Tag in Z["taggedEnum"]["_tag"]]: (
-            args: Extract<TaggedEnum.Kind<Z, A, B, C, D>, { readonly _tag: Tag }>
+        const Self extends TaggedEnum.Kind<Z, any, any, any, any>,
+        const Cases extends {
+          readonly [Tag in Self["_tag"]]: (
+            args: Extract<Self, { readonly _tag: Tag }>
           ) => any
         }
       >(
-        cases: Cases & { [K in Exclude<keyof Cases, Z["taggedEnum"]["_tag"]>]: never }
-      ): (self: TaggedEnum.Kind<Z, A, B, C, D>) => Unify<ReturnType<Cases[Z["taggedEnum"]["_tag"]]>>
+        self: Self,
+        cases: Cases & { [K in Exclude<keyof Cases, Self["_tag"]>]: never }
+      ): Unify<ReturnType<Cases[Self["_tag"]]>>
       <
         A,
         B,
@@ -408,13 +441,19 @@ export declare namespace TaggedEnum {
         D,
         Cases extends {
           readonly [Tag in Z["taggedEnum"]["_tag"]]: (
-            args: Extract<TaggedEnum.Kind<Z, A, B, C, D>, { readonly _tag: Tag }>
+            args: Extract<
+              TaggedEnum.Kind<Z, A, B, C, D>,
+              { readonly _tag: Tag }
+            >
           ) => any
         }
       >(
-        self: TaggedEnum.Kind<Z, A, B, C, D>,
-        cases: Cases & { [K in Exclude<keyof Cases, Z["taggedEnum"]["_tag"]>]: never }
-      ): Unify<ReturnType<Cases[Z["taggedEnum"]["_tag"]]>>
+        cases: Cases & {
+          [K in Exclude<keyof Cases, Z["taggedEnum"]["_tag"]>]: never
+        }
+      ): (
+        self: TaggedEnum.Kind<Z, A, B, C, D>
+      ) => Unify<ReturnType<Cases[Z["taggedEnum"]["_tag"]]>>
     }
   }
 }
@@ -505,16 +544,19 @@ export const taggedEnum: {
 
   <A extends { readonly _tag: string }>(): TaggedEnum.Constructor<A>
 } = () =>
-  new Proxy({}, {
-    get(_target, tag, _receiver) {
-      if (tag === "$is") {
-        return Predicate.isTagged
-      } else if (tag === "$match") {
-        return taggedMatch
+  new Proxy(
+    {},
+    {
+      get(_target, tag, _receiver) {
+        if (tag === "$is") {
+          return Predicate.isTagged
+        } else if (tag === "$match") {
+          return taggedMatch
+        }
+        return tagged(tag as string)
       }
-      return tagged(tag as string)
     }
-  }) as any
+  ) as any
 
 function taggedMatch<
   A extends { readonly _tag: string },
@@ -536,7 +578,7 @@ function taggedMatch<
 >(): any {
   if (arguments.length === 1) {
     const cases = arguments[0] as Cases
-    return function(value: A): ReturnType<Cases[A["_tag"]]> {
+    return function (value: A): ReturnType<Cases[A["_tag"]]> {
       return cases[value._tag as A["_tag"]](value as any)
     }
   }
@@ -551,9 +593,9 @@ function taggedMatch<
  * @since 2.0.0
  * @category constructors
  */
-export const Error: new<A extends Record<string, any> = {}>(
+export const Error: new <A extends Record<string, any> = {}>(
   args: Types.VoidIfEmpty<{ readonly [P in keyof A]: A[P] }>
-) => Cause.YieldableError & Readonly<A> = (function() {
+) => Cause.YieldableError & Readonly<A> = (function () {
   const plainArgsSymbol = Symbol.for("effect/Data/Error/plainArgs")
   const O = {
     BaseEffectError: class extends core.YieldableError {
@@ -562,7 +604,10 @@ export const Error: new<A extends Record<string, any> = {}>(
         if (args) {
           Object.assign(this, args)
           // @effect-diagnostics-next-line floatingEffect:off
-          Object.defineProperty(this, plainArgsSymbol, { value: args, enumerable: false })
+          Object.defineProperty(this, plainArgsSymbol, {
+            value: args,
+            enumerable: false
+          })
         }
       }
       toJSON() {
@@ -577,8 +622,12 @@ export const Error: new<A extends Record<string, any> = {}>(
  * @since 2.0.0
  * @category constructors
  */
-export const TaggedError = <Tag extends string>(tag: Tag): new<A extends Record<string, any> = {}>(
-  args: Types.VoidIfEmpty<{ readonly [P in keyof A as P extends "_tag" ? never : P]: A[P] }>
+export const TaggedError = <Tag extends string>(
+  tag: Tag
+): new <A extends Record<string, any> = {}>(
+  args: Types.VoidIfEmpty<{
+    readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]
+  }>
 ) => Cause.YieldableError & { readonly _tag: Tag } & Readonly<A> => {
   const O = {
     BaseEffectError: class extends Error<{}> {
