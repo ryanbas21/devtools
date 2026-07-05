@@ -8,7 +8,11 @@ import {
   UrlParams
 } from "@effect/platform"
 import { describe, it } from "@effect/vitest"
-import { assertInclude, deepStrictEqual, strictEqual } from "@effect/vitest/utils"
+import {
+  assertInclude,
+  deepStrictEqual,
+  strictEqual
+} from "@effect/vitest/utils"
 import {
   Context,
   Effect,
@@ -39,10 +43,12 @@ const OkTodo = Schema.Struct({
   body: Todo
 })
 
-const makeJsonPlaceholder = Effect.gen(function*() {
-  const defaultClient = yield* (HttpClient.HttpClient)
+const makeJsonPlaceholder = Effect.gen(function* () {
+  const defaultClient = yield* HttpClient.HttpClient
   const client = defaultClient.pipe(
-    HttpClient.mapRequest(HttpClientRequest.prependUrl("https://jsonplaceholder.typicode.com"))
+    HttpClient.mapRequest(
+      HttpClientRequest.prependUrl("https://jsonplaceholder.typicode.com")
+    )
   )
   const createTodo = (todo: typeof TodoWithoutId.Type) =>
     HttpClientRequest.post("/todos").pipe(
@@ -55,144 +61,167 @@ const makeJsonPlaceholder = Effect.gen(function*() {
     createTodo
   } as const
 })
-interface JsonPlaceholder extends Effect.Effect.Success<typeof makeJsonPlaceholder> {}
-const JsonPlaceholder = Context.GenericTag<JsonPlaceholder>("test/JsonPlaceholder")
-const JsonPlaceholderLive = Layer.effect(JsonPlaceholder, makeJsonPlaceholder)
-  .pipe(Layer.provide(FetchHttpClient.layer))
+interface JsonPlaceholder extends Effect.Effect.Success<
+  typeof makeJsonPlaceholder
+> {}
+const JsonPlaceholder = Context.GenericTag<JsonPlaceholder>(
+  "test/JsonPlaceholder"
+)
+const JsonPlaceholderLive = Layer.effect(
+  JsonPlaceholder,
+  makeJsonPlaceholder
+).pipe(Layer.provide(FetchHttpClient.layer))
 
 describe("HttpClient", () => {
-  it.effect("google", () =>
-    Effect.gen(function*() {
-      const response = yield* pipe(
-        HttpClient.get("https://www.google.com/"),
-        Effect.flatMap((_) => _.text)
-      )
-      assertInclude(response, "Google")
-    }).pipe(
-      it.flakyTest,
-      Effect.provide(FetchHttpClient.layer)
-    ), 30000)
+  it.effect(
+    "google",
+    () =>
+      Effect.gen(function* () {
+        const response = yield* pipe(
+          HttpClient.get("https://www.google.com/"),
+          Effect.flatMap((_) => _.text)
+        )
+        assertInclude(response, "Google")
+      }).pipe(it.flakyTest, Effect.provide(FetchHttpClient.layer)),
+    30000
+  )
 
-  it.effect("google withCookiesRef", () =>
-    Effect.gen(function*() {
-      const ref = yield* (Ref.make(Cookies.empty))
-      const client = (yield* HttpClient.HttpClient).pipe(
-        HttpClient.withCookiesRef(ref)
-      )
-      yield* pipe(
-        HttpClientRequest.get("https://www.google.com/"),
-        client.execute
-      )
-      const cookieHeader = yield* pipe(Ref.get(ref), Effect.map(Cookies.toCookieHeader))
-      yield* pipe(
-        HttpClientRequest.get("https://www.google.com/"),
-        client.pipe(
-          HttpClient.tapRequest((req) =>
-            Effect.sync(() => {
-              strictEqual(req.headers.cookie, cookieHeader)
-            })
-          )
-        ).execute
-      )
-    }).pipe(
-      it.flakyTest,
-      Effect.provide(FetchHttpClient.layer)
-    ), 30000)
+  it.effect(
+    "google withCookiesRef",
+    () =>
+      Effect.gen(function* () {
+        const ref = yield* Ref.make(Cookies.empty)
+        const client = (yield* HttpClient.HttpClient).pipe(
+          HttpClient.withCookiesRef(ref)
+        )
+        yield* pipe(
+          HttpClientRequest.get("https://www.google.com/"),
+          client.execute
+        )
+        const cookieHeader = yield* pipe(
+          Ref.get(ref),
+          Effect.map(Cookies.toCookieHeader)
+        )
+        yield* pipe(
+          HttpClientRequest.get("https://www.google.com/"),
+          client.pipe(
+            HttpClient.tapRequest((req) =>
+              Effect.sync(() => {
+                strictEqual(req.headers.cookie, cookieHeader)
+              })
+            )
+          ).execute
+        )
+      }).pipe(it.flakyTest, Effect.provide(FetchHttpClient.layer)),
+    30000
+  )
 
-  it.effect("google stream", () =>
-    Effect.gen(function*() {
-      const response = yield* pipe(
-        HttpClient.get(new URL("https://www.google.com/")),
-        Effect.map((_) => _.stream),
-        Stream.unwrapScoped,
-        Stream.runFold("", (a, b) => a + new TextDecoder().decode(b))
-      )
-      assertInclude(response, "Google")
-    }).pipe(
-      it.flakyTest,
-      Effect.provide(FetchHttpClient.layer)
-    ), 30000)
+  it.effect(
+    "google stream",
+    () =>
+      Effect.gen(function* () {
+        const response = yield* pipe(
+          HttpClient.get(new URL("https://www.google.com/")),
+          Effect.map((_) => _.stream),
+          Stream.unwrapScoped,
+          Stream.runFold("", (a, b) => a + new TextDecoder().decode(b))
+        )
+        assertInclude(response, "Google")
+      }).pipe(it.flakyTest, Effect.provide(FetchHttpClient.layer)),
+    30000
+  )
 
-  it.effect("jsonplaceholder", () =>
-    Effect.gen(function*() {
-      const jp = yield* JsonPlaceholder
-      const response = yield* jp.client.get("/todos/1").pipe(
-        Effect.flatMap(HttpClientResponse.schemaBodyJson(Todo))
-      )
-      strictEqual(response.id, 1)
-    }).pipe(
-      it.flakyTest,
-      Effect.provide(JsonPlaceholderLive)
-    ), 30000)
+  it.effect(
+    "jsonplaceholder",
+    () =>
+      Effect.gen(function* () {
+        const jp = yield* JsonPlaceholder
+        const response = yield* jp.client
+          .get("/todos/1")
+          .pipe(Effect.flatMap(HttpClientResponse.schemaBodyJson(Todo)))
+        strictEqual(response.id, 1)
+      }).pipe(it.flakyTest, Effect.provide(JsonPlaceholderLive)),
+    30000
+  )
 
-  it.effect("jsonplaceholder schemaFunction", () =>
-    Effect.gen(function*() {
-      const jp = yield* JsonPlaceholder
-      const response = yield* (jp.createTodo({
-        userId: 1,
-        title: "test",
-        completed: false
-      }))
-      strictEqual(response.title, "test")
-    }).pipe(
-      it.flakyTest,
-      Effect.provide(JsonPlaceholderLive)
-    ), 30000)
+  it.effect(
+    "jsonplaceholder schemaFunction",
+    () =>
+      Effect.gen(function* () {
+        const jp = yield* JsonPlaceholder
+        const response = yield* jp.createTodo({
+          userId: 1,
+          title: "test",
+          completed: false
+        })
+        strictEqual(response.title, "test")
+      }).pipe(it.flakyTest, Effect.provide(JsonPlaceholderLive)),
+    30000
+  )
 
-  it.effect("jsonplaceholder schemaJson", () =>
-    Effect.gen(function*() {
-      const jp = yield* JsonPlaceholder
-      const response = yield* jp.client.get("/todos/1").pipe(
-        Effect.flatMap(HttpClientResponse.schemaJson(OkTodo))
-      )
-      strictEqual(response.body.id, 1)
-    }).pipe(
-      it.flakyTest,
-      Effect.provide(JsonPlaceholderLive)
-    ), 30000)
+  it.effect(
+    "jsonplaceholder schemaJson",
+    () =>
+      Effect.gen(function* () {
+        const jp = yield* JsonPlaceholder
+        const response = yield* jp.client
+          .get("/todos/1")
+          .pipe(Effect.flatMap(HttpClientResponse.schemaJson(OkTodo)))
+        strictEqual(response.body.id, 1)
+      }).pipe(it.flakyTest, Effect.provide(JsonPlaceholderLive)),
+    30000
+  )
 
-  it.effect("request processing order", () =>
-    Effect.gen(function*() {
-      const defaultClient = yield* HttpClient.HttpClient
-      const client = defaultClient.pipe(
-        HttpClient.mapRequest(HttpClientRequest.prependUrl("jsonplaceholder.typicode.com")),
-        HttpClient.mapRequest(HttpClientRequest.prependUrl("https://"))
-      )
-      const response = yield* client.get("/todos/1").pipe(
-        Effect.flatMap(HttpClientResponse.schemaBodyJson(Todo))
-      )
-      strictEqual(response.id, 1)
-    }).pipe(
-      it.flakyTest,
-      Effect.provide(FetchHttpClient.layer)
-    ), 30000)
+  it.effect(
+    "request processing order",
+    () =>
+      Effect.gen(function* () {
+        const defaultClient = yield* HttpClient.HttpClient
+        const client = defaultClient.pipe(
+          HttpClient.mapRequest(
+            HttpClientRequest.prependUrl("jsonplaceholder.typicode.com")
+          ),
+          HttpClient.mapRequest(HttpClientRequest.prependUrl("https://"))
+        )
+        const response = yield* client
+          .get("/todos/1")
+          .pipe(Effect.flatMap(HttpClientResponse.schemaBodyJson(Todo)))
+        strictEqual(response.id, 1)
+      }).pipe(it.flakyTest, Effect.provide(FetchHttpClient.layer)),
+    30000
+  )
 
-  it.effect("streamBody accesses the current runtime", () =>
-    Effect.gen(function*() {
-      const defaultClient = yield* HttpClient.HttpClient
+  it.effect(
+    "streamBody accesses the current runtime",
+    () =>
+      Effect.gen(function* () {
+        const defaultClient = yield* HttpClient.HttpClient
 
-      const requestStream = Stream.fromIterable(["hello", "world"]).pipe(
-        Stream.tap((_) => Effect.log(_)),
-        Stream.encodeText
-      )
+        const requestStream = Stream.fromIterable(["hello", "world"]).pipe(
+          Stream.tap((_) => Effect.log(_)),
+          Stream.encodeText
+        )
 
-      const logs: Array<unknown> = []
-      const logger = Logger.make(({ message }) => logs.push(message))
+        const logs: Array<unknown> = []
+        const logger = Logger.make(({ message }) => logs.push(message))
 
-      yield* HttpClientRequest.post("https://jsonplaceholder.typicode.com").pipe(
-        HttpClientRequest.bodyStream(requestStream),
-        defaultClient.execute,
-        Effect.provide(Logger.replace(Logger.defaultLogger, logger))
-      )
+        yield* HttpClientRequest.post(
+          "https://jsonplaceholder.typicode.com"
+        ).pipe(
+          HttpClientRequest.bodyStream(requestStream),
+          defaultClient.execute,
+          Effect.provide(Logger.replace(Logger.defaultLogger, logger))
+        )
 
-      deepStrictEqual(logs, [["hello"], ["world"]])
-    }).pipe(
-      it.flakyTest,
-      Effect.provide(FetchHttpClient.layer)
-    ), 30000)
+        deepStrictEqual(logs, [["hello"], ["world"]])
+      }).pipe(it.flakyTest, Effect.provide(FetchHttpClient.layer)),
+    30000
+  )
 
   it("ClientRequest parses URL instances", () => {
-    const request = HttpClientRequest.get(new URL("https://example.com/?foo=bar#hash")).pipe(
+    const request = HttpClientRequest.get(
+      new URL("https://example.com/?foo=bar#hash")
+    ).pipe(
       HttpClientRequest.appendUrl("/foo"),
       HttpClientRequest.setUrlParam("baz", "qux")
     )
@@ -246,28 +275,34 @@ describe("HttpClient", () => {
     })
   })
 
-  it.effect("matchStatus", () =>
-    Effect.gen(function*() {
-      const jp = yield* JsonPlaceholder
-      const response = yield* jp.client.get("/todos/1").pipe(
-        Effect.flatMap(
-          HttpClientResponse.matchStatus({
-            "2xx": HttpClientResponse.schemaBodyJson(Todo),
-            404: () => Effect.fail("not found"),
-            orElse: () => Effect.fail("boom")
-          })
+  it.effect(
+    "matchStatus",
+    () =>
+      Effect.gen(function* () {
+        const jp = yield* JsonPlaceholder
+        const response = yield* jp.client.get("/todos/1").pipe(
+          Effect.flatMap(
+            HttpClientResponse.matchStatus({
+              "2xx": HttpClientResponse.schemaBodyJson(Todo),
+              404: () => Effect.fail("not found"),
+              orElse: () => Effect.fail("boom")
+            })
+          )
         )
-      )
-      deepStrictEqual(response, { id: 1, userId: 1, title: "delectus aut autem", completed: false })
-    }).pipe(
-      it.flakyTest,
-      Effect.provide(JsonPlaceholderLive)
-    ), 30000)
+        deepStrictEqual(response, {
+          id: 1,
+          userId: 1,
+          title: "delectus aut autem",
+          completed: false
+        })
+      }).pipe(it.flakyTest, Effect.provide(JsonPlaceholderLive)),
+    30000
+  )
 
   it("ClientRequest redacts headers", () => {
     const request = HttpClientRequest.get(new URL("https://example.com")).pipe(
       HttpClientRequest.setHeaders({
-        "authorization": "foobar"
+        authorization: "foobar"
       })
     )
 
@@ -279,7 +314,9 @@ describe("HttpClient", () => {
         ] as const
       ])
     )
-    const r = Inspectable.withRedactableContext(fiberRefs, () => Inspectable.toStringUnknown(request))
+    const r = Inspectable.withRedactableContext(fiberRefs, () =>
+      Inspectable.toStringUnknown(request)
+    )
     const redacted = JSON.parse(r)
 
     deepStrictEqual(redacted, {
@@ -293,123 +330,185 @@ describe("HttpClient", () => {
     })
   })
 
-  it.effect("followRedirects", () =>
-    Effect.gen(function*() {
-      const defaultClient = yield* HttpClient.HttpClient
-      const client = defaultClient.pipe(HttpClient.followRedirects())
+  it.effect(
+    "followRedirects",
+    () =>
+      Effect.gen(function* () {
+        const defaultClient = yield* HttpClient.HttpClient
+        const client = defaultClient.pipe(HttpClient.followRedirects())
 
-      const response = yield* client.get("https://google.com/")
-      strictEqual(response.request.url, "https://www.google.com/")
+        const response = yield* client.get("https://google.com/")
+        strictEqual(response.request.url, "https://www.google.com/")
+      }).pipe(
+        it.flakyTest,
+        Effect.provide(FetchHttpClient.layer),
+        Effect.provideService(FetchHttpClient.RequestInit, {
+          redirect: "manual"
+        })
+      ),
+    30000
+  )
+
+  it.effect("fetch removes content-length header", () => {
+    let headers: globalThis.RequestInit["headers"] | undefined
+    const fetch: typeof globalThis.fetch = (_, init) => {
+      headers = init?.headers
+      return Promise.resolve(new Response("ok"))
+    }
+    return Effect.gen(function* () {
+      const client = yield* HttpClient.HttpClient
+
+      yield* HttpClientRequest.post("http://test/").pipe(
+        HttpClientRequest.bodyText("hello"),
+        client.execute
+      )
+
+      strictEqual(
+        (headers as Record<string, string> | undefined)?.["content-length"],
+        undefined
+      )
+      strictEqual(
+        (headers as Record<string, string> | undefined)?.["content-type"],
+        "text/plain"
+      )
+      strictEqual(
+        (headers as Record<string, string> | undefined)?.["x-test"],
+        "ok"
+      )
     }).pipe(
-      it.flakyTest,
       Effect.provide(FetchHttpClient.layer),
-      Effect.provideService(FetchHttpClient.RequestInit, { redirect: "manual" })
-    ), 30000)
+      Effect.provideService(FetchHttpClient.Fetch, fetch),
+      Effect.provideService(FetchHttpClient.RequestInit, {
+        headers: {
+          "content-length": "100",
+          "x-test": "ok"
+        }
+      })
+    )
+  })
 
   describe("retryTransient", () => {
     const makeTestClient = (status: number) => {
       const attemptsRef = Ref.unsafeMake(0)
       const client = HttpClient.make((request) =>
-        Effect.gen(function*() {
+        Effect.gen(function* () {
           yield* Ref.update(attemptsRef, (n) => n + 1)
-          return HttpClientResponse.fromWeb(request, new Response(null, { status }))
+          return HttpClientResponse.fromWeb(
+            request,
+            new Response(null, { status })
+          )
         })
       )
       return { attemptsRef, client }
     }
 
     it.effect("retries 408 Request Timeout", () =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const { attemptsRef, client } = makeTestClient(408)
         const retryClient = client.pipe(HttpClient.retryTransient({ times: 2 }))
         yield* retryClient.get("http://test/").pipe(Effect.ignore)
         const attempts = yield* Ref.get(attemptsRef)
         strictEqual(attempts, 3)
-      }))
+      })
+    )
 
     it.effect("retries 429 Too Many Requests", () =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const { attemptsRef, client } = makeTestClient(429)
         const retryClient = client.pipe(HttpClient.retryTransient({ times: 2 }))
         yield* retryClient.get("http://test/").pipe(Effect.ignore)
         const attempts = yield* Ref.get(attemptsRef)
         strictEqual(attempts, 3)
-      }))
+      })
+    )
 
     it.effect("retries 500 Internal Server Error", () =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const { attemptsRef, client } = makeTestClient(500)
         const retryClient = client.pipe(HttpClient.retryTransient({ times: 2 }))
         yield* retryClient.get("http://test/").pipe(Effect.ignore)
         const attempts = yield* Ref.get(attemptsRef)
         strictEqual(attempts, 3)
-      }))
+      })
+    )
 
     it.effect("retries 502 Bad Gateway", () =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const { attemptsRef, client } = makeTestClient(502)
         const retryClient = client.pipe(HttpClient.retryTransient({ times: 2 }))
         yield* retryClient.get("http://test/").pipe(Effect.ignore)
         const attempts = yield* Ref.get(attemptsRef)
         strictEqual(attempts, 3)
-      }))
+      })
+    )
 
     it.effect("retries 503 Service Unavailable", () =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const { attemptsRef, client } = makeTestClient(503)
         const retryClient = client.pipe(HttpClient.retryTransient({ times: 2 }))
         yield* retryClient.get("http://test/").pipe(Effect.ignore)
         const attempts = yield* Ref.get(attemptsRef)
         strictEqual(attempts, 3)
-      }))
+      })
+    )
 
     it.effect("retries 504 Gateway Timeout", () =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const { attemptsRef, client } = makeTestClient(504)
         const retryClient = client.pipe(HttpClient.retryTransient({ times: 2 }))
         yield* retryClient.get("http://test/").pipe(Effect.ignore)
         const attempts = yield* Ref.get(attemptsRef)
         strictEqual(attempts, 3)
-      }))
+      })
+    )
 
     it.effect("does NOT retry 200 OK", () =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const { attemptsRef, client } = makeTestClient(200)
         const retryClient = client.pipe(HttpClient.retryTransient({ times: 2 }))
         yield* retryClient.get("http://test/").pipe(Effect.ignore)
         const attempts = yield* Ref.get(attemptsRef)
         strictEqual(attempts, 1)
-      }))
+      })
+    )
 
     it.effect("does NOT retry 501 Not Implemented", () =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const { attemptsRef, client } = makeTestClient(501)
         const retryClient = client.pipe(HttpClient.retryTransient({ times: 2 }))
         yield* retryClient.get("http://test/").pipe(Effect.ignore)
         const attempts = yield* Ref.get(attemptsRef)
         strictEqual(attempts, 1)
-      }))
+      })
+    )
 
     it.effect("does NOT retry 505 HTTP Version Not Supported", () =>
-      Effect.gen(function*() {
+      Effect.gen(function* () {
         const { attemptsRef, client } = makeTestClient(505)
         const retryClient = client.pipe(HttpClient.retryTransient({ times: 2 }))
         yield* retryClient.get("http://test/").pipe(Effect.ignore)
         const attempts = yield* Ref.get(attemptsRef)
         strictEqual(attempts, 1)
-      }))
+      })
+    )
 
-    it.effect("while predicate only applies to error retries, not response retries", () =>
-      Effect.gen(function*() {
-        const { attemptsRef, client } = makeTestClient(503)
-        const errorOnlyPredicate = (e: unknown) => e !== null && typeof e === "object" && "_tag" in e
-        const retryClient = client.pipe(HttpClient.retryTransient({
-          times: 2,
-          while: errorOnlyPredicate
-        }))
-        yield* retryClient.get("http://test/").pipe(Effect.ignore)
-        const attempts = yield* Ref.get(attemptsRef)
-        strictEqual(attempts, 3)
-      }))
+    it.effect(
+      "while predicate only applies to error retries, not response retries",
+      () =>
+        Effect.gen(function* () {
+          const { attemptsRef, client } = makeTestClient(503)
+          const errorOnlyPredicate = (e: unknown) =>
+            e !== null && typeof e === "object" && "_tag" in e
+          const retryClient = client.pipe(
+            HttpClient.retryTransient({
+              times: 2,
+              while: errorOnlyPredicate
+            })
+          )
+          yield* retryClient.get("http://test/").pipe(Effect.ignore)
+          const attempts = yield* Ref.get(attemptsRef)
+          strictEqual(attempts, 3)
+        })
+    )
   })
 })

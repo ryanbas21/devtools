@@ -70,7 +70,12 @@ describe("Data", () => {
     }
     const taggedPerson = Data.tagged<TaggedPerson>("Person")
 
-    expect(taggedPerson).type.toBe<(args: { readonly name: string; readonly optional?: string }) => TaggedPerson>()
+    expect(taggedPerson).type.toBe<
+      (args: {
+        readonly name: string
+        readonly optional?: string
+      }) => TaggedPerson
+    >()
   })
 
   it("Class", () => {
@@ -85,10 +90,17 @@ describe("Data", () => {
   })
 
   it("TaggedClass", () => {
-    class Person extends Data.TaggedClass("Person")<{ name: string; age?: number }> {}
+    class Person extends Data.TaggedClass("Person")<{
+      name: string
+      age?: number
+    }> {}
     const person = new Person({ name: "Mike" })
     // fields should be readonly
-    expect(person).type.toBe<{ readonly name: string; readonly age?: number; readonly _tag: "Person" }>()
+    expect(person).type.toBe<{
+      readonly name: string
+      readonly age?: number
+      readonly _tag: "Person"
+    }>()
 
     class Void extends Data.TaggedClass("Void") {}
     // void constructor
@@ -96,16 +108,22 @@ describe("Data", () => {
   })
 
   it("Error", () => {
-    class Err extends Data.Error<{ message: string; a: number; optional?: string }> {}
+    class Err extends Data.Error<{
+      message: string
+      a: number
+      optional?: string
+    }> {}
     const err = new Err({ message: "Oh no!", a: 1 })
 
     // assignable to Error
     expect<Err>().type.toBeAssignableTo<Error>()
 
     // non-Error fields should be readonly
-    expect(pick(err, "message", "a", "optional")).type.toBe<
-      { message: string; readonly a: number; readonly optional?: string }
-    >()
+    expect(pick(err, "message", "a", "optional")).type.toBe<{
+      message: string
+      readonly a: number
+      readonly optional?: string
+    }>()
 
     class Void extends Data.Error {}
     // void constructor
@@ -113,7 +131,10 @@ describe("Data", () => {
   })
 
   it("TaggedError", () => {
-    class Err extends Data.TaggedError("Foo")<{ message?: string; a: number }> {}
+    class Err extends Data.TaggedError("Foo")<{
+      message?: string
+      a: number
+    }> {}
     // Test optional props are allowed
     new Err({ a: 1 })
 
@@ -123,7 +144,10 @@ describe("Data", () => {
     const err = new Err({ message: "Oh no!", a: 1 })
 
     // non-Error fields should be readonly
-    expect(pick(err, "message", "a")).type.toBe<{ message: string; readonly a: number }>()
+    expect(pick(err, "message", "a")).type.toBe<{
+      message: string
+      readonly a: number
+    }>()
 
     class Void extends Data.TaggedError("Foo") {}
     // void constructor
@@ -136,12 +160,14 @@ describe("Data", () => {
         A: { readonly required: string }
         B: { readonly optional?: number }
       }>
-      expect<Extract<TE, { _tag: "A" }>>().type.toBe<
-        { readonly _tag: "A"; readonly required: string }
-      >()
-      expect<Extract<TE, { _tag: "B" }>>().type.toBe<
-        { readonly _tag: "B"; readonly optional?: number }
-      >()
+      expect<Extract<TE, { _tag: "A" }>>().type.toBe<{
+        readonly _tag: "A"
+        readonly required: string
+      }>()
+      expect<Extract<TE, { _tag: "B" }>>().type.toBe<{
+        readonly _tag: "B"
+        readonly optional?: number
+      }>()
     })
 
     it("should raise an error if one of the variants has a _tag property", () => {
@@ -161,10 +187,20 @@ describe("Data", () => {
       }>
 
       const { $is, A, B } = Data.taggedEnum<TE>()
-      expect<Parameters<typeof A>>().type.toBe<[{ readonly required: string }]>()
-      expect<ReturnType<typeof A>>().type.toBe<{ readonly _tag: "A"; readonly required: string }>()
-      expect<Parameters<typeof B>>().type.toBe<[{ readonly optional?: number }]>()
-      expect<ReturnType<typeof B>>().type.toBe<{ readonly _tag: "B"; readonly optional?: number }>()
+      expect<Parameters<typeof A>>().type.toBe<
+        [{ readonly required: string }]
+      >()
+      expect<ReturnType<typeof A>>().type.toBe<{
+        readonly _tag: "A"
+        readonly required: string
+      }>()
+      expect<Parameters<typeof B>>().type.toBe<
+        [{ readonly optional?: number }]
+      >()
+      expect<ReturnType<typeof B>>().type.toBe<{
+        readonly _tag: "B"
+        readonly optional?: number
+      }>()
       const isA = $is("A")
       expect(isA).type.toBe<
         (u: unknown) => u is { readonly _tag: "A"; readonly required: string }
@@ -186,8 +222,37 @@ describe("Data", () => {
       }
 
       const { A, B } = Data.taggedEnum<TEDefinition>()
-      expect<typeof A>().type.toBe<(<A>(args: { readonly a: A }) => { readonly _tag: "A"; readonly a: A })>()
-      expect<typeof B>().type.toBe<(<B>(args: { readonly b?: B }) => { readonly _tag: "B"; readonly b?: B })>()
+      expect<typeof A>().type.toBe<
+        <A>(args: { readonly a: A }) => { readonly _tag: "A"; readonly a: A }
+      >()
+      expect<typeof B>().type.toBe<
+        <B>(args: { readonly b?: B }) => { readonly _tag: "B"; readonly b?: B }
+      >()
+    })
+
+    it("should preserve the generic type parameter inside $match arms (#6249)", () => {
+      type TE<T> = Data.TaggedEnum<{
+        Leaf: { value: T }
+        Branch: { children: ReadonlyArray<TE<T>> }
+      }>
+
+      interface TEDefinition extends Data.TaggedEnum.WithGenerics<1> {
+        readonly taggedEnum: TE<this["A"]>
+      }
+
+      const TE = Data.taggedEnum<TEDefinition>()
+
+      function collectValues<A>(node: TE<A>): ReadonlyArray<A> {
+        return TE.$match(node, {
+          Leaf: (leaf) => {
+            expect(leaf.value).type.toBe<A>()
+            return [leaf.value]
+          },
+          Branch: (branch) => branch.children.flatMap(collectValues<A>)
+        })
+      }
+
+      expect(collectValues).type.toBe<<A>(node: TE<A>) => ReadonlyArray<A>>()
     })
   })
 })

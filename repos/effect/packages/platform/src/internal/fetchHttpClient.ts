@@ -14,9 +14,15 @@ export const requestInitTagKey = "@effect/platform/FetchHttpClient/FetchOptions"
 
 const fetch: Client.HttpClient = client.make((request, url, signal, fiber) => {
   const context = fiber.getFiberRef(FiberRef.currentContext)
-  const fetch: typeof globalThis.fetch = context.unsafeMap.get(fetchTagKey) ?? globalThis.fetch
+  const fetch: typeof globalThis.fetch =
+    context.unsafeMap.get(fetchTagKey) ?? globalThis.fetch
   const options: RequestInit = context.unsafeMap.get(requestInitTagKey) ?? {}
-  const headers = options.headers ? Headers.merge(Headers.fromInput(options.headers), request.headers) : request.headers
+  let headers = options.headers
+    ? Headers.merge(Headers.fromInput(options.headers), request.headers)
+    : request.headers
+  if (headers["content-length"]) {
+    headers = Headers.remove(headers, "content-length")
+  }
   const send = (body: BodyInit | undefined) =>
     Effect.map(
       Effect.tryPromise({
@@ -45,7 +51,10 @@ const fetch: Client.HttpClient = client.make((request, url, signal, fiber) => {
     case "FormData":
       return send(request.body.formData)
     case "Stream":
-      return Effect.flatMap(Stream.toReadableStreamEffect(request.body.stream), send)
+      return Effect.flatMap(
+        Stream.toReadableStreamEffect(request.body.stream),
+        send
+      )
   }
   return send(undefined)
 })
