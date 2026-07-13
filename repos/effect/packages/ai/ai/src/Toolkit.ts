@@ -108,18 +108,14 @@ export type TypeId = typeof TypeId
  * @since 1.0.0
  * @category Models
  */
-export interface Toolkit<in out Tools extends Record<string, Tool.Any>> extends
-  Effect.Effect<
-    WithHandler<Tools>,
-    never,
-    Tool.HandlersFor<Tools>
-  >,
-  Inspectable,
-  Pipeable
-{
+export interface Toolkit<in out Tools extends Record<string, Tool.Any>>
+  extends
+    Effect.Effect<WithHandler<Tools>, never, Tool.HandlersFor<Tools>>,
+    Inspectable,
+    Pipeable {
   readonly [TypeId]: TypeId
 
-  new(_: never): {}
+  new (_: never): {}
 
   /**
    * A record containing all tools in this toolkit.
@@ -178,10 +174,12 @@ export type Tools<T> = T extends Toolkit<infer Tools> ? Tools : never
  * @since 1.0.0
  * @category Utility Types
  */
-export type ToolsByName<Tools> = Tools extends Record<string, Tool.Any> ?
-  { readonly [Name in keyof Tools]: Tools[Name] }
-  : Tools extends ReadonlyArray<Tool.Any> ? { readonly [Tool in Tools[number] as Tool["name"]]: Tool }
-  : never
+export type ToolsByName<Tools> =
+  Tools extends Record<string, Tool.Any>
+    ? { readonly [Name in keyof Tools]: Tools[Name] }
+    : Tools extends ReadonlyArray<Tool.Any>
+      ? { readonly [Tool in Tools[number] as Tool["name"]]: Tool }
+      : never
 
 /**
  * A utility type that maps tool names to their required handler functions.
@@ -190,7 +188,11 @@ export type ToolsByName<Tools> = Tools extends Record<string, Tool.Any> ?
  * @category Utility Types
  */
 export type HandlersFrom<Tools extends Record<string, Tool.Any>> = {
-  readonly [Name in keyof Tools as Tool.RequiresHandler<Tools[Name]> extends true ? Name : never]: (
+  readonly [Name in keyof Tools as Tool.RequiresHandler<
+    Tools[Name]
+  > extends true
+    ? Name
+    : never]: (
     params: Tool.Parameters<Tools[Name]>
   ) => Effect.Effect<
     Tool.Success<Tools[Name]>,
@@ -206,7 +208,8 @@ export type HandlersFrom<Tools extends Record<string, Tool.Any>> = {
  * @category Utility Types
  */
 
-export type WithHandlerTools<T> = T extends WithHandler<infer Tools> ? Tools : never
+export type WithHandlerTools<T> =
+  T extends WithHandler<infer Tools> ? Tools : never
 
 /**
  * A toolkit instance with registered handlers ready for tool execution.
@@ -248,9 +251,11 @@ const Proto = {
   of: identity,
   toContext(
     this: Toolkit<Record<string, Tool.Any>>,
-    build: Record<string, (params: any) => any> | Effect.Effect<Record<string, (params: any) => any>>
+    build:
+      | Record<string, (params: any) => any>
+      | Effect.Effect<Record<string, (params: any) => any>>
   ) {
-    return Effect.gen(this, function*() {
+    return Effect.gen(this, function* () {
       const context = yield* Effect.context<never>()
       const handlers = Effect.isEffect(build) ? yield* build : build
       const contextMap = new Map<string, unknown>()
@@ -263,27 +268,43 @@ const Proto = {
   },
   toLayer(
     this: Toolkit<Record<string, Tool.Any>>,
-    build: Record<string, (params: any) => any> | Effect.Effect<Record<string, (params: any) => any>>
+    build:
+      | Record<string, (params: any) => any>
+      | Effect.Effect<Record<string, (params: any) => any>>
   ) {
     return Layer.scopedContext(this.toContext(build))
   },
   commit(this: Toolkit<Record<string, Tool.Any>>) {
-    return Effect.gen(this, function*() {
+    return Effect.gen(this, function* () {
       const tools = this.tools
       const context = yield* Effect.context<never>()
-      const schemasCache = new WeakMap<any, {
-        readonly context: Context.Context<never>
-        readonly handler: (params: any) => Effect.Effect<any, any>
-        readonly decodeParameters: (u: unknown) => Effect.Effect<Tool.Parameters<any>, ParseError>
-        readonly validateResult: (u: unknown) => Effect.Effect<unknown, ParseError>
-        readonly encodeResult: (u: unknown) => Effect.Effect<unknown, ParseError>
-      }>()
+      const schemasCache = new WeakMap<
+        any,
+        {
+          readonly context: Context.Context<never>
+          readonly handler: (params: any) => Effect.Effect<any, any>
+          readonly decodeParameters: (
+            u: unknown
+          ) => Effect.Effect<Tool.Parameters<any>, ParseError>
+          readonly validateResult: (
+            u: unknown
+          ) => Effect.Effect<unknown, ParseError>
+          readonly encodeResult: (
+            u: unknown
+          ) => Effect.Effect<unknown, ParseError>
+        }
+      >()
       const getSchemas = (tool: Tool.Any) => {
         let schemas = schemasCache.get(tool)
         if (Predicate.isUndefined(schemas)) {
           const handler = context.unsafeMap.get(tool.id)! as Tool.Handler<any>
-          const decodeParameters = Schema.decodeUnknown(tool.parametersSchema) as any
-          const resultSchema = Schema.Union(tool.successSchema, tool.failureSchema)
+          const decodeParameters = Schema.decodeUnknown(
+            tool.parametersSchema as Schema.Schema.Any
+          ) as any
+          const resultSchema = Schema.Union(
+            tool.successSchema,
+            tool.failureSchema
+          )
           const validateResult = Schema.validate(resultSchema) as any
           const encodeResult = Schema.encodeUnknown(resultSchema) as any
           schemas = {
@@ -298,7 +319,7 @@ const Proto = {
         return schemas
       }
       const handle = Effect.fn("Toolkit.handle", { captureStackTrace: false })(
-        function*(name: string, params: unknown) {
+        function* (name: string, params: unknown) {
           yield* Effect.annotateCurrentSpan({ tool: name, parameters: params })
           const tool = tools[name]
           if (Predicate.isUndefined(tool)) {
@@ -316,34 +337,40 @@ const Proto = {
               new AiError.MalformedOutput({
                 module: "Toolkit",
                 method: `${name}.handle`,
-                description: `Failed to decode tool call parameters for tool '${name}' from:\n'${
-                  JSON.stringify(params, undefined, 2)
-                }'`,
+                description: `Failed to decode tool call parameters for tool '${name}' from:\n'${JSON.stringify(
+                  params,
+                  undefined,
+                  2
+                )}'`,
                 cause
               })
           )
-          const { isFailure, result } = yield* schemas.handler(decodedParams).pipe(
-            Effect.map((result) => ({ result, isFailure: false })),
-            Effect.catchAll((error) =>
-              // If the tool handler failed, check the tool's failure mode to
-              // determine how the result should be returned to the end user
-              tool.failureMode === "error"
-                ? Effect.fail(error)
-                : Effect.succeed({ result: error, isFailure: true })
-            ),
-            Effect.tap(({ result }) => schemas.validateResult(result)),
-            Effect.mapInputContext((input) => Context.merge(schemas.context, input)),
-            Effect.mapError((cause) =>
-              ParseResult.isParseError(cause)
-                ? new AiError.MalformedInput({
-                  module: "Toolkit",
-                  method: `${name}.handle`,
-                  description: `Failed to validate tool call result for tool '${name}'`,
-                  cause
-                })
-                : cause
+          const { isFailure, result } = yield* schemas
+            .handler(decodedParams)
+            .pipe(
+              Effect.map((result) => ({ result, isFailure: false })),
+              Effect.catchAll((error) =>
+                // If the tool handler failed, check the tool's failure mode to
+                // determine how the result should be returned to the end user
+                tool.failureMode === "error"
+                  ? Effect.fail(error)
+                  : Effect.succeed({ result: error, isFailure: true })
+              ),
+              Effect.tap(({ result }) => schemas.validateResult(result)),
+              Effect.mapInputContext((input) =>
+                Context.merge(schemas.context, input)
+              ),
+              Effect.mapError((cause) =>
+                ParseResult.isParseError(cause)
+                  ? new AiError.MalformedInput({
+                      module: "Toolkit",
+                      method: `${name}.handle`,
+                      description: `Failed to validate tool call result for tool '${name}'`,
+                      cause
+                    })
+                  : cause
+              )
             )
-          )
           const encodedResult = yield* Effect.mapError(
             schemas.encodeResult(result),
             (cause) =>
@@ -370,7 +397,9 @@ const Proto = {
   toJSON(this: Toolkit<any>): unknown {
     return {
       _id: "@effect/ai/Toolkit",
-      tools: Array.from(Object.values(this.tools)).map((tool) => (tool as Tool.Any).name)
+      tools: Array.from(Object.values(this.tools)).map(
+        (tool) => (tool as Tool.Any).name
+      )
     }
   },
   pipe() {
@@ -378,15 +407,18 @@ const Proto = {
   }
 }
 
-const makeProto = <Tools extends Record<string, Tool.Any>>(tools: Tools): Toolkit<Tools> =>
-  Object.assign(function() {}, Proto, { tools }) as any
+const makeProto = <Tools extends Record<string, Tool.Any>>(
+  tools: Tools
+): Toolkit<Tools> => Object.assign(function () {}, Proto, { tools }) as any
 
 const resolveInput = <Tools extends ReadonlyArray<Tool.Any>>(
   ...tools: Tools
 ): Record<string, Tools[number]> => {
   const output = {} as Record<string, Tools[number]>
   for (const tool of tools) {
-    const value = (Schema.isSchema(tool) ? Tool.fromTaggedRequest(tool as any) : tool) as any
+    const value = (
+      Schema.isSchema(tool) ? Tool.fromTaggedRequest(tool as any) : tool
+    ) as any
     output[tool.name] = value
   }
   return output

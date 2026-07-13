@@ -1,8 +1,10 @@
 import { describe, it } from "@effect/vitest"
 import { deepStrictEqual } from "@effect/vitest/utils"
 import * as Clock from "effect/Clock"
+import * as Deferred from "effect/Deferred"
 import * as Duration from "effect/Duration"
 import * as Effect from "effect/Effect"
+import * as Fiber from "effect/Fiber"
 import { pipe } from "effect/Function"
 import * as Ref from "effect/Ref"
 import * as Schedule from "effect/Schedule"
@@ -10,29 +12,40 @@ import * as TestClock from "effect/TestClock"
 
 describe("Effect", () => {
   it.effect("schedule - runs effect for each recurrence of the schedule", () =>
-    Effect.gen(function*() {
+    Effect.gen(function* () {
       const ref = yield* Ref.make<ReadonlyArray<Duration.Duration>>([])
       const effect = pipe(
         Clock.currentTimeMillis,
-        Effect.flatMap((duration) => Ref.update(ref, (array) => [...array, Duration.millis(duration)]))
+        Effect.flatMap((duration) =>
+          Ref.update(ref, (array) => [...array, Duration.millis(duration)])
+        )
       )
-      const schedule = pipe(Schedule.spaced(Duration.seconds(1)), Schedule.intersect(Schedule.recurs(5)))
+      const schedule = pipe(
+        Schedule.spaced(Duration.seconds(1)),
+        Schedule.intersect(Schedule.recurs(5))
+      )
       yield* pipe(effect, Effect.schedule(schedule), Effect.fork)
       yield* TestClock.adjust(Duration.seconds(5))
       const value = yield* Ref.get(ref)
       const expected = [1, 2, 3, 4, 5].map(Duration.seconds)
       deepStrictEqual(value, expected)
-    }))
+    })
+  )
 
   it.effect("schedule - Schedule.CurrentIterationMetadata", () =>
-    Effect.gen(function*() {
-      const ref = yield* Ref.make<Array<undefined | Schedule.IterationMetadata>>([])
-      const effect = Effect.gen(function*() {
+    Effect.gen(function* () {
+      const ref = yield* Ref.make<
+        Array<undefined | Schedule.IterationMetadata>
+      >([])
+      const effect = Effect.gen(function* () {
         const lastIterationInfo = yield* Schedule.CurrentIterationMetadata
 
         yield* Ref.update(ref, (array) => [...array, lastIterationInfo])
       })
-      const schedule = pipe(Schedule.fibonacci("1 second"), Schedule.intersect(Schedule.recurs(4)))
+      const schedule = pipe(
+        Schedule.fibonacci("1 second"),
+        Schedule.intersect(Schedule.recurs(4))
+      )
       yield* pipe(effect, Effect.schedule(schedule), Effect.fork)
       yield* TestClock.adjust(Duration.seconds(50))
       const value = yield* Ref.get(ref)
@@ -75,5 +88,23 @@ describe("Effect", () => {
           start: 0
         }
       ])
-    }))
+    })
+  )
+
+  it.effect(
+    "schedule - cron does not fail when the test clock is adjusted to infinity",
+    () =>
+      Effect.gen(function* () {
+        const latch = yield* Deferred.make<void>()
+        const fiber = yield* pipe(
+          Deferred.await(latch),
+          Effect.repeat(Schedule.cron("0 0 4 8-14 * *", "UTC")),
+          Effect.fork
+        )
+
+        yield* TestClock.adjust(Infinity)
+        yield* Deferred.succeed(latch, void 0)
+        yield* Fiber.join(fiber)
+      })
+  )
 })
