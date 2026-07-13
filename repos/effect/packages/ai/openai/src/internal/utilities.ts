@@ -2,15 +2,18 @@ import type * as Response from "@effect/ai/Response"
 import * as Predicate from "effect/Predicate"
 
 /** @internal */
-export const ProviderOptionsKey = "@effect/ai-openai/OpenAiLanguageModel/ProviderOptions"
+export const ProviderOptionsKey =
+  "@effect/ai-openai/OpenAiLanguageModel/ProviderOptions"
 
 /** @internal */
-export const ProviderMetadataKey = "@effect/ai-openai/OpenAiLanguageModel/ProviderMetadata"
+export const ProviderMetadataKey =
+  "@effect/ai-openai/OpenAiLanguageModel/ProviderMetadata"
 
 const finishReasonMap: Record<string, Response.FinishReason> = {
   content_filter: "content-filter",
   function_call: "tool-calls",
   length: "length",
+  max_output_tokens: "length",
   stop: "stop",
   tool_calls: "tool-calls"
 }

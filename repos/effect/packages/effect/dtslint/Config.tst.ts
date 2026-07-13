@@ -1,5 +1,5 @@
 import { Brand, Config, hole, pipe } from "effect"
-import { describe, expect, it, when } from "tstyche"
+import { describe, expect, it } from "tstyche"
 
 declare const string: Config.Config<string>
 declare const number: Config.Config<number>
@@ -21,13 +21,21 @@ const Str = Brand.refined<Str>(
 describe("Config", () => {
   describe("all", () => {
     it("tuple", () => {
-      expect(Config.all([string, number])).type.toBe<Config.Config<[string, number]>>()
-      expect(pipe([string, number] as const, Config.all)).type.toBe<Config.Config<[string, number]>>()
+      expect(Config.all([string, number])).type.toBe<
+        Config.Config<[string, number]>
+      >()
+      expect(pipe([string, number] as const, Config.all)).type.toBe<
+        Config.Config<[string, number]>
+      >()
     })
 
     it("struct", () => {
-      expect(Config.all({ a: string, b: number })).type.toBe<Config.Config<{ a: string; b: number }>>()
-      expect(pipe({ a: string, b: number }, Config.all)).type.toBe<Config.Config<{ a: string; b: number }>>()
+      expect(Config.all({ a: string, b: number })).type.toBe<
+        Config.Config<{ a: string; b: number }>
+      >()
+      expect(pipe({ a: string, b: number }, Config.all)).type.toBe<
+        Config.Config<{ a: string; b: number }>
+      >()
     })
 
     it("array", () => {
@@ -36,33 +44,47 @@ describe("Config", () => {
     })
 
     it("record", () => {
-      expect(Config.all(record)).type.toBe<Config.Config<Record<string, number>>>()
-      expect(pipe(record, Config.all)).type.toBe<Config.Config<Record<string, number>>>()
+      expect(Config.all(record)).type.toBe<
+        Config.Config<Record<string, number>>
+      >()
+      expect(pipe(record, Config.all)).type.toBe<
+        Config.Config<Record<string, number>>
+      >()
     })
   })
 
   it("branded", () => {
     expect(Config.branded).type.not.toBeCallableWith("NAME", Int)
     expect(Config.branded).type.not.toBeCallableWith(number, Str)
-    when(number.pipe).isCalledWith(expect(Config.branded).type.not.toBeCallableWith(Str))
+    number.pipe(
+      // @ts-expect-error Argument of type
+      Config.branded(Str)
+    )
 
     expect(Config.branded(number, Int)).type.toBe<Config.Config<Int>>()
     expect(Config.branded("NAME", Str)).type.toBe<Config.Config<Str>>()
     expect(number.pipe(Config.branded(Int))).type.toBe<Config.Config<Int>>()
-    expect(pipe([string, number] as const, Config.all)).type.toBe<Config.Config<[string, number]>>()
+    expect(pipe([string, number] as const, Config.all)).type.toBe<
+      Config.Config<[string, number]>
+    >()
   })
 
   it("orElseIf", () => {
-    expect(Config.orElseIf(number, {
-      if: hole(),
-      orElse: () => string
-    })).type.toBe<Config.Config<number | string>>()
+    expect(
+      Config.orElseIf(number, {
+        if: hole(),
+        orElse: () => string
+      })
+    ).type.toBe<Config.Config<number | string>>()
   })
 
   it("Config.Success helper type", () => {
     expect(hole<Config.Config.Success<typeof string>>()).type.toBe<string>()
     expect(hole<Config.Config.Success<typeof number>>()).type.toBe<number>()
     const _config = Config.all({ a: string, b: number })
-    expect(hole<Config.Config.Success<typeof _config>>()).type.toBe<{ a: string; b: number }>()
+    expect(hole<Config.Config.Success<typeof _config>>()).type.toBe<{
+      a: string
+      b: number
+    }>()
   })
 })
